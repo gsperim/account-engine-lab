@@ -1,0 +1,21 @@
+services:
+
+  docs:
+    image: squidfunk/mkdocs-material
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/docs
+    command: serve --dev-addr=0.0.0.0:8000
+
+  structurizr:
+    image: structurizr/lite
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./structurizr:/usr/local/structurizr
+
+  # lancamentos:     # Serviço de Lançamentos — a definir
+  # consolidado:     # Serviço de Consolidado Diário — a definir
+  # broker:          # Message broker — a definir
+  # db:              # Banco de dados — a definir
