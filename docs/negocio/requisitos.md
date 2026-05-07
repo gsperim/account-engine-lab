@@ -182,28 +182,31 @@ tags:
 
 **Serviço:** Consolidação · **Driver:** [D-02](drivers.md#d-02), [D-05](drivers.md#d-05)
 
-**Trigger:** Evento `LancamentoRegistrado` recebido via broker
+**Triggers:** dois eventos consumidos via broker, cada um com handler dedicado:
+
+| Evento | Handler | Responsabilidade |
+|--------|---------|-----------------|
+| `LancamentoRegistrado` | Handler A | Inserir lançamento + recalcular saldo do dia |
+| `LancamentoEstornado` | Handler B | Inserir estorno + vincular original + recalcular saldo do dia |
 
 **Comportamento:**
-- Ao receber o evento, deve recalcular e persistir o saldo do dia correspondente à `data_competencia` do lançamento.
+- Ao receber qualquer um dos eventos, deve recalcular e persistir o saldo do dia correspondente à `data_competencia`.
 - O processamento deve ser **idempotente** — processar o mesmo evento mais de uma vez não deve alterar o resultado.
 - O processamento deve garantir **at-least-once delivery** — nenhum evento pode ser descartado sem processamento.
 
 **Regras de negócio:**
 - A indisponibilidade do Serviço de Consolidação Diária não deve gerar perda de eventos — o broker retém as mensagens até o serviço estar disponível novamente.
-- O consolidado de uma data deve sempre refletir a soma de **todos** os lançamentos daquela `data_competencia`, incluindo os registrados retroativamente.
+- O consolidado de uma data deve sempre refletir a soma de **todos** os lançamentos e estornos daquela `data_competencia`.
 
-**Estratégia de idempotência — Recálculo idempotente (recomendada):**
-
-O Serviço de Consolidação Diária mantém uma tabela local de lançamentos processados. O campo `id` do evento é o UUID gerado pelo Serviço de Lançamentos no momento do registro ([RF-01](#rf-01)) e incluído no payload do evento `LancamentoRegistrado`. Esse UUID é usado como chave primária na tabela local:
+**Handler A — `LancamentoRegistrado`:**
 
 ```sql
--- Tentativa de inserção do lançamento recebido via evento
+-- Inserção idempotente do lançamento
 INSERT INTO lancamentos_processados (id, tipo, valor, data_competencia)
 VALUES (:event_id, :tipo, :valor, :data)
 ON CONFLICT (id) DO NOTHING;
 
--- Recálculo do saldo: sempre por agregação sobre todos os registros da data
+-- Recálculo do saldo por agregação
 UPDATE consolidacao_diaria
 SET total_creditos = (SELECT COALESCE(SUM(valor), 0) FROM lancamentos_processados
                       WHERE data_competencia = :data AND tipo = 'credito'),
@@ -213,11 +216,36 @@ SET total_creditos = (SELECT COALESCE(SUM(valor), 0) FROM lancamentos_processado
 WHERE data = :data;
 ```
 
-A idempotência emerge naturalmente do design: se o evento for entregue mais de uma vez, o `INSERT ... ON CONFLICT DO NOTHING` resulta em `0 rows affected` e o `UPDATE` recalcula o mesmo valor já existente. Não é necessário detectar explicitamente se o evento está sendo reprocessado.
+**Handler B — `LancamentoEstornado`:**
+
+```sql
+-- 1. Inserção idempotente do estorno (tipo já é inverso ao original)
+INSERT INTO lancamentos_processados (id, tipo, valor, data_competencia, estorno_de)
+VALUES (:estorno_id, :tipo_inverso, :valor, :data, :id_original)
+ON CONFLICT (id) DO NOTHING;
+
+-- 2. Vínculo no registro original (idempotente: só atualiza se ainda não vinculado)
+UPDATE lancamentos_processados
+SET estornado_por = :estorno_id
+WHERE id = :id_original
+  AND estornado_por IS NULL;
+
+-- 3. Recálculo do saldo (mesmo que handler A)
+UPDATE consolidacao_diaria
+SET total_creditos = (SELECT COALESCE(SUM(valor), 0) FROM lancamentos_processados
+                      WHERE data_competencia = :data AND tipo = 'credito'),
+    total_debitos  = (SELECT COALESCE(SUM(valor), 0) FROM lancamentos_processados
+                      WHERE data_competencia = :data AND tipo = 'debito'),
+    atualizado_em  = NOW()
+WHERE data = :data;
+```
+
+A separação em dois handlers mantém cada um com responsabilidade única. O recálculo do saldo (passo 3) é uma função compartilhada entre os dois. A idempotência é garantida pelo `ON CONFLICT DO NOTHING` no insert e pela condição `estornado_por IS NULL` no update do original.
 
 **Critérios de aceite:**
 
 - [ ] Dado um evento `LancamentoRegistrado` recebido, o saldo do dia correspondente deve ser atualizado
+- [ ] Dado um evento `LancamentoEstornado` recebido, o saldo do dia deve ser atualizado e o registro original deve ter `estornado_por` preenchido
 - [ ] Dado o mesmo evento processado duas vezes, o saldo não deve ser duplicado (idempotência)
 - [ ] Dado o serviço indisponível temporariamente, os eventos devem ser processados após a recuperação
 
@@ -361,14 +389,16 @@ sequenceDiagram
 
 **Regras de negócio:**
 - Valor e data de competência são sempre idênticos ao original — estorno parcial não é permitido
-- Um lançamento que já é um estorno não pode ser estornado novamente
-- O estorno publica o evento `LancamentoEstornado` após persistência confirmada
+- Um lançamento que já **é** um estorno (`estorno_de != null`) não pode ser estornado novamente
+- Um lançamento que já **foi** estornado (`estornado_por != null`) não pode ser estornado novamente — evita duplo estorno
+- O estorno publica **exclusivamente** o evento `LancamentoEstornado` após persistência confirmada — não publica `LancamentoRegistrado`
 
 **Critérios de aceite:**
 
 - [ ] Dado um lançamento de crédito estornado, deve criar um débito com o mesmo valor na mesma data de competência
 - [ ] O campo `estorno_de` deve apontar para o `id` do lançamento original
-- [ ] Dado tentativa de estornar um estorno, deve retornar HTTP 422
+- [ ] Dado tentativa de estornar um lançamento que já **é** um estorno, deve retornar HTTP 422
+- [ ] Dado tentativa de estornar um lançamento que já **foi** estornado (`estornado_por` preenchido), deve retornar HTTP 422
 - [ ] Dado `id_lancamento_original` inexistente, deve retornar HTTP 404
 
 ---
