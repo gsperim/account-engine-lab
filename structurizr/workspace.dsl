@@ -65,6 +65,14 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
             autoLayout
         }
 
+        styles {
+            element "External" {
+                background "#999999"
+                color "#ffffff"
+                opacity 50
+            }
+        }
+
         themes theme.json
 
     }
