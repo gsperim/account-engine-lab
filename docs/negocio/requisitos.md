@@ -289,6 +289,31 @@ Detalhado como parte das regras e casos de borda do [RF-01](#rf-01). A validaç�
 - [ ] Para cada dia com lançamentos no intervalo, deve ser publicado exatamente um evento `TotaisDiarioCalculado`
 - [ ] Dias sem lançamentos não devem gerar eventos
 
+**Fluxo de recuperação:**
+
+```mermaid
+sequenceDiagram
+    actor Gestor
+    participant GW as API Gateway
+    participant LA as Serviço de Lançamentos
+    participant DB as PostgreSQL (Lançamentos)
+    participant BR as Message Broker
+    participant CO as Serviço de Consolidação
+
+    Gestor->>GW: POST /lancamentos/recalcular<br/>{data_inicio, data_fim}
+    GW->>LA: POST /recalcular (JWT validado)
+    LA-->>Gestor: HTTP 202 {job_id, status: "aceito"}
+
+    loop Para cada dia com lançamentos no intervalo
+        LA->>DB: SELECT SUM(creditos), SUM(debitos)<br/>WHERE data_competencia = :dia
+        DB-->>LA: totais do dia
+        LA->>BR: publica TotaisDiarioCalculado<br/>{data, total_creditos, total_debitos, job_id}
+    end
+
+    BR->>CO: entrega TotaisDiarioCalculado (at-least-once)
+    CO->>CO: reconstrói saldo do dia<br/>(idempotente via job_id)
+```
+
 ---
 
 ### RF-08 — Registrar Estorno Rastreável 🔹 { #rf-08 }
