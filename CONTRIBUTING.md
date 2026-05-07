@@ -59,6 +59,47 @@ arch/adr-004-message-broker
 
 > Usar kebab-case. Incluir o escopo do serviço quando aplicável.
 
+### Visão geral do fluxo
+
+```mermaid
+gitGraph
+   commit id: "initial"
+   branch develop
+   checkout develop
+   commit id: "setup"
+
+   branch arch/etapa-1
+   checkout arch/etapa-1
+   commit id: "arch: drivers e requisitos"
+   commit id: "arch: ADRs e diagramas"
+   checkout develop
+   merge arch/etapa-1 id: "PR: etapa-1"
+
+   branch feature/lancamentos-registro
+   checkout feature/lancamentos-registro
+   commit id: "feat: registrar lançamento"
+   commit id: "test: validações RF-01"
+   checkout develop
+   merge feature/lancamentos-registro id: "PR: feat"
+
+   branch release/1.0.0
+   checkout release/1.0.0
+   commit id: "chore: bump v1.0.0"
+   checkout main
+   merge release/1.0.0 tag: "v1.0.0"
+   checkout develop
+   merge release/1.0.0
+
+   checkout main
+   branch hotfix/correcao-critica
+   checkout hotfix/correcao-critica
+   commit id: "fix: correção crítica"
+   checkout main
+   merge hotfix/correcao-critica tag: "v1.0.1"
+   checkout develop
+   merge hotfix/correcao-critica
+```
+
 ### Fluxo de uma feature
 
 ```bash
@@ -127,6 +168,7 @@ tipo(escopo): descrição curta
 | `adr` | Architecture Decision Records |
 | `arch` | Modelos ArchiMate ou Structurizr |
 | `ci` | Pipeline de CI/CD |
+| `contrib` | Arquivos de governança do projeto (CONTRIBUTING.md, scripts/, hooks) |
 
 ### Exemplos
 
