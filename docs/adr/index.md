@@ -26,3 +26,13 @@ Cada ADR segue a estrutura:
 - **Consequências** — impactos positivos e trade-offs
 
 **Status possíveis:** Proposto · Aceito · Depreciado · Substituído
+
+---
+
+## Leituras de Referência
+
+Materiais externos que embasam ou influenciam decisões arquiteturais deste projeto.
+
+| Tema | Recurso |
+|------|---------|
+| Estratégias de cache com Redis (técnicas: Cache-Aside, Write-Through, Read-Through, TTL, eviction) | [Database Caching Strategies Using Redis — AWS Whitepaper](https://docs.aws.amazon.com/pdfs/whitepapers/latest/database-caching-strategies-using-redis/database-caching-strategies-using-redis.pdf) |
