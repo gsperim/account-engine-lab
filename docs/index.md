@@ -22,7 +22,7 @@ Um comerciante precisa controlar seu fluxo de caixa diário com lançamentos (d�
 ## Navegação Rápida
 
 - [Decisões arquiteturais (ADRs)](adr/index.md)
-- [Guias de Engenharia](engenharia/conventional-commits.md)
+- [Guias de Contribuição](../CONTRIBUTING.md)
 
 ---
 

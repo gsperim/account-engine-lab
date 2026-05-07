@@ -40,7 +40,7 @@ Essa classificação teve consequência direta: toda a profundidade de modelagem
 
 Os requisitos funcionais foram detalhados com campos de entrada e saída, regras de negócio, casos de borda e critérios de aceite. Os NFRs foram elevados à mesma importância — particularmente o NFR crítico que diz que o registro de lançamentos não pode ser afetado pela queda do serviço de consolidação. Essa restrição de resiliência moldou toda a arquitetura subsequente.
 
-**Artefatos produzidos:** [Drivers e Stakeholders](negocio/drivers.md) · [Principles Catalog](negocio/principios.md) · [Domínios, Value Stream e Capacidades](negocio/dominios.md) · [Glossário](negocio/glossario.md) · [Requisitos](negocio/requisitos.md)
+**Artefatos produzidos:** [Visão Executiva](negocio/visao-executiva.md) · [Drivers e Stakeholders](negocio/drivers.md) · [Principles Catalog](negocio/principios.md) · [Domínios, Value Stream e Capacidades](negocio/dominios.md) · [Glossário](negocio/glossario.md) · [Requisitos](negocio/requisitos.md)
 
 ---
 
