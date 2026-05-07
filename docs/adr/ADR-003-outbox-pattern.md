@@ -16,7 +16,7 @@ tags:
 
 ## Contexto
 
-RF-01 define que o evento `LancamentoRegistrado` deve ser publicado **somente após** a persistência confirmada do lançamento. Isso cria um problema clássico de sistemas distribuídos: o **dual-write problem**.
+[RF-01](../negocio/requisitos.md#rf-01) define que o evento `LancamentoRegistrado` deve ser publicado **somente após** a persistência confirmada do lançamento. Isso cria um problema clássico de sistemas distribuídos: o **dual-write problem**.
 
 Se o Serviço de Lançamentos escrever no banco e depois publicar no broker em operações separadas, dois cenários de falha surgem:
 
@@ -25,7 +25,7 @@ Se o Serviço de Lançamentos escrever no banco e depois publicar no broker em o
 
 Nenhuma das abordagens ingênuas resolve isso sem comprometer a disponibilidade:
 
-- **Two-phase commit (2PC)** distribui a transação entre banco e broker, mas reduz disponibilidade e aumenta latência — viola o espírito de NFR-01
+- **Two-phase commit (2PC)** distribui a transação entre banco e broker, mas reduz disponibilidade e aumenta latência — viola o espírito de [NFR-01](../negocio/requisitos.md#nfr-01)
 - **Publicar e torcer** não oferece garantia alguma
 
 ---
@@ -36,7 +36,7 @@ Nenhuma das abordagens ingênuas resolve isso sem comprometer a disponibilidade:
 |-------|----------------------|
 | **Two-phase commit (2PC)** | Acopla banco e broker em uma transação distribuída; latência elevada; reduz disponibilidade de ambos os recursos |
 | **Publicar antes de persistir** | Cria lançamentos fantasmas no consolidado se a persistência falhar |
-| **Polling do banco pela Consolidação** | Cria acoplamento direto ao banco do Lançamentos — viola P-04 (Database per Service) e P-01 (Desacoplamento) |
+| **Polling do banco pela Consolidação** | Cria acoplamento direto ao banco do Lançamentos — viola [P-04](../negocio/principios.md#p-04) (Database per Service) e [P-01](../negocio/principios.md#p-01) (Desacoplamento) |
 | **Event Sourcing** | Elimina o problema por design, mas exige reescrita completa do modelo de persistência; complexidade desproporcional ao escopo atual |
 
 ---
@@ -69,7 +69,7 @@ SELECT * FROM outbox WHERE publicado = false ORDER BY criado_em LIMIT 100;
 UPDATE outbox SET publicado = true, publicado_em = NOW() WHERE id = :id;
 ```
 
-Se o Relay cair entre a publicação e o UPDATE, o evento é republicado na próxima execução — resultando em **at-least-once delivery**. O Serviço de Consolidação Diária já é idempotente (RF-04), então reentregas são seguras.
+Se o Relay cair entre a publicação e o UPDATE, o evento é republicado na próxima execução — resultando em **at-least-once delivery**. O Serviço de Consolidação Diária já é idempotente ([RF-04](../negocio/requisitos.md#rf-04)), então reentregas são seguras.
 
 ---
 
@@ -77,14 +77,14 @@ Se o Relay cair entre a publicação e o UPDATE, o evento é republicado na pró
 
 ### Positivas
 
-- **NFR-03 garantido** — o lançamento e o evento são atomicamente persistidos; não há janela de falha entre os dois
+- **[NFR-03](../negocio/requisitos.md#nfr-03) garantido** — o lançamento e o evento são atomicamente persistidos; não há janela de falha entre os dois
 - **Alta disponibilidade** — o Relay é stateless e reiniciável; falhas temporárias não resultam em perda de eventos
 - **Sem dependência transacional do broker** — o banco de dados (sempre disponível) é o buffer primário; o broker é notificado de forma assíncrona
 - **Auditoria natural** — a tabela `outbox` registra todos os eventos publicados com timestamp (contribui para NFR-09)
 
 ### Negativas / Trade-offs
 
-- **Latência adicional** — há um delay entre o commit do lançamento e a chegada do evento à Consolidação (depende do intervalo de polling do Relay); aceitável dado que NFR-01 e P-03 já estabelecem consistência eventual
+- **Latência adicional** — há um delay entre o commit do lançamento e a chegada do evento à Consolidação (depende do intervalo de polling do Relay); aceitável dado que [NFR-01](../negocio/requisitos.md#nfr-01) e [P-03](../negocio/principios.md#p-03) já estabelecem consistência eventual
 - **Componente adicional** — o Outbox Relay precisa ser implementado, deployado e monitorado como parte do Serviço de Lançamentos
-- **Crescimento da tabela outbox** — eventos publicados devem ser purgados periodicamente para evitar crescimento ilimitado; estratégia de retenção necessária (relacionado a C-04)
+- **Crescimento da tabela outbox** — eventos publicados devem ser purgados periodicamente para evitar crescimento ilimitado; estratégia de retenção necessária (relacionado a [C-04](../negocio/requisitos.md#c-04))
 - **At-least-once delivery obrigatório** — o consumidor deve ser idempotente; já garantido por [RF-04](../negocio/requisitos.md#rf-04)

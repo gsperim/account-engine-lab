@@ -382,9 +382,9 @@ Detalhado como parte das regras e casos de borda do [RF-01](#rf-01). A validaç�
 
 | ID | Restrição | Origem |
 |----|-----------|--------|
-| C-01 | A solução deve ser executável localmente via `docker-compose` | Requisito obrigatório do desafio |
-| C-02 | O repositório deve ser público no GitHub com toda a documentação | Requisito obrigatório do desafio |
-| C-03 | A linguagem de implementação é livre | Requisito do desafio |
+| <span id="c-01"></span>C-01 | A solução deve ser executável localmente via `docker-compose` | Requisito obrigatório do desafio |
+| <span id="c-02"></span>C-02 | O repositório deve ser público no GitHub com toda a documentação | Requisito obrigatório do desafio |
+| <span id="c-03"></span>C-03 | A linguagem de implementação é livre | Requisito do desafio |
 | <span id="c-04"></span>🔹 C-04 | Dados pessoais e financeiros devem obedecer à LGPD (Lei 13.709/2018): prazo de retenção conforme regulação, direito de exclusão via anonimização quando dados não puderem ser apagados | [D-08](drivers.md#d-08) |
 
 --- 
