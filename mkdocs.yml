@@ -80,5 +80,6 @@ nav:
     - ADR-002 — Message Broker: adr/ADR-002-message-broker.md
     - ADR-003 — Outbox Pattern: adr/ADR-003-outbox-pattern.md
     - ADR-004 — JWT e JWKS: adr/ADR-004-jwt-validacao-local.md
+    - ADR-005 — Protocolo Interno REST vs gRPC: adr/ADR-005-protocolo-comunicacao-interna.md
   - Glossário: glossario.md
   - Tags: tags.md

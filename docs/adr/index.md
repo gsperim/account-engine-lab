@@ -12,6 +12,7 @@ Registro das decisões arquiteturais relevantes do projeto, com contexto, altern
 | [ADR-002](ADR-002-message-broker.md) | Message Broker: RabbitMQ | Aceito | 2026-05-07 |
 | [ADR-003](ADR-003-outbox-pattern.md) | Garantia de Entrega: Transactional Outbox Pattern | Aceito | 2026-05-07 |
 | [ADR-004](ADR-004-jwt-validacao-local.md) | Validação de Tokens: JWT com Validação Local via JWKS | Aceito | 2026-05-07 |
+| [ADR-005](ADR-005-protocolo-comunicacao-interna.md) | Protocolo de Comunicação Interna: REST sobre gRPC | Aceito | 2026-05-07 |
 
 > Decisões sobre ferramentas e stack de desenvolvimento estão em [Ferramentas e Stack](../stack.md).
 
