@@ -1,3 +1,9 @@
+---
+tags:
+  - negocio
+  - stakeholders
+---
+
 # Registro de Drivers e Stakeholders
 
 **Papéis:** 💼 Arquiteto de Negócios · 🏛️ Arquiteto Corporativo

@@ -1,3 +1,9 @@
+---
+tags:
+  - ferramentas
+  - decisao
+---
+
 # Ferramentas e Stack
 
 **Papéis:** 🧩 Arquiteto de Soluções · ⚙️ Arquiteto de Tecnologia

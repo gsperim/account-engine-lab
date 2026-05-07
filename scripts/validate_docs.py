@@ -47,7 +47,7 @@ DOCS_COM_PAPEL = [
     NEGOCIO_DIR / "requisitos.md",
     NEGOCIO_DIR / "principios.md",
     NEGOCIO_DIR / "dominios.md",
-    NEGOCIO_DIR / "glossario.md",
+    DOCS_DIR / "glossario.md",
     NEGOCIO_DIR / "visao-executiva.md",
     DOCS_DIR / "stack.md",
     DOCS_DIR / "planejamento.md",

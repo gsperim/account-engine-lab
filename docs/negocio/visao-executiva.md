@@ -1,3 +1,9 @@
+---
+tags:
+  - negocio
+  - executivo
+---
+
 # Visão Executiva — Domínio de Negócio
 
 **Papel:** 💼 Arquiteto de Negócios · 🏛️ Arquiteto Corporativo  

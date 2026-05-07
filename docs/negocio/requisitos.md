@@ -1,4 +1,10 @@
- # Requisitos Funcionais e Não Funcionais
+---
+tags:
+  - negocio
+  - requisitos
+---
+
+# Requisitos Funcionais e Não Funcionais
 
 **Papel:** 💼 Arquiteto de Negócios · 🧩 Arquiteto de Soluções
 **Framework:** ArchiMate — Motivation View (Requirement, Constraint)

@@ -1,3 +1,9 @@
+---
+tags:
+  - negocio
+  - arquitetura
+---
+
 # Principles Catalog
 
 **Papel:** 🏛️ Arquiteto Corporativo · 🧩 Arquiteto de Soluções

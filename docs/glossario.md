@@ -1,3 +1,9 @@
+---
+tags:
+  - negocio
+  - ddd
+---
+
 # Glossário — Ubiquitous Language
 
 **Papel:** 💼 Arquiteto de Negócios
@@ -17,5 +23,7 @@ Termos do domínio utilizados de forma consistente em todo o projeto: código, d
 | **Saldo** | Resultado líquido dos lançamentos em um período: soma dos créditos menos a soma dos débitos | Consolidação |
 | **Consolidação Diária** | Saldo calculado considerando todos os lançamentos de uma data de competência específica | Consolidação |
 | **Fluxo de Caixa** | Sequência temporal de lançamentos que representa a movimentação financeira do comerciante | Ambos |
-| **Evento de Lançamento** | Mensagem publicada pelo Contexto de Lançamentos ao registrar um novo lançamento, consumida pela Consolidação | Integração |
+| **`LancamentoRegistrado`** | Evento de domínio publicado pelo Serviço de Lançamentos após persistência bem-sucedida, consumido pelo Serviço de Consolidação Diária | Integração |
 | **Comerciante** | Pessoa física ou jurídica proprietária do negócio que utiliza o sistema para controlar seu caixa | Negócio |
+| **Caixa** | Operador responsável pelo registro das movimentações financeiras no dia a dia | Negócio |
+| **Gestor** | Responsável pela análise do fluxo de caixa e tomada de decisão financeira | Negócio |

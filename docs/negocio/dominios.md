@@ -1,3 +1,9 @@
+---
+tags:
+  - negocio
+  - ddd
+---
+
 # Domínios, Value Stream e Capacidades de Negócio
 
 **Papéis:** 💼 Arquiteto de Negócios · 🧩 Arquiteto de Soluções · 🏛️ Arquiteto Corporativo
