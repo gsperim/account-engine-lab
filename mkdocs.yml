@@ -76,6 +76,7 @@ nav:
   - Ferramentas e Stack: stack.md
   - Engenharia:
     - Contratos de Integração: engenharia/contratos.md
+    - Arquitetura de Transição: engenharia/transicao.md
   - Decisões Arquiteturais:
     - Índice: adr/index.md
     - ADR-001 — Padrão Arquitetural: adr/ADR-001-padrao-arquitetural.md

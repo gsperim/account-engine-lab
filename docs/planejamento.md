@@ -70,7 +70,7 @@ Os contratos de integração foram documentados antes do código — espírito d
 | ADR-004 — Validação de Tokens: JWT com Validação Local via JWKS | [adr/ADR-004](adr/ADR-004-jwt-validacao-local.md) |
 | ADR-005 — Protocolo de Comunicação Interna: REST sobre gRPC | [adr/ADR-005](adr/ADR-005-protocolo-comunicacao-interna.md) |
 | Contratos de Integração (eventos e APIs REST) | [engenharia/contratos](engenharia/contratos.md) |
-| Arquitetura de Transição *(diferencial)* | — em elaboração |
+| Arquitetura de Transição *(diferencial)* | [engenharia/transicao](engenharia/transicao.md) |
 
 ---
 
