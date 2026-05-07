@@ -49,13 +49,28 @@ Os requisitos funcionais foram detalhados com campos de entrada e saída, regras
 
 ---
 
-### Fase 2 — Arquitetura da Solução
+### Fase 2 — Arquitetura da Solução ✓
 
-Com o domínio estabelecido, esta fase responde à pergunta central de design: como o sistema é estruturado para atender os requisitos funcionais e, especialmente, os não funcionais?
+Com o domínio estabelecido, esta fase respondeu à pergunta central de design: como o sistema é estruturado para atender os requisitos funcionais e, especialmente, os não funcionais?
 
-A decisão arquitetural mais importante desta fase é o padrão de desacoplamento entre os dois serviços. O NFR-01 exige que o serviço de lançamentos seja independente do serviço de consolidação — e isso determina que a comunicação entre eles precisa ser assíncrona, via broker de mensagens. Essa decisão será formalizada em um ADR.
+A decisão arquitetural mais importante foi o padrão de desacoplamento entre os dois serviços. O [NFR-01](negocio/requisitos.md#nfr-01) exige que o serviço de lançamentos seja independente do serviço de consolidação — o que determina comunicação assíncrona via broker de mensagens, formalizada no [ADR-001](adr/ADR-001-padrao-arquitetural.md). A partir daí, cada decisão subsequente derivou dessa escolha central.
 
-O resultado desta fase são os diagramas C4 L1 e L2, os ADRs das principais decisões e a estratégia de integração com contratos de mensagem definidos.
+O C4 L1 e L2 foram evoluídos iterativamente à medida que as decisões amadureciam: dois atores distintos (Caixa e Gestor) refletem jornadas diferentes; API Gateway centraliza autenticação, rate limiting e roteamento; PDV aparece como sistema externo alternativo ao frontend; dois bancos isolados e Redis de cache completam a topologia de containers.
+
+Os contratos de integração foram documentados antes do código — espírito do **Spec-Driven Development** — com schemas JSON dos eventos de domínio e tabela de endpoints REST. Na Etapa 7, esses contratos Markdown serão convertidos em `openapi.yaml` e `asyncapi.yaml` para dirigir a implementação.
+
+**Artefatos produzidos:**
+
+| Artefato | Link |
+|----------|------|
+| Diagrama C4 L1 e L2 | [structurizr/workspace.dsl](https://github.com) · visualizar via `docker-compose up structurizr` |
+| ADR-001 — Padrão Arquitetural: Microserviços Orientados a Eventos | [adr/ADR-001](adr/ADR-001-padrao-arquitetural.md) |
+| ADR-002 — Message Broker: RabbitMQ | [adr/ADR-002](adr/ADR-002-message-broker.md) |
+| ADR-003 — Garantia de Entrega: Transactional Outbox Pattern | [adr/ADR-003](adr/ADR-003-outbox-pattern.md) |
+| ADR-004 — Validação de Tokens: JWT com Validação Local via JWKS | [adr/ADR-004](adr/ADR-004-jwt-validacao-local.md) |
+| ADR-005 — Protocolo de Comunicação Interna: REST sobre gRPC | [adr/ADR-005](adr/ADR-005-protocolo-comunicacao-interna.md) |
+| Contratos de Integração (eventos e APIs REST) | [engenharia/contratos](engenharia/contratos.md) |
+| Arquitetura de Transição *(diferencial)* | — em elaboração |
 
 ---
 
@@ -87,9 +102,11 @@ Logs estruturados, métricas e rastreamento distribuído são requisitos do sist
 
 ### Fase 7 — Implementação
 
-Com toda a arquitetura documentada e as decisões formalizadas em ADRs, a implementação começa com contexto completo. Os serviços de Lançamentos e Consolidação Diária são implementados, os contratos de API formalizados em OpenAPI e os testes escritos.
+Com toda a arquitetura documentada e as decisões formalizadas em ADRs, a implementação começa com contexto completo seguindo o fluxo **Spec-Driven Development**: os contratos Markdown definidos na Fase 2 são convertidos em `openapi.yaml` (REST) e `asyncapi.yaml` (eventos), gerando stubs de servidor, mocks e validação de contrato automatizada no CI.
 
-É também nesta fase que o DDD Tático entra: aggregates, entities, value objects e domain events são modelados dentro de cada bounded context.
+Os serviços de Lançamentos e Consolidação Diária são implementados contra esses contratos. É também nesta fase que o DDD Tático entra: aggregates, entities, value objects e domain events são modelados dentro de cada bounded context.
+
+> Base para o `openapi.yaml` e `asyncapi.yaml`: [Contratos de Integração](engenharia/contratos.md)
 
 ---
 
