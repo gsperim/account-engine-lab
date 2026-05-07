@@ -27,3 +27,6 @@ Termos do domínio utilizados de forma consistente em todo o projeto: código, d
 | **Comerciante** | Pessoa física ou jurídica proprietária do negócio que utiliza o sistema para controlar seu caixa | Negócio |
 | **Caixa** | Operador responsável pelo registro das movimentações financeiras no dia a dia | Negócio |
 | **Gestor** | Responsável pela análise do fluxo de caixa e tomada de decisão financeira | Negócio |
+| **Estorno** | Lançamento compensatório que reverte financeiramente um lançamento anterior, criando um vínculo rastreável via campo `estorno_de` | Lançamentos |
+| **`TotaisDiarioCalculado`** | Evento de domínio publicado pelo Serviço de Lançamentos em resposta a um pedido de recálculo assíncrono ([RF-07](negocio/requisitos.md#rf-07)), contendo a soma de créditos e débitos de um dia específico | Integração |
+| **`LancamentoEstornado`** | Evento de domínio publicado pelo Serviço de Lançamentos após a confirmação de um estorno ([RF-08](negocio/requisitos.md#rf-08)), contendo o vínculo entre o estorno e o lançamento original | Integração |

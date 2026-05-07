@@ -10,6 +10,7 @@
 *[API]: Application Programming Interface — interface que define como componentes se comunicam
 *[DDD]: Domain-Driven Design — abordagem de design de software centrada no modelo de domínio
 *[C4]: Modelo de diagramas arquiteturais em 4 níveis: Context, Containers, Components e Code
+*[LGPD]: Lei Geral de Proteção de Dados (Lei 13.709/2018) — regula o tratamento de dados pessoais no Brasil
 
 *[Lançamento]: Registro de uma movimentação financeira com tipo (débito ou crédito), valor, data de competência e descrição
 *[lançamento]: Registro de uma movimentação financeira com tipo (débito ou crédito), valor, data de competência e descrição
