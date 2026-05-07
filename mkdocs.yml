@@ -74,6 +74,10 @@ nav:
     - Domínios, Value Stream e Capacidades: negocio/dominios.md
     - Requisitos: negocio/requisitos.md
   - Ferramentas e Stack: stack.md
-  - Decisões Arquiteturais: adr/index.md
+  - Decisões Arquiteturais:
+    - Índice: adr/index.md
+    - ADR-001 — Padrão Arquitetural: adr/ADR-001-padrao-arquitetural.md
+    - ADR-002 — Message Broker: adr/ADR-002-message-broker.md
+    - ADR-003 — Outbox Pattern: adr/ADR-003-outbox-pattern.md
   - Glossário: glossario.md
   - Tags: tags.md

@@ -8,7 +8,9 @@ Registro das decisões arquiteturais relevantes do projeto, com contexto, altern
 
 | ADR | Título | Status | Data |
 |-----|--------|--------|------|
-| — | *Aguardando Etapa 2 — decisões arquiteturais do sistema* | — | — |
+| [ADR-001](ADR-001-padrao-arquitetural.md) | Padrão Arquitetural: Microserviços Orientados a Eventos | Aceito | 2026-05-07 |
+| [ADR-002](ADR-002-message-broker.md) | Message Broker: RabbitMQ | Aceito | 2026-05-07 |
+| [ADR-003](ADR-003-outbox-pattern.md) | Garantia de Entrega: Transactional Outbox Pattern | Aceito | 2026-05-07 |
 
 > Decisões sobre ferramentas e stack de desenvolvimento estão em [Ferramentas e Stack](../stack.md).
 
