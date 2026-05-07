@@ -6,7 +6,6 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
 
         sistema = softwareSystem "Sistema de Fluxo de Caixa" "Controla lançamentos financeiros e consolida saldos diários." {
             !docs docs/negocio
-            !adrs docs/adr
 
 
             lancamentos = container "Serviço de Lançamentos" {
