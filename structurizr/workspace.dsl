@@ -7,17 +7,17 @@ workspace "Fluxo de Caixa Diário" "Desafio Banco Carrefour — Controle de Flux
         sistema = softwareSystem "Sistema de Fluxo de Caixa" "Controla lançamentos financeiros e consolida saldos diários." {
 
             lancamentos = container "Serviço de Lançamentos" {
-                description "Registra débitos e créditos. Não pode ficar indisponível se o Consolidado cair."
+                description "Registra débitos e créditos. Não pode ficar indisponível se a Consolidação cair."
                 tags "Service"
             }
 
-            consolidado = container "Serviço de Consolidado Diário" {
+            consolidado = container "Serviço de Consolidação Diária" {
                 description "Calcula e disponibiliza o saldo consolidado por dia. Suporta 50 req/s com até 5% de perda."
                 tags "Service"
             }
 
             broker = container "Message Broker" {
-                description "Garante desacoplamento assíncrono entre Lançamentos e Consolidado."
+                description "Garante desacoplamento assíncrono entre Lançamentos e Consolidação."
                 tags "Broker"
             }
 

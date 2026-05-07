@@ -1,7 +1,10 @@
 site_name: Fluxo de Caixa Diário — Banco Carrefour
 site_description: Desafio técnico para a vaga de Arquiteto de Soluções
-docs_dir: .
+docs_dir: docs
 site_dir: site
+dev_addr: 127.0.0.1:8000
+watch:
+  - docs
 
 theme:
   name: material
@@ -54,19 +57,15 @@ plugins:
   - minify:
       minify_html: true
 
-exclude_docs: |
-  CLAUDE.md
-  .venv/
-  site/
-  __pycache__/
-
 nav:
-  - Início: docs/index.md
-  - Base de Conhecimento:
-    - Desafio: base-de-conhecimento/desafio-arquiteto-solucoes.md
-    - Roteiro: base-de-conhecimento/roteiro.md
-  - Decisões Arquiteturais:
-    - Índice: docs/adr/index.md
-    - ADR-001 — Ferramentas de Documentação: docs/adr/ADR-001-ferramentas-documentacao-arquitetural.md
-    - ADR-002 — MkDocs Material: docs/adr/ADR-002-mkdocs-portal-documentacao.md
-    - ADR-003 — ArchiMate 3.x: docs/adr/ADR-003-archimate-notacao-arquitetural.md
+  - Início: index.md
+  - Planejamento do Projeto: planejamento.md
+  - Negócio:
+    - Visão Executiva: negocio/visao-executiva.md
+    - Drivers e Stakeholders: negocio/drivers.md
+    - Principles Catalog: negocio/principios.md
+    - Domínios, Value Stream e Capacidades: negocio/dominios.md
+    - Glossário: negocio/glossario.md
+    - Requisitos: negocio/requisitos.md
+  - Ferramentas e Stack: stack.md
+  - Decisões Arquiteturais: adr/index.md

@@ -13,17 +13,16 @@ Um comerciante precisa controlar seu fluxo de caixa diário com lançamentos (d�
 | Serviço | Responsabilidade |
 |---------|-----------------|
 | Lançamentos | Registro de débitos e créditos em tempo real |
-| Consolidado Diário | Saldo consolidado por dia com suporte a 50 req/s |
+| Consolidação Diária | Saldo consolidado por dia com suporte a 50 req/s |
 
-**NFR crítico:** o Serviço de Lançamentos não pode ficar indisponível se o Consolidado Diário cair.
+**NFR crítico:** o Serviço de Lançamentos não pode ficar indisponível se a Consolidação Diária cair.
 
 ---
 
 ## Navegação Rápida
 
-- [Enunciado do desafio](../base-de-conhecimento/desafio-arquiteto-solucoes.md)
-- [Roteiro de execução](../base-de-conhecimento/roteiro.md)
 - [Decisões arquiteturais (ADRs)](adr/index.md)
+- [Guias de Engenharia](engenharia/conventional-commits.md)
 
 ---
 
