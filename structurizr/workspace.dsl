@@ -47,10 +47,10 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
         frontend -> lancamentos "Envia lançamentos" "REST/HTTPS"
         frontend -> consolidado "Consulta saldo" "REST/HTTPS"
         pdv -> lancamentos "Envia lançamentos via API" "REST/HTTPS · OAuth2 Client Credentials"
-        lancamentos -> authService "Valida token" "JWT/HTTPS"
+        lancamentos -> authService "Obtém chaves públicas (JWKS)" "HTTPS · cache local"
         lancamentos -> broker "Publica evento de lançamento"
         broker -> consolidado "Entrega evento para processamento"
-        consolidado -> authService "Valida token" "JWT/HTTPS"
+        consolidado -> authService "Obtém chaves públicas (JWKS)" "HTTPS · cache local"
 
     }
 

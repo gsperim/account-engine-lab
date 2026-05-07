@@ -79,5 +79,6 @@ nav:
     - ADR-001 — Padrão Arquitetural: adr/ADR-001-padrao-arquitetural.md
     - ADR-002 — Message Broker: adr/ADR-002-message-broker.md
     - ADR-003 — Outbox Pattern: adr/ADR-003-outbox-pattern.md
+    - ADR-004 — JWT e JWKS: adr/ADR-004-jwt-validacao-local.md
   - Glossário: glossario.md
   - Tags: tags.md
