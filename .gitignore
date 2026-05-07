@@ -24,6 +24,7 @@ base-de-conhecimento/
 CLAUDE.md
 AGENTS.md
 
-# Structurizr — arquivos gerados em runtime
+# Structurizr — arquivos gerados em runtime e links locais
 structurizr/.structurizr/
 structurizr/workspace.json
+structurizr/docs

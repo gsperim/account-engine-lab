@@ -15,6 +15,7 @@ services:
       - "8080:8080"
     volumes:
       - ./structurizr:/usr/local/structurizr
+      - ./docs:/usr/local/structurizr/docs:ro
     command: local
 
   # lancamentos:     # Serviço de Lançamentos — a definir
