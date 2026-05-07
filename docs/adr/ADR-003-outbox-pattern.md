@@ -88,3 +88,23 @@ Se o Relay cair entre a publicação e o UPDATE, o evento é republicado na pró
 - **Componente adicional** — o Outbox Relay precisa ser implementado, deployado e monitorado como parte do Serviço de Lançamentos
 - **Crescimento da tabela outbox** — eventos publicados devem ser purgados periodicamente para evitar crescimento ilimitado; estratégia de retenção necessária (relacionado a [C-04](../negocio/requisitos.md#c-04))
 - **At-least-once delivery obrigatório** — o consumidor deve ser idempotente; já garantido por [RF-04](../negocio/requisitos.md#rf-04)
+
+---
+
+## Caminho de Evolução
+
+O Transactional Outbox Pattern escala naturalmente por replicação: cada novo serviço produtor de eventos recebe sua própria tabela `outbox` no seu próprio banco — alinhado ao [P-04](../negocio/principios.md#p-04) (Database per Service). O padrão não muda; o que cresce é o número de instâncias do relay.
+
+O custo operacional do relay é o ponto de inflexão:
+
+| Estágio | Abordagem do Relay | Quando adotar |
+|---|---|---|
+| **Atual** (1–2 serviços) | Thread ou goroutine dentro do próprio serviço; polling simples | Escopo atual — zero infra adicional |
+| **Crescimento** (3–5 serviços) | Relay extraído como biblioteca ou sidecar reutilizável | Quando o boilerplate se repete em mais de dois serviços |
+| **Escala** | **CDC com Debezium** lendo o WAL do PostgreSQL | Quando a latência de polling vira problema ou o número de serviços produtores cresce significativamente |
+
+### CDC com Debezium
+
+Em vez de um processo que faz `SELECT WHERE publicado = false` periodicamente, o [Debezium](https://debezium.io/) lê o *Write-Ahead Log* (WAL) do PostgreSQL diretamente. Cada `INSERT` na tabela `outbox` é capturado em tempo real, sem polling e sem código de relay customizado. A infraestrutura de captura fica centralizada; o contrato por serviço (a tabela `outbox`) permanece idêntico.
+
+A transição de relay para CDC não exige mudança no esquema da tabela `outbox` nem no código do serviço produtor — apenas a substituição do componente de relay. O contrato de mensagens ([RF-05](../negocio/requisitos.md#rf-05), schemas de eventos) permanece estável, facilitando a migração.
