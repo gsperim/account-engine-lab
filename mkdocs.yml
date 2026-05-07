@@ -74,6 +74,8 @@ nav:
     - Domínios, Value Stream e Capacidades: negocio/dominios.md
     - Requisitos: negocio/requisitos.md
   - Ferramentas e Stack: stack.md
+  - Engenharia:
+    - Contratos de Integração: engenharia/contratos.md
   - Decisões Arquiteturais:
     - Índice: adr/index.md
     - ADR-001 — Padrão Arquitetural: adr/ADR-001-padrao-arquitetural.md
