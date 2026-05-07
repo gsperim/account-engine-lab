@@ -1,4 +1,4 @@
-workspace "Fluxo de Caixa Diário" "Desafio Banco Carrefour — Controle de Fluxo de Caixa" {
+workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
 
     model {
 

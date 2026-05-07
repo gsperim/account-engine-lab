@@ -26,7 +26,7 @@ A cadeia *Dor → Requisito → Decisão Arquitetural → Componente* serve a um
 |-------------|-------|--------------------|-----------  |
 | Comerciante | Usuário final do sistema | Controlar o fluxo de caixa com precisão e em tempo real | Disponibilidade e confiabilidade dos dados financeiros |
 | Equipe de Operações | Operação e suporte do sistema | Estabilidade, desempenho e rastreabilidade de incidentes | Independência entre serviços em caso de falha |
-| Banco Carrefour | Patrocinador e dono do produto | Produto financeiro que gere valor ao comerciante parceiro | Escalabilidade, segurança e conformidade regulatória |
+| Instituição Financeira | Patrocinador e dono do produto | Produto financeiro que gere valor ao comerciante parceiro | Escalabilidade, segurança e conformidade regulatória |
 
 ---
 

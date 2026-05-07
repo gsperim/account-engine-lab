@@ -23,7 +23,7 @@ warn()    { echo -e "${YELLOW}⚠ $*${RESET}"; }
 error()   { echo -e "${RED}✗ $*${RESET}"; exit 1; }
 
 echo ""
-echo -e "${BOLD}Controle de Fluxo de Caixa Diário — Banco Carrefour${RESET}"
+echo -e "${BOLD}Controle de Fluxo de Caixa Diário${RESET}"
 echo "────────────────────────────────────────────────────"
 echo ""
 

@@ -1,4 +1,4 @@
-# Fluxo de Caixa Diário — Banco Carrefour
+# Fluxo de Caixa Diário
 
 Portal de documentação do desafio técnico para a vaga de **Arquiteto de Soluções**.
 

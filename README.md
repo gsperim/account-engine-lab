@@ -1,4 +1,4 @@
-# Controle de Fluxo de Caixa Diário — Desafio Banco Carrefour
+# Controle de Fluxo de Caixa Diário
 
 Sistema de controle financeiro para comerciantes com dois serviços independentes:
 
