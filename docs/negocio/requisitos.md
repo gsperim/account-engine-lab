@@ -54,6 +54,8 @@ tags:
 | `data_competencia` | date | Data de competência confirmada |
 | `descricao` | string | Descrição confirmada |
 | `criado_em` | datetime | Timestamp UTC de criação do registro |
+| `estorno_de` | uuid \| null | Preenchido se este lançamento é um estorno — ID do lançamento original; `null` caso contrário |
+| `estornado_por` | uuid \| null | Preenchido se este lançamento foi estornado — ID do lançamento de estorno; `null` caso contrário |
 
 **Regras de negócio:**
 - Lançamentos são **imutáveis** após confirmação — não podem ser editados nem excluídos. Para corrigir um lançamento, registra-se um lançamento compensatório.
@@ -80,6 +82,7 @@ tags:
 - [ ] Dado `tipo` inválido, deve retornar HTTP 422
 - [ ] O evento `LancamentoRegistrado` deve ser publicado após cada registro bem-sucedido
 - [ ] Uma falha no broker não deve impedir o registro do lançamento
+- [ ] Os campos `estorno_de` e `estornado_por` devem ser `null` para lançamentos comuns recém-criados
 
 ---
 
@@ -101,8 +104,16 @@ tags:
 
 | Campo | Tipo | Descrição |
 |-------|------|-----------|
-| `itens` | array | Lista de lançamentos |
-| `total` | integer | Total de registros no período |
+| `itens` | array | Lista de lançamentos — cada item segue o schema abaixo |
+| `itens[].id` | uuid | Identificador do lançamento |
+| `itens[].tipo` | enum | `debito` ou `credito` |
+| `itens[].valor` | decimal | Valor do lançamento |
+| `itens[].data_competencia` | date | Data de competência |
+| `itens[].descricao` | string | Descrição do lançamento |
+| `itens[].criado_em` | datetime | Timestamp UTC de criação |
+| `itens[].estorno_de` | uuid \| null | ID do lançamento original, se este item é um estorno |
+| `itens[].estornado_por` | uuid \| null | ID do estorno, se este item foi estornado |
+| `total` | integer | Total de registros no período (sem paginação) |
 | `pagina` | integer | Página atual |
 | `tamanho` | integer | Tamanho da página |
 
@@ -342,7 +353,9 @@ sequenceDiagram
 | `tipo` | enum | Tipo inverso ao original: `credito` vira `debito` e vice-versa |
 | `valor` | decimal | Mesmo valor do lançamento original |
 | `data_competencia` | date | Mesma data de competência do original |
+| `descricao` | string | Descrição gerada automaticamente referenciando o lançamento original |
 | `estorno_de` | uuid | ID do lançamento original — vínculo explícito e rastreável |
+| `estornado_por` | null | Sempre `null` — um estorno não pode ser estornado novamente ([RF-08](#rf-08)) |
 | `motivo` | string | Motivo registrado |
 | `criado_em` | datetime | Timestamp UTC do estorno |
 
