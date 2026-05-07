@@ -2,7 +2,8 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
 
     model {
 
-        comerciante = person "Comerciante" "Proprietário que precisa controlar o fluxo de caixa diário."
+        caixa = person "Caixa" "Operador que registra débitos e créditos no momento da transação."
+        gestor = person "Gestor" "Responsável por acompanhar o saldo consolidado e tomar decisões financeiras."
 
         sistema = softwareSystem "Sistema de Fluxo de Caixa" "Controla lançamentos financeiros e consolida saldos diários." {
             !docs overview.md
@@ -26,8 +27,8 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
 
         }
 
-        comerciante -> lancamentos "Registra lançamentos (débitos e créditos)"
-        comerciante -> consolidado "Consulta saldo diário consolidado"
+        caixa -> lancamentos "Registra débitos e créditos"
+        gestor -> consolidado "Consulta saldo diário consolidado"
         lancamentos -> broker "Publica evento de lançamento"
         broker -> consolidado "Entrega evento para processamento"
 
