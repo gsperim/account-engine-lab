@@ -23,3 +23,7 @@ Thumbs.db
 base-de-conhecimento/
 CLAUDE.md
 AGENTS.md
+
+# Structurizr — arquivos gerados em runtime
+structurizr/.structurizr/
+structurizr/workspace.json

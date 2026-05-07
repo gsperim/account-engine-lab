@@ -44,7 +44,7 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
             autoLayout
         }
 
-        theme default
+        themes theme.json
 
     }
 
