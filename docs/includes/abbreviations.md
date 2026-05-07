@@ -10,3 +10,22 @@
 *[API]: Application Programming Interface — interface que define como componentes se comunicam
 *[DDD]: Domain-Driven Design — abordagem de design de software centrada no modelo de domínio
 *[C4]: Modelo de diagramas arquiteturais em 4 níveis: Context, Containers, Components e Code
+
+*[Lançamento]: Registro de uma movimentação financeira com tipo (débito ou crédito), valor, data de competência e descrição
+*[lançamento]: Registro de uma movimentação financeira com tipo (débito ou crédito), valor, data de competência e descrição
+*[lançamentos]: Registros de movimentações financeiras com tipo (débito ou crédito), valor, data de competência e descrição
+*[Lançamentos]: Registros de movimentações financeiras com tipo (débito ou crédito), valor, data de competência e descrição
+*[Débito]: Lançamento que representa uma saída de caixa — reduz o saldo
+*[débito]: Lançamento que representa uma saída de caixa — reduz o saldo
+*[Crédito]: Lançamento que representa uma entrada de caixa — aumenta o saldo
+*[crédito]: Lançamento que representa uma entrada de caixa — aumenta o saldo
+*[Saldo]: Resultado líquido dos lançamentos em um período: soma dos créditos menos a soma dos débitos
+*[saldo]: Resultado líquido dos lançamentos em um período: soma dos créditos menos a soma dos débitos
+*[Consolidação Diária]: Saldo calculado considerando todos os lançamentos de uma data de competência específica
+*[consolidação diária]: Saldo calculado considerando todos os lançamentos de uma data de competência específica
+*[Data de Competência]: Data à qual o lançamento se refere financeiramente, independente da data de registro
+*[data de competência]: Data à qual o lançamento se refere financeiramente, independente da data de registro
+*[Fluxo de Caixa]: Sequência temporal de lançamentos que representa a movimentação financeira do comerciante
+*[fluxo de caixa]: Sequência temporal de lançamentos que representa a movimentação financeira do comerciante
+*[Comerciante]: Pessoa física ou jurídica proprietária do negócio que utiliza o sistema para controlar seu caixa
+*[comerciante]: Pessoa física ou jurídica proprietária do negócio que utiliza o sistema para controlar seu caixa

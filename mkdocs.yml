@@ -42,7 +42,10 @@ markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
+  - abbr
   - pymdownx.snippets:
+      base_path:
+        - docs
       auto_append:
         - includes/abbreviations.md
   - admonition

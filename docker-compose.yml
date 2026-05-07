@@ -6,11 +6,11 @@ services:
       - "8000:8000"
     volumes:
       - .:/docs
-    command: serve --dev-addr=0.0.0.0:8000
+    command: serve --dev-addr=0.0.0.0:8000 --watch docs --watch mkdocs.yml --livereload
 
   structurizr:
     image: structurizr/structurizr
-    user: root
+    user: "0"
     ports:
       - "8080:8080"
     volumes:
