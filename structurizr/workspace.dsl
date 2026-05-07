@@ -41,6 +41,21 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
                 tags "Broker"
             }
 
+            dbLancamentos = container "PostgreSQL (Lançamentos)" {
+                description "Banco de dados exclusivo do Serviço de Lançamentos. Armazena lançamentos e tabela outbox. Isolado por P-04."
+                tags "Database"
+            }
+
+            dbConsolidado = container "PostgreSQL (Consolidação)" {
+                description "Banco de dados exclusivo do Serviço de Consolidação Diária. Armazena saldos consolidados e lançamentos processados. Isolado por P-04."
+                tags "Database"
+            }
+
+            cache = container "Redis (Cache de Saldos)" {
+                description "Cache de leitura para saldos consolidados por data. Reduz carga no banco e suporta o pico de 50 req/s do NFR-02."
+                tags "Cache"
+            }
+
         }
 
         caixa -> authService "Autentica" "OAuth2 Authorization Code"
@@ -54,8 +69,11 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
         gateway -> authService "Obtém chaves públicas (JWKS)" "HTTPS · cache local"
         gateway -> lancamentos "Roteia requisições de lançamento" "REST/HTTPS"
         gateway -> consolidado "Roteia requisições de saldo" "REST/HTTPS"
+        lancamentos -> dbLancamentos "Lê e escreve" "SQL/TCP"
         lancamentos -> broker "Publica evento de lançamento"
         broker -> consolidado "Entrega evento para processamento"
+        consolidado -> dbConsolidado "Lê e escreve" "SQL/TCP"
+        consolidado -> cache "Lê e invalida saldos" "Redis Protocol/TCP"
 
     }
 
@@ -83,6 +101,16 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
                 background "#e67e00"
                 color "#ffffff"
                 shape "RoundedBox"
+            }
+            element "Database" {
+                background "#1e6b3a"
+                color "#ffffff"
+                shape "Cylinder"
+            }
+            element "Cache" {
+                background "#a93226"
+                color "#ffffff"
+                shape "Cylinder"
             }
         }
 
