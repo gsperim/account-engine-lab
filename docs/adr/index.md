@@ -38,3 +38,7 @@ Materiais externos que embasam ou influenciam decisões arquiteturais deste proj
 | Tema | Recurso |
 |------|---------|
 | Estratégias de cache com Redis (técnicas: Cache-Aside, Write-Through, Read-Through, TTL, eviction) | [Database Caching Strategies Using Redis — AWS Whitepaper](https://docs.aws.amazon.com/pdfs/whitepapers/latest/database-caching-strategies-using-redis/database-caching-strategies-using-redis.pdf) |
+| Instrumentação de observabilidade — padrão unificado para traces, métricas e logs (D-10, D-11) | [OpenTelemetry — especificação e SDKs](https://opentelemetry.io/docs/) |
+| Rastreamento distribuído — visualização de traces em sistemas de microserviços (D-10) | [Jaeger — distributed tracing](https://www.jaegertracing.io/docs/) |
+| Padrão de campos de log estruturado — schema de referência para JSON logs (D-11) | [Elastic Common Schema (ECS)](https://www.elastic.co/guide/en/ecs/current/index.html) |
+| Pipeline de linhagem de dados e catálogo — analytics sobre dados operacionais (D-09) | [OpenMetadata — documentação](https://docs.open-metadata.org/) |
