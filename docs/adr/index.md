@@ -8,9 +8,9 @@ Registro das decisões arquiteturais relevantes do projeto, com contexto, altern
 
 | ADR | Título | Status | Data |
 |-----|--------|--------|------|
-| [ADR-001](ADR-001-ferramentas-documentacao-arquitetural.md) | Ferramentas de Documentação Arquitetural | Aceito | 2026-05-06 |
-| [ADR-002](ADR-002-mkdocs-portal-documentacao.md) | MkDocs Material como Portal de Documentação | Aceito | 2026-05-06 |
-| [ADR-003](ADR-003-archimate-notacao-arquitetural.md) | ArchiMate 3.x como Notação Arquitetural | Aceito | 2026-05-06 |
+| — | *Aguardando Etapa 2 — decisões arquiteturais do sistema* | — | — |
+
+> Decisões sobre ferramentas e stack de desenvolvimento estão em [Ferramentas e Stack](../stack.md).
 
 ---
 
