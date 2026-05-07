@@ -212,6 +212,30 @@ if adr_dir.exists():
                 err(adr_path.name, f"seção obrigatória ausente: '{section}'")
 
 
+# ── 8. Tags obrigatórias nas páginas de conteúdo ────────────────────────────
+
+FRONTMATTER_RE = re.compile(r"^---\n.*?\n---", re.DOTALL)
+
+DOCS_COM_TAGS = [
+    NEGOCIO_DIR / "drivers.md",
+    NEGOCIO_DIR / "requisitos.md",
+    NEGOCIO_DIR / "principios.md",
+    NEGOCIO_DIR / "dominios.md",
+    NEGOCIO_DIR / "visao-executiva.md",
+    DOCS_DIR / "glossario.md",
+    DOCS_DIR / "stack.md",
+    DOCS_DIR / "planejamento.md",
+]
+
+for path in DOCS_COM_TAGS:
+    if not path.exists():
+        continue
+    content = path.read_text(encoding="utf-8")
+    fm_match = FRONTMATTER_RE.match(content)
+    if not fm_match or "tags:" not in fm_match.group(0):
+        warn(path.name, "frontmatter tags: ausente — adicione ao menos uma tag")
+
+
 # ── Resultado ─────────────────────────────────────────────────────────────────
 
 print("\n── Validação de Documentação " + "─" * 45)
