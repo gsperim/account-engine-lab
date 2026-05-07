@@ -9,10 +9,17 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
             tags "External"
         }
 
+        pdv = softwareSystem "Sistema PDV" "Ponto de venda externo que envia lançamentos diretamente via API — canal alternativo ao frontend para operações integradas." {
+            tags "External"
+        }
+
         sistema = softwareSystem "Sistema de Fluxo de Caixa" "Controla lançamentos financeiros e consolida saldos diários." {
             !docs overview.md
 
-
+            frontend = container "Aplicação Web" {
+                description "Interface para registro de lançamentos pelo Caixa e consulta de saldo consolidado pelo Gestor."
+                tags "Web"
+            }
 
             lancamentos = container "Serviço de Lançamentos" {
                 description "Registra débitos e créditos. Não pode ficar indisponível se a Consolidação cair."
@@ -33,8 +40,11 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
 
         caixa -> authService "Autentica"
         gestor -> authService "Autentica"
-        caixa -> lancamentos "Registra débitos e créditos"
-        gestor -> consolidado "Consulta saldo diário consolidado"
+        caixa -> frontend "Registra lançamentos" "HTTPS"
+        gestor -> frontend "Consulta saldo consolidado" "HTTPS"
+        frontend -> lancamentos "Envia lançamentos" "REST/HTTPS"
+        frontend -> consolidado "Consulta saldo" "REST/HTTPS"
+        pdv -> lancamentos "Envia lançamentos via API" "REST/HTTPS"
         lancamentos -> broker "Publica evento de lançamento"
         broker -> consolidado "Entrega evento para processamento"
         sistema -> authService "Valida tokens de acesso" "JWT/HTTPS"
