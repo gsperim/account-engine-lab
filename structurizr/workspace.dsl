@@ -21,6 +21,11 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
                 tags "Web"
             }
 
+            gateway = container "API Gateway" {
+                description "Ponto de entrada único para todas as requisições. Responsável por autenticação (JWKS), rate limiting (NFR-07) e roteamento para os serviços internos."
+                tags "Gateway"
+            }
+
             lancamentos = container "Serviço de Lançamentos" {
                 description "Registra débitos e créditos. Não pode ficar indisponível se a Consolidação cair."
                 tags "Service"
@@ -44,13 +49,13 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
         caixa -> frontend "Registra lançamentos" "HTTPS"
         gestor -> frontend "Consulta saldo consolidado" "HTTPS"
         frontend -> authService "Redireciona para login" "OAuth2 Authorization Code"
-        frontend -> lancamentos "Envia lançamentos" "REST/HTTPS"
-        frontend -> consolidado "Consulta saldo" "REST/HTTPS"
-        pdv -> lancamentos "Envia lançamentos via API" "REST/HTTPS · OAuth2 Client Credentials"
-        lancamentos -> authService "Obtém chaves públicas (JWKS)" "HTTPS · cache local"
+        frontend -> gateway "Envia requisições" "REST/HTTPS"
+        pdv -> gateway "Envia lançamentos via API" "REST/HTTPS · OAuth2 Client Credentials"
+        gateway -> authService "Obtém chaves públicas (JWKS)" "HTTPS · cache local"
+        gateway -> lancamentos "Roteia requisições de lançamento" "REST/HTTPS"
+        gateway -> consolidado "Roteia requisições de saldo" "REST/HTTPS"
         lancamentos -> broker "Publica evento de lançamento"
         broker -> consolidado "Entrega evento para processamento"
-        consolidado -> authService "Obtém chaves públicas (JWKS)" "HTTPS · cache local"
 
     }
 
@@ -73,6 +78,11 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
                 background "#999999"
                 color "#ffffff"
                 opacity 50
+            }
+            element "Gateway" {
+                background "#e67e00"
+                color "#ffffff"
+                shape "RoundedBox"
             }
         }
 
