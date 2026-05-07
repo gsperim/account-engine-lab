@@ -164,4 +164,13 @@ Os contratos detalhados de cada endpoint (campos de entrada, saída, códigos HT
 | `/consolidacao/reconciliacao` | POST | [RF-06](../negocio/requisitos.md#rf-06) | Consolidação |
 | `/consolidacao/periodo` | GET | [RF-09](../negocio/requisitos.md#rf-09) | Consolidação |
 
-> O contrato formal em OpenAPI (Swagger) será gerado na Etapa 7 — Implementação, quando os endpoints estiverem codificados.
+> **Etapa 7 — Spec-Driven Development:** os contratos Markdown desta página são a base conceitual. Na implementação, eles devem ser convertidos em artefatos machine-readable que dirigem o desenvolvimento:
+>
+> | Artefato | Ferramenta | Finalidade |
+> |----------|-----------|-----------|
+> | `openapi.yaml` | OpenAPI 3.x | Contratos REST — geração de stubs de servidor, SDKs de cliente e mock server |
+> | `asyncapi.yaml` | AsyncAPI 3.x | Contratos de eventos — documentação, geração de código de producer/consumer e binding RabbitMQ |
+> | Mock server | Prism / WireMock | Sobe servidor falso a partir do `openapi.yaml`; frontend desenvolve sem esperar backend |
+> | Contract validation | Dredd / Schemathesis | Valida em CI que a implementação não quebrou o contrato — falha o build se houver divergência |
+>
+> O fluxo SDD é: **spec → mock → implementar → validar contra a spec**. O contrato é a fonte de verdade, não o código.
