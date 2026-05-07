@@ -12,6 +12,12 @@
 *[C4]: Modelo de diagramas arquiteturais em 4 níveis: Context, Containers, Components e Code
 *[LGPD]: Lei Geral de Proteção de Dados (Lei 13.709/2018) — regula o tratamento de dados pessoais no Brasil
 
+*[at-least-once delivery]: Garantia de entrega onde cada mensagem é processada pelo menos uma vez — reentregas são possíveis, por isso o consumidor deve ser idempotente
+*[at-least-once]: Garantia de entrega onde cada mensagem é processada pelo menos uma vez — reentregas são possíveis, por isso o consumidor deve ser idempotente
+*[retry]: Mecanismo de reenvio automático de uma operação que falhou, geralmente com espera crescente entre tentativas (exponential backoff) para evitar sobrecarga
+*[Retry]: Mecanismo de reenvio automático de uma operação que falhou, geralmente com espera crescente entre tentativas (exponential backoff) para evitar sobrecarga
+*[exponential backoff]: Estratégia de retry onde o intervalo entre tentativas cresce exponencialmente, reduzindo pressão sobre sistemas sobrecarregados
+
 *[Lançamento]: Registro de uma movimentação financeira com tipo (débito ou crédito), valor, data de competência e descrição
 *[lançamento]: Registro de uma movimentação financeira com tipo (débito ou crédito), valor, data de competência e descrição
 *[lançamentos]: Registros de movimentações financeiras com tipo (débito ou crédito), valor, data de competência e descrição
