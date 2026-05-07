@@ -5,6 +5,7 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
         comerciante = person "Comerciante" "Proprietário que precisa controlar o fluxo de caixa diário."
 
         sistema = softwareSystem "Sistema de Fluxo de Caixa" "Controla lançamentos financeiros e consolida saldos diários." {
+            !docs overview.md
 
 
 
