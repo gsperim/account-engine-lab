@@ -15,15 +15,15 @@ tags:
 
 | ID | Descrição resumida | Serviço | Driver |
 |----|-------------------|---------|--------|
-| RF-01 | Registrar lançamento (débito ou crédito) | Lançamentos | [D-01](drivers.md#d-01) |
-| RF-02 | Consultar lançamentos por período | Lançamentos | [D-01](drivers.md#d-01) |
-| RF-03 | Consultar saldo consolidado de um dia | Consolidação | [D-02](drivers.md#d-02) |
-| RF-04 | Atualizar saldo consolidado após cada lançamento | Consolidação | [D-02](drivers.md#d-02), [D-05](drivers.md#d-05) |
-| RF-05 | Validar e rejeitar lançamentos inválidos | Lançamentos | [D-01](drivers.md#d-01) |
-| 🔹 RF-06 | Reconciliar totais do consolidado com os lançamentos | Consolidação | [D-05](drivers.md#d-05) |
-| 🔹 RF-07 | Solicitar recálculo assíncrono de totais por período | Lançamentos | [D-07](drivers.md#d-07) |
-| 🔹 RF-08 | Registrar estorno rastreável de lançamento | Lançamentos | [D-01](drivers.md#d-01) |
-| 🔹 RF-09 | Consultar consolidação por período e granularidade | Consolidação | [D-02](drivers.md#d-02) |
+| [RF-01](#rf-01) | Registrar lançamento (débito ou crédito) | Lançamentos | [D-01](drivers.md#d-01) |
+| [RF-02](#rf-02) | Consultar lançamentos por período | Lançamentos | [D-01](drivers.md#d-01) |
+| [RF-03](#rf-03) | Consultar saldo consolidado de um dia | Consolidação | [D-02](drivers.md#d-02) |
+| [RF-04](#rf-04) | Atualizar saldo consolidado após cada lançamento | Consolidação | [D-02](drivers.md#d-02), [D-05](drivers.md#d-05) |
+| [RF-05](#rf-05) | Validar e rejeitar lançamentos inválidos | Lançamentos | [D-01](drivers.md#d-01) |
+| 🔹 [RF-06](#rf-06) | Reconciliar totais do consolidado com os lançamentos | Consolidação | [D-05](drivers.md#d-05) |
+| 🔹 [RF-07](#rf-07) | Solicitar recálculo assíncrono de totais por período | Lançamentos | [D-07](drivers.md#d-07) |
+| 🔹 [RF-08](#rf-08) | Registrar estorno rastreável de lançamento | Lançamentos | [D-01](drivers.md#d-01) |
+| 🔹 [RF-09](#rf-09) | Consultar consolidação por período e granularidade | Consolidação | [D-02](drivers.md#d-02) |
 
 > 🔹 Requisitos marcados com este símbolo são **escopo diferencial** — vão além do enunciado original do desafio e refletem maturidade arquitetural em sistemas financeiros reais.
 
@@ -73,6 +73,7 @@ tags:
 | Falha na publicação do evento | Registrar lançamento e garantir reentrega via mecanismo de retry/outbox |
 
 **Critérios de aceite:**
+
 - [ ] Dado um lançamento válido, deve retornar HTTP 201 com o recurso criado
 - [ ] Dado qualquer campo obrigatório ausente, deve retornar HTTP 422 com mensagem descritiva
 - [ ] Dado `valor` ≤ 0, deve retornar HTTP 422
@@ -117,6 +118,7 @@ tags:
 | Período muito amplo (anos) | Aceitar — paginação garante desempenho |
 
 **Critérios de aceite:**
+
 - [ ] Dado um período válido, deve retornar HTTP 200 com a lista paginada
 - [ ] Dado período sem lançamentos, deve retornar HTTP 200 com lista vazia (não 404)
 - [ ] Dado `data_inicio` > `data_fim`, deve retornar HTTP 422
@@ -157,6 +159,7 @@ tags:
 | Consolidado ainda não processado para a data | Retornar HTTP 200 com os dados disponíveis até o momento |
 
 **Critérios de aceite:**
+
 - [ ] Dado uma data com lançamentos, deve retornar HTTP 200 com os totais corretos
 - [ ] Dado uma data sem lançamentos, deve retornar HTTP 200 com zeros (não 404)
 - [ ] O saldo deve ser igual a `total_creditos` − `total_debitos`
@@ -202,6 +205,7 @@ WHERE data = :data;
 A idempotência emerge naturalmente do design: se o evento for entregue mais de uma vez, o `INSERT ... ON CONFLICT DO NOTHING` resulta em `0 rows affected` e o `UPDATE` recalcula o mesmo valor já existente. Não é necessário detectar explicitamente se o evento está sendo reprocessado.
 
 **Critérios de aceite:**
+
 - [ ] Dado um evento `LancamentoRegistrado` recebido, o saldo do dia correspondente deve ser atualizado
 - [ ] Dado o mesmo evento processado duas vezes, o saldo não deve ser duplicado (idempotência)
 - [ ] Dado o serviço indisponível temporariamente, os eventos devem ser processados após a recuperação
@@ -224,6 +228,7 @@ Detalhado como parte das regras e casos de borda do [RF-01](#rf-01). A validaç�
 | `descricao` | Ausente ou com menos de 3 caracteres | 422 |
 
 **Critérios de aceite:**
+
 - [ ] Toda rejeição deve retornar HTTP 422 com mensagem que identifica o campo inválido
 - [ ] Múltiplos campos inválidos devem ser reportados em uma única resposta
 
@@ -249,6 +254,7 @@ Detalhado como parte das regras e casos de borda do [RF-01](#rf-01). A validaç�
 - A reconciliação não altera dados — apenas detecta e alerta; correção é feita via [RF-07](#rf-07)
 
 **Critérios de aceite:**
+
 - [ ] Dado saldos consistentes, a reconciliação deve completar sem alertas
 - [ ] Dado uma divergência real, deve gerar alerta com a data afetada e os valores divergentes
 - [ ] Dado dias sem lançamentos, não deve gerar alertas falsos positivos
@@ -284,6 +290,7 @@ Detalhado como parte das regras e casos de borda do [RF-01](#rf-01). A validaç�
 - Re-solicitação do mesmo intervalo é idempotente — a Consolidação absorve sem duplicar valores
 
 **Critérios de aceite:**
+
 - [ ] Dado um intervalo válido, deve retornar HTTP 202 imediatamente com `job_id`
 - [ ] Dado `data_inicio` > `data_fim`, deve retornar HTTP 422
 - [ ] Para cada dia com lançamentos no intervalo, deve ser publicado exatamente um evento `TotaisDiarioCalculado`
@@ -345,6 +352,7 @@ sequenceDiagram
 - O estorno publica o evento `LancamentoEstornado` após persistência confirmada
 
 **Critérios de aceite:**
+
 - [ ] Dado um lançamento de crédito estornado, deve criar um débito com o mesmo valor na mesma data de competência
 - [ ] O campo `estorno_de` deve apontar para o `id` do lançamento original
 - [ ] Dado tentativa de estornar um estorno, deve retornar HTTP 422
@@ -379,6 +387,7 @@ sequenceDiagram
 - Períodos sem lançamentos retornam zeros — não são omitidos da resposta
 
 **Critérios de aceite:**
+
 - [ ] Dado granularidade `dia`, deve retornar um registro por dia no intervalo
 - [ ] Dado granularidade `semana`, deve retornar um registro por semana ISO
 - [ ] Dado granularidade `mes`, deve retornar um registro por mês
