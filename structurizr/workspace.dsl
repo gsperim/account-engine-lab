@@ -38,13 +38,14 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
 
         }
 
-        caixa -> authService "Autentica"
-        gestor -> authService "Autentica"
+        caixa -> authService "Autentica" "OAuth2 Authorization Code"
+        gestor -> authService "Autentica" "OAuth2 Authorization Code"
+        pdv -> authService "Autentica" "OAuth2 Client Credentials"
         caixa -> frontend "Registra lançamentos" "HTTPS"
         gestor -> frontend "Consulta saldo consolidado" "HTTPS"
         frontend -> lancamentos "Envia lançamentos" "REST/HTTPS"
         frontend -> consolidado "Consulta saldo" "REST/HTTPS"
-        pdv -> lancamentos "Envia lançamentos via API" "REST/HTTPS"
+        pdv -> lancamentos "Envia lançamentos via API" "REST/HTTPS · OAuth2 Client Credentials"
         lancamentos -> broker "Publica evento de lançamento"
         broker -> consolidado "Entrega evento para processamento"
         sistema -> authService "Valida tokens de acesso" "JWT/HTTPS"
