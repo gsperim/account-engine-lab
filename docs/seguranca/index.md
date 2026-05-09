@@ -102,12 +102,16 @@ Todo access token carrega os seguintes claims relevantes para autorização:
 | `POST /lancamentos/recalcular` | ❌ | ❌ | ❌ | ✅ |
 | `POST /consolidacao/reconciliacao` | ❌ | ❌ | ❌ | ✅ |
 
-**Regra de autorização aplicada em dois níveis:**
+**Regra de autorização — onde cada verificação ocorre:**
 
-1. **API Gateway** — valida o JWT e verifica se o escopo necessário está presente no token. Rejeita com HTTP 401 (token inválido) ou 403 (escopo ausente) antes da requisição chegar ao serviço.
-2. **Serviço** — verifica o `role` do claim para decisões de autorização mais finas (ex: um Gestor com `lancamentos:read` não pode acessar reconciliação mesmo que o gateway deixasse passar).
+| Verificação | Responsável | Mecanismo |
+|-------------|-------------|-----------|
+| Assinatura JWT válida | **Gateway** | JWKS cache local — zero chamada de rede por requisição |
+| Token não expirado (`exp`) | **Gateway** | Verificação local do claim |
+| Escopo presente (`scope`) | **Gateway** | Comparação do claim com o escopo exigido pela rota |
+| Role autorizado para a operação | **Serviço** | Leitura do header `X-User-Role` injetado pelo gateway |
 
-Essa redundância de verificação segue o princípio **defense in depth** — um bypass no gateway não expõe o serviço.
+O serviço **não valida o JWT** e **não consulta nenhum store de autenticação**. Recebe os claims pré-validados como headers (`X-User-Id`, `X-User-Role`, `X-Scopes`) e confia neles — o gateway é o único ponto de validação criptográfica.
 
 ---
 
@@ -152,38 +156,41 @@ flowchart TD
 
 ## Ciclo de Vida do Token e Revogação
 
+Decisão completa em [ADR-013](../adr/ADR-013-revogacao-tokens.md). Resumo:
+
+| Parâmetro | Valor |
+|-----------|-------|
+| Access token TTL | **5 minutos** |
+| Refresh token TTL | **24 horas** (configurável) |
+| Refresh rotation | A cada uso — refresh anterior invalidado |
+| Blacklist Redis | **Não implementada** — ver ADR-013 |
+
 ```mermaid
 sequenceDiagram
     actor U as Usuário
     participant A as Auth Service
     participant GW as API Gateway
     participant S as Serviço
-    participant R as Redis (blacklist)
 
     U->>A: login (Authorization Code + PKCE)
-    A-->>U: access_token (TTL 15min) + refresh_token
+    A-->>U: access_token (TTL 5min) + refresh_token
 
     U->>GW: requisição + Bearer token
-    GW->>GW: valida assinatura JWT (JWKS local)
-    GW->>S: requisição (token válido)
-    S->>R: jti na blacklist?
-    R-->>S: não
+    GW->>GW: valida assinatura + exp + scope (JWKS local)
+    GW->>S: headers X-User-Id, X-User-Role, X-Scopes
     S-->>U: resposta
 
-    note over U,R: Logout / comprometimento de credencial
+    note over U,S: Logout explícito
 
-    U->>A: POST /logout
-    A->>R: SET blacklist:{jti} EX {tempo_restante}
-    A->>A: invalida refresh_token
+    U->>A: POST /logout (refresh_token)
+    A->>A: invalida refresh_token no store
+    A-->>U: HTTP 200
 
-    U->>GW: nova requisição com token antigo
-    GW->>S: token ainda válido (não expirou)
-    S->>R: jti na blacklist?
-    R-->>S: sim — jti encontrado
-    S-->>U: HTTP 401 Unauthorized
+    note over GW: Access token expira em até 5 minutos
+    note over A: Sem refresh_token válido, não há renovação
 ```
 
-A lista de revogação em Redis mantém apenas tokens não expirados — o `EX` é definido como o tempo restante até `exp`. Ao expirar naturalmente, a entrada some do Redis automaticamente. O conjunto é sempre pequeno (TTL máximo de 15 minutos por entrada).
+**Por que não há blacklist Redis:** adicionar uma consulta Redis por requisição violaria a separação de responsabilidades (auth é função do gateway, não do serviço) e anularia a vantagem principal do JWT — validação local sem I/O. A janela de 5 minutos após logout é o trade-off aceito para este perfil de risco. Alternativas avaliadas e descartadas estão documentadas no ADR-013.
 
 ---
 

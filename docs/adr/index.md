@@ -37,6 +37,12 @@ Decisões sobre modelagem, persistência e consistência de dados — separadas 
 |-----|---------|--------|------|
 | [ADR-012](ADR-012-persistencia.md) | Modelagem de Dados e Mecanismos de Persistência: NUMERIC, UUID, Outbox Polling, Read Model | Aceito | 2026-05-09 |
 
+## Decisões de Segurança
+
+| ADR | Decisão | Status | Data |
+|-----|---------|--------|------|
+| [ADR-013](ADR-013-revogacao-tokens.md) | Revogação de Tokens: TTL 5min + Refresh Rotation (sem blacklist Redis) | Aceito | 2026-05-09 |
+
 ---
 
 ## Convenção
