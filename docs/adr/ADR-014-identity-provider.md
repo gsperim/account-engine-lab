@@ -6,7 +6,7 @@ tags:
   - identidade
 ---
 
-# ADR-014 — Identity Provider: Keycloak
+# ADR-014 — Identity Provider: Keycloak como capacidade externa
 
 **Papéis:** 🔒 Arquiteto de Segurança · 🧩 Arquiteto de Soluções · ⚙️ Arquiteto de Tecnologia  
 **Data:** 2026-05-09  
@@ -133,4 +133,31 @@ A troca é possível porque a aplicação depende apenas do **JWKS URL** (variá
 
 - **Mais um container operacional** — em produção, Keycloak precisa de banco de dados próprio (PostgreSQL), alta disponibilidade e monitoramento. Mitigado pela opção de substituição por Cognito.
 - **Cold start em desenvolvimento** — Keycloak demora ~30s para inicializar em modo dev. Mitigado por `depends_on: condition: service_healthy` no compose.
-- **Configuração de realm** — a configuração inicial do realm (clients, roles, mappers) precisa ser versionada e importada. Endereçado na Etapa 7 com `realm-fluxocaixa.json`.
+- **Configuração de realm** — a configuração inicial do realm (clients, roles, mappers) precisa ser versionada e importada. Endereçado com `realm-fluxocaixa.json` com import automático via `--import-realm`.
+
+---
+
+## Adendo — Posicionamento Arquitetural: IdP como Sistema Externo
+
+**Data do adendo:** 2026-05-09  
+**Decisão:** o Keycloak (e qualquer IdP) é um **software system externo** ao Sistema de Fluxo de Caixa — não um container interno.
+
+### Contexto do adendo
+
+Durante a modelagem C4, o Keycloak foi inicialmente posicionado como um container dentro do sistema. Esse posicionamento foi identificado como incorreto por três razões:
+
+1. **Supporting Domain implica fronteira externa** — a classificação DDD deste ADR ("comprar ou adaptar") é incompatível com ownership interno. Um domínio que se compra não é seu sistema.
+
+2. **Capacidade corporativa compartilhável** — em um banco, o Identity Provider é operado por um time de IAM (Identity & Access Management) e compartilhado entre dezenas de sistemas. Modelar o IdP como interno implica que o Fluxo de Caixa o opera — o que não é verdade.
+
+3. **Portabilidade é um indicador de externalidade** — a própria decisão de "trocar por Cognito via variável de ambiente" demonstra que o IdP é substituível sem alterar o sistema. Componentes internos não são substituíveis dessa forma.
+
+### Consequência no modelo C4
+
+O Identity Provider aparece como `softwareSystem` externo no diagrama de contexto e container — ao lado do Sistema PDV. Isso reflete que:
+
+- O Sistema de Fluxo de Caixa **consome** o IdP, não o **opera**
+- Em dev: Keycloak 26 rodando localmente no mesmo docker-compose por conveniência operacional
+- Em prod: IdP corporativo (Cognito, Azure AD ou equivalente) — mesma interface OIDC/JWKS
+
+A coleta de telemetria do Keycloak pela nossa plataforma de observabilidade (Promtail captura stdout, Prometheus raspa `/metrics`) é uma exceção operacional do ambiente dev — em produção, a telemetria do IdP corporativo vai para a plataforma de observabilidade do time de IAM.

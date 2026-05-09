@@ -324,3 +324,145 @@ A mesma arquitetura de containers é mapeada para Kubernetes em produção — a
 | **Runtime de produção** | Kubernetes — mesmas imagens, orquestração gerenciada |
 
 > Para a visão técnica desta fase: [Topologia e Plataforma](infraestrutura/topologia.md) · [ADR-006 — Container Runtime](adr/ADR-006-container-runtime.md)
+
+---
+
+## Fase 4 — Como os dados são protegidos e organizados
+
+Com a infraestrutura definida, a Fase 4 garantiu que os dados financeiros sejam armazenados com a precisão e a integridade que uma operação de caixa exige. Três princípios guiaram todas as decisões desta fase.
+
+---
+
+### Cada centavo conta — precisão financeira não é opcional
+
+Sistemas que usam representação de ponto flutuante para valores monetários cometem erros de arredondamento. Para um saldo de R$ 1.000.000,00, a diferença pode ser de centavos — mas em auditoria financeira, qualquer divergência é um problema.
+
+O sistema armazena todos os valores com **precisão exata de 15 dígitos e 2 casas decimais**. Nenhum valor financeiro passa por representação aproximada em nenhum momento do ciclo de vida dos dados.
+
+---
+
+### Lançamentos são imutáveis — erros geram estornos, não edições
+
+Uma vez confirmado, um lançamento nunca é alterado. Se o operador cometeu um erro, o sistema registra um novo lançamento de estorno — criando uma trilha auditável completa de toda a movimentação.
+
+Isso é análogo a um livro-caixa físico: você não apaga o que está escrito, você registra a correção em uma linha nova. O resultado é um histórico financeiro que pode ser auditado em qualquer momento, sem lacunas ou alterações invisíveis.
+
+---
+
+### Os dados do módulo de registro nunca se misturam com os do módulo de saldo
+
+Cada serviço tem seu próprio banco de dados, inacessível ao outro em nível de rede — não apenas por configuração de software. Isso garante que uma falha em um banco não afeta o outro, e que a evolução de um serviço não quebra o schema do outro.
+
+---
+
+### O que foi definido nesta fase
+
+| O que | Decisão |
+|-------|---------|
+| **Precisão financeira** | Valores armazenados com precisão exata — sem ponto flutuante |
+| **Imutabilidade** | Lançamentos são append-only — correções geram estornos |
+| **Isolamento de dados** | Banco dedicado por serviço, inacessível entre serviços |
+| **Saldo pré-calculado** | Saldo por dia calculado incrementalmente — consulta em tempo constante |
+| **Retenção** | Dados financeiros retidos por 5 anos conforme legislação fiscal |
+| **Privacidade** | Nenhum dado pessoal armazenado nas tabelas financeiras por design |
+
+> Para a visão técnica desta fase: [Modelagem de Dados](arquitetura/dados.md) · [ADR-012 — Persistência](adr/ADR-012-persistencia.md)
+
+---
+
+## Fase 5 — Como o acesso é controlado e o sistema é protegido
+
+A Fase 5 definiu quem pode fazer o quê no sistema, como as identidades são verificadas, e como o sistema se comporta diante de ataques ou uso indevido.
+
+---
+
+### Nenhuma requisição é confiável por padrão
+
+O sistema adota o princípio de **confiança zero**: toda requisição — mesmo vindas de dentro da rede interna — precisa apresentar uma credencial válida. Não existe zona "segura" onde requisições são aceitas sem verificação.
+
+Na prática, isso significa que:
+- O Caixa e o Gestor fazem login com usuário e senha — o sistema emite uma credencial com validade de 5 minutos
+- O Sistema PDV se autentica com chaves de sistema — sem interação humana
+- O API Gateway verifica a credencial antes de qualquer requisição chegar aos serviços internos
+- Os serviços internos nunca recebem requisições não autenticadas
+
+---
+
+### Identidade é uma capacidade compartilhada, não um componente deste sistema
+
+A gestão de identidades (login, senhas, tokens) é operada por uma plataforma separada — não construída dentro deste sistema. Essa decisão segue o princípio de que sistemas de identidade são capacidades corporativas, potencialmente compartilhadas entre dezenas de sistemas.
+
+Em desenvolvimento: Keycloak local. Em produção: o Identity Provider corporativo do Banco Carrefour (ex: AWS Cognito, Azure AD). A troca não requer alteração no código dos serviços.
+
+---
+
+### Cada perfil tem acesso apenas ao que precisa
+
+| Perfil | Pode registrar lançamentos | Pode consultar saldo consolidado | Pode fazer reconciliação |
+|--------|:--------------------------:|:--------------------------------:|:------------------------:|
+| Caixa | ✅ | ❌ | ❌ |
+| Gestor | ❌ | ✅ | ❌ |
+| Admin | ✅ | ✅ | ✅ |
+| Sistema PDV | ✅ | ❌ | ❌ |
+
+---
+
+### O que foi definido nesta fase
+
+| O que | Decisão |
+|-------|---------|
+| **Modelo de acesso** | Confiança zero — toda requisição verificada, nenhuma zona implicitamente segura |
+| **Identidade** | Plataforma externa — não construída neste sistema, substituível sem mudança de código |
+| **Credenciais** | Validade de 5 minutos — sem listas de revogação, sem dependência de banco de dados por requisição |
+| **Autorização** | Escopos por operação — acesso mínimo necessário por perfil |
+| **Proteção contra abuso** | Rate limiting por camada — API Gateway bloqueia antes de chegar aos serviços |
+| **Auditoria** | Todo acesso e operação registrado com identidade, horário e resultado |
+
+> Para a visão técnica desta fase: [Segurança](seguranca/index.md) · [ADR-013 — Revogação de Tokens](adr/ADR-013-revogacao-tokens.md) · [ADR-014 — Identity Provider](adr/ADR-014-identity-provider.md)
+
+---
+
+## Fase 6 — Como sabemos que o sistema está funcionando
+
+A Fase 6 respondeu à pergunta que toda operação em produção precisa responder: **como você sabe, antes do cliente reclamar, que algo está errado?**
+
+---
+
+### Visibilidade completa em um único lugar
+
+Toda a telemetria do sistema — logs, métricas de performance, rastreamento de requisições e uso de recursos — converge em uma única interface de monitoramento. Um incidente que começa com um alerta de lentidão pode ser investigado sem trocar de ferramenta: do alerta, para a requisição lenta, para os logs daquele momento, para a linha de código que causou o problema.
+
+---
+
+### Compromissos mensuráveis — não intuição
+
+Cada compromisso de negócio firmado na Fase 1 foi traduzido em um indicador técnico monitorado continuamente:
+
+| Compromisso de negócio | Indicador técnico | Meta |
+|------------------------|-------------------|------|
+| Registro sempre disponível | Taxa de sucesso do `POST /lancamentos` | ≥ 99,5% nos últimos 30 dias |
+| Saldo suporta picos | Throughput sob carga | ≥ 50 req/s com < 5% de erros |
+| Saldo atualizado rapidamente | Tempo lançamento → saldo atualizado | < 30 segundos (p99) |
+| Zero mensagens perdidas | Mensagens na fila de reprocessamento | 0 por hora |
+
+Quando um indicador começa a se deteriorar — antes de violar a meta — o sistema alerta automaticamente a equipe de operação via Telegram (dev) ou PagerDuty (produção).
+
+---
+
+### Dados sensíveis nunca chegam ao monitoramento
+
+Antes de qualquer log ser persistido, o sistema aplica **redação automática de dados pessoais**: CPF, CNPJ, e-mail e número de cartão são substituídos por marcadores inidentificáveis. Isso acontece na camada de infraestrutura, sem depender de disciplina individual dos desenvolvedores — em conformidade com a LGPD.
+
+---
+
+### O que foi definido nesta fase
+
+| O que | Decisão |
+|-------|---------|
+| **Visibilidade** | Logs, métricas, traces e profiles centralizados em plataforma única |
+| **Alertas** | Baseados em consumo de budget de erro — alerta antes de violar a meta |
+| **Privacidade nos logs** | Redação automática de PII na camada de infraestrutura — LGPD |
+| **Uptime sintético** | Sondas ativas verificam disponibilidade dos componentes a cada 30 segundos |
+| **Rastreabilidade** | Cada requisição tem um identificador único que percorre todos os serviços |
+
+> Para a visão técnica desta fase: [Observabilidade](observabilidade/index.md) · [ADR-015 — Stack de Observabilidade](adr/ADR-015-observabilidade.md) · [ADR-016 — Redação de PII](adr/ADR-016-redacao-pii-logs.md)
