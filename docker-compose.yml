@@ -203,6 +203,32 @@ services:
   # Prometheus:     http://localhost:9090
   # OTEL Collector: localhost:4317 (gRPC) / 4318 (HTTP)
 
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    volumes:
+      - ./observability/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    ports:
+      - "9093:9093"
+    networks:
+      - observability
+    restart: unless-stopped
+
+  blackbox:
+    image: prom/blackbox-exporter:v0.25.0
+    volumes:
+      - ./observability/blackbox.yml:/etc/blackbox/config.yml:ro
+    command: --config.file=/etc/blackbox/config.yml
+    ports:
+      - "9115:9115"
+    networks:
+      - gateway-services
+      - observability
+    restart: unless-stopped
+
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.113.0
     volumes:
@@ -221,6 +247,7 @@ services:
     image: prom/prometheus:v3.1.0
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus-rules.yml:/etc/prometheus/rules/rules.yml:ro
       - prometheus-data:/prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -373,3 +400,4 @@ volumes:
   tempo-data:
   grafana-data:
   pyroscope-data:
+  alertmanager-data:

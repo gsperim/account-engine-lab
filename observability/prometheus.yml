@@ -4,6 +4,14 @@ global:
   external_labels:
     environment: local
 
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: [alertmanager:9093]
+
 scrape_configs:
   - job_name: prometheus
     static_configs:
@@ -12,6 +20,25 @@ scrape_configs:
   - job_name: otel-collector
     static_configs:
       - targets: [otel-collector:8888]
+
+  # Blackbox — probes sintéticos externos aos serviços
+  - job_name: blackbox
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          # Etapa 7: adicionar endpoints reais quando os serviços existirem
+          # - http://lancamentos:8080/health
+          # - http://consolidado:8080/health
+          - http://keycloak:8080/health/ready
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115
 
   # Etapa 7: adicionar quando os serviços existirem
   # - job_name: lancamentos

@@ -1,0 +1,54 @@
+{
+  "title": "Infraestrutura — Fluxo de Caixa",
+  "uid": "infra",
+  "tags": ["infra", "fluxocaixa"],
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "schemaVersion": 38,
+  "panels": [
+    {
+      "id": 1, "type": "timeseries", "title": "Throughput (req/s)",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        { "datasource": "Prometheus", "expr": "sum by (service) (rate(http_server_request_count[1m]))", "legendFormat": "{{service}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "lineWidth": 2 } } }
+    },
+    {
+      "id": 2, "type": "timeseries", "title": "Taxa de Erro (%)",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        { "datasource": "Prometheus", "expr": "sum by (service) (rate(http_server_request_count{http_status_code=~\"5..\"}[1m])) / sum by (service) (rate(http_server_request_count[1m])) * 100", "legendFormat": "{{service}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent", "custom": { "lineWidth": 2 }, "thresholds": { "steps": [{ "color": "green", "value": 0 }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 }] } } }
+    },
+    {
+      "id": 3, "type": "timeseries", "title": "Latência p50 / p95 / p99",
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 8 },
+      "targets": [
+        { "datasource": "Prometheus", "expr": "histogram_quantile(0.50, sum by (service, le) (rate(http_server_duration_bucket[5m])))", "legendFormat": "{{service}} p50" },
+        { "datasource": "Prometheus", "expr": "histogram_quantile(0.95, sum by (service, le) (rate(http_server_duration_bucket[5m])))", "legendFormat": "{{service}} p95" },
+        { "datasource": "Prometheus", "expr": "histogram_quantile(0.99, sum by (service, le) (rate(http_server_duration_bucket[5m])))", "legendFormat": "{{service}} p99" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "lineWidth": 2 } } }
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "Probe Blackbox — tempo de resposta",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        { "datasource": "Prometheus", "expr": "probe_duration_seconds", "legendFormat": "{{instance}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "lineWidth": 2 }, "thresholds": { "steps": [{ "color": "green", "value": 0 }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 2 }] } } }
+    },
+    {
+      "id": 5, "type": "stat", "title": "Probe — Status dos endpoints",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        { "datasource": "Prometheus", "expr": "probe_success", "legendFormat": "{{instance}}" }
+      ],
+      "options": { "colorMode": "background", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }] } }
+    }
+  ]
+}
