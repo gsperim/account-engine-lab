@@ -42,7 +42,13 @@ Decisões sobre modelagem, persistência e consistência de dados — separadas 
 | ADR | Decisão | Status | Data |
 |-----|---------|--------|------|
 | [ADR-013](ADR-013-revogacao-tokens.md) | Revogação de Tokens: TTL 5min + Refresh Rotation (sem blacklist Redis) | Aceito | 2026-05-09 |
-| [ADR-014](ADR-014-identity-provider.md) | Identity Provider: Keycloak 24 (OAuth2/OIDC, portável para Cognito) | Aceito | 2026-05-09 |
+| [ADR-014](ADR-014-identity-provider.md) | Identity Provider: Keycloak 26 (OAuth2/OIDC, portável para Cognito) | Aceito | 2026-05-09 |
+
+## Decisões de Observabilidade
+
+| ADR | Decisão | Status | Data |
+|-----|---------|--------|------|
+| [ADR-015](ADR-015-observabilidade.md) | Stack de Observabilidade: PLT + OpenTelemetry (Prometheus, Loki, Tempo, Grafana) | Aceito | 2026-05-09 |
 
 ---
 
