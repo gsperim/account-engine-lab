@@ -204,21 +204,22 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:24
     environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_DB: dev-file            # banco embutido para dev — substituir por postgres em prod
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD obrigatório}
+      KC_DB: dev-file
       KC_HEALTH_ENABLED: "true"
-    command: start-dev
+      KC_METRICS_ENABLED: "true"
+      KC_LOG_LEVEL: INFO
+    command: start-dev --import-realm
     ports:
       - "8180:8080"
     volumes:
       - keycloak-data:/opt/keycloak/data
-      # Etapa 7: descomente para importar o realm automaticamente
-      # - ./keycloak/realm-fluxocaixa.json:/opt/keycloak/data/import/realm-fluxocaixa.json
+      - ./keycloak/realm-fluxocaixa.json:/opt/keycloak/data/import/realm-fluxocaixa.json:ro
     networks:
       - gateway-services
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health/ready || exit 1"]
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8080/health/ready | grep -q UP"]
       interval: 15s
       timeout: 5s
       retries: 8
