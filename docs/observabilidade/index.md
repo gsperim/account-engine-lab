@@ -99,14 +99,17 @@ flowchart LR
 
 ## Stack
 
-| Porta local | Componente | Pilar |
-|-------------|-----------|-------|
-| `:3000` | Grafana | UI unificada — correlação entre todos os pilares |
-| `:4317 / :4318` | OTEL Collector | Pipeline de traces, métricas e logs |
-| `:9090` | Prometheus | Métricas |
-| `:3100` | Loki | Logs |
-| `:3200` | Tempo | Traces |
-| `:4040` | Pyroscope | Profiles (drill-down até linha de código) |
+| Porta local | Container | Papel | Pilar |
+|-------------|-----------|-------|-------|
+| `:3000` | `obs-grafana` | UI unificada — dashboards, Explore, correlação | Visualização |
+| `:9090` | `obs-prometheus` | Métricas + avaliação de regras de alerta | Métricas |
+| `:9093` | `obs-alertmanager` | Roteamento de alertas → Telegram / Slack / PagerDuty | Alertas |
+| `:3100` | `obs-loki` | Logs | Logs |
+| `:3200` | `obs-tempo` | Traces distribuídos | Traces |
+| `:4040` | `obs-pyroscope` | Continuous profiling (drill-down até linha de código) | Profiles |
+| `:4317 / :4318` | `obs-otel-collector` | Pipeline OTLP — recebe, processa, roteia | Pipeline |
+| `:9115` | `obs-blackbox` | Probes sintéticos de uptime (7 endpoints monitorados) | Uptime |
+| `:9001` | `dev-portainer` | Gestão visual dos containers | Dev |
 
 ---
 
@@ -320,8 +323,17 @@ OTEL SDK (profiling) → OTEL Collector → Pyroscope
 | **Warning** | Burn rate > 1× (consumindo budget acima do normal) | Telegram ⚠️ | Slack `#alertas-infra` | Investigar no turno |
 | **Info** | Anomalia sem impacto em SLO ainda | Telegram ℹ️ | Slack `#alertas-info` | Monitorar |
 
-> **Dev:** Telegram configurado no `alertmanager.yml` — setup em 3 minutos via `@BotFather`. Credenciais em `TELEGRAM_BOT_TOKEN` e `TELEGRAM_CHAT_ID` no `.env`.  
-> **Produção:** descomentar receivers Slack + PagerDuty no `alertmanager.yml` e definir `SLACK_WEBHOOK_URL` e `PAGERDUTY_INTEGRATION_KEY`.
+> **Dev:** Telegram ativo — bot `@PerimArchChalenger_bot` configurado em `observability/alertmanager.yml` (arquivo fora do git por conter token). Receivers: `telegram-warning` (padrão), `telegram-critical`, `telegram-info`.  
+> **Produção:** adicionar receivers Slack + PagerDuty no `alertmanager.yml` com `SLACK_WEBHOOK_URL` e `PAGERDUTY_INTEGRATION_KEY`.
+
+**Verificar alertas disparados:**
+
+| Onde | Como |
+|------|------|
+| Grafana | Alerting → Alert rules → filtrar por `Mimir / Prometheus` |
+| Grafana | Alerting → Active notifications |
+| Alertmanager UI | `http://localhost:9093` → aba Alerts |
+| Métricas | `alertmanager_notifications_total{integration="telegram"}` no Prometheus |
 
 **Regras críticas (PromQL):**
 
@@ -437,23 +449,42 @@ No Grafana, consulte os eventos de segurança:
 
 ---
 
+## Dashboards disponíveis
+
+| Dashboard | Tags | O que mostra | Dados disponíveis |
+|-----------|------|-------------|------------------|
+| [Plataforma](http://localhost:3000/d/plataforma-fluxo-de-caixa) | `plataforma` | Uptime (7 probes), PostgreSQL, Redis, RabbitMQ, Traefik | ✅ Agora |
+| [Logs Centralizados](http://localhost:3000/d/logs-fluxo-de-caixa) | `logs` | Volume por serviço, erros, stream filtrado, correlação por trace_id | ✅ Agora |
+| [Infraestrutura](http://localhost:3000/d/infraestrutura-e28094-fluxo-de-caixa) | `infra` | Throughput, taxa de erro, latência p50/p95/p99 por serviço | ⏳ Etapa 7 |
+| [Negócio](http://localhost:3000/d/negocio-e28094-fluxo-de-caixa) | `negocio` | Lançamentos/hora, BRL acumulado, DLQ, cache hit rate | ⏳ Etapa 7 |
+| [SLOs](http://localhost:3000/d/slos-e28094-fluxo-de-caixa) | `slo` | Burn rate, error budget consumido por SLO | ⏳ Etapa 7 |
+
+> ⏳ = aguarda os serviços de Lançamentos e Consolidação enviarem OTLP (Etapa 7)
+
+---
+
 ## Como usar localmente
 
 ```bash
-# Subir o stack completo de observabilidade
-docker compose up otel-collector prometheus loki promtail tempo grafana \
-                  pyroscope alertmanager blackbox -d
+# Subir o stack completo
+docker compose up -d
 
-# Verificar saúde dos componentes
-docker compose ps otel-collector prometheus loki promtail tempo grafana \
-                  pyroscope alertmanager blackbox
+# Ver status de todos os containers
+docker ps --format "table {{.Names}}\t{{.Status}}"
+
+# Verificar targets do Prometheus (deve mostrar 14 UP)
+curl -s http://localhost:9090/api/v1/targets | \
+  python3 -c "import sys,json; [print(t['health'], t['labels']['job']) \
+  for t in json.load(sys.stdin)['data']['activeTargets']]"
 ```
 
 Após subir, acesse:
 
-- **Grafana:** `http://localhost:3000` — datasources já provisionados (Prometheus, Loki, Tempo, Pyroscope)
-- **Prometheus:** `http://localhost:9090` — 13 targets ativos
-- **Alertmanager:** `http://localhost:9093`
+- **Grafana:** `http://localhost:3000` — 5 dashboards provisionados, datasources: Prometheus, Loki, Tempo, Pyroscope, Alertmanager
+- **Prometheus:** `http://localhost:9090` — 14 targets ativos
+- **Alertmanager:** `http://localhost:9093` — receivers Telegram configurados
+- **Portainer:** `http://localhost:9001` — gestão visual dos 21 containers
+- **RabbitMQ:** `http://localhost:15672` — usuário `fluxocaixa` / senha no `.env`
 
 **Logs já disponíveis no Loki** (via Promtail) assim que os containers sobem:
 
