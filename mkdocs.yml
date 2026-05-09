@@ -61,8 +61,19 @@ plugins:
       lang: pt
   - tags:
       tags_file: tags.md
+  - glightbox:
+      touchNavigation: true
+      loop: false
+      effect: zoom
+      width: 100%
+      height: auto
+      zoomable: true
+      draggable: true
   - minify:
       minify_html: true
+
+extra_javascript:
+  - javascripts/mermaid-zoom.js
 
 nav:
   - Início: index.md
