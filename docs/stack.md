@@ -60,11 +60,13 @@ Decisão completa em [ADR-006](adr/ADR-006-container-runtime.md). docker-compose
 
 ## Documentação Arquitetural
 
-### ArchiMate 3.x — ferramenta de referência (fora do escopo do desafio)
+### ArchiMate 3.x — linguagem de modelagem (conceitos utilizados integralmente)
 
-Em um engajamento real, a ferramenta de modelagem seria o **[Archi](https://www.archimatetool.com/)** (open-source), cobrindo as camadas de Motivação, Negócio, Aplicação e Tecnologia com a notação formal do ArchiMate 3.x — modelo único, múltiplas views, rastreabilidade entre elementos.
+Os **conceitos** do ArchiMate são aplicados em toda a documentação: Motivation View (Drivers, Stakeholders, Princípios), Business Layer (Value Stream, Capability Map, Bounded Contexts), Application Layer (serviços e contratos) e Technology Layer (topologia e infraestrutura).
 
-**Decisão para o desafio:** os *conceitos* do ArchiMate (Value Stream, Capability Map, Bounded Contexts, Motivation View) são aplicados integralmente na documentação, mas os *diagramas* são produzidos em Mermaid. Isso elimina dependência de ferramenta externa, mantém tudo versionável em texto e não compromete a substância das decisões arquiteturais — que é o que o desafio avalia.
+**O que está fora do escopo é o [Archi](https://www.archimatetool.com/)** — a ferramenta open-source que implementa a notação gráfica formal do ArchiMate. Em um engajamento real, o Archi produziria um modelo único com múltiplas views e rastreabilidade entre elementos em formato `.archimate`.
+
+**Decisão para o desafio:** os diagramas são produzidos em Mermaid, eliminando dependência de ferramenta externa e mantendo tudo versionável em texto. A substância das decisões arquiteturais — que é o que o desafio avalia — não é comprometida pela ausência da notação gráfica formal.
 
 ### C4 Model — decomposição técnica
 
