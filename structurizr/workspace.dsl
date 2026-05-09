@@ -198,12 +198,25 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
         container sistema "containers" {
             title "Containers — Sistema de Negócio"
             include *
+            include observabilidade
+            exclude otelCollector
+            exclude promtail
+            exclude prometheus
+            exclude alertmanager
+            exclude loki
+            exclude tempo
+            exclude pyroscope
+            exclude blackbox
+            exclude grafana
             autoLayout
         }
 
         container observabilidade "observabilidade-containers" {
             title "Containers — Plataforma de Observabilidade"
             include *
+            include lancamentos
+            include outboxRelay
+            include consolidado
             autoLayout
         }
 
