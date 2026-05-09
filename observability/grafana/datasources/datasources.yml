@@ -8,6 +8,8 @@ datasources:
     isDefault: true
     jsonData:
       timeInterval: 15s
+      manageAlerts: true
+      alertmanagerUid: alertmanager
       exemplarTraceIdDestinations:
         - name: trace_id
           datasourceUid: tempo
@@ -62,3 +64,4 @@ datasources:
     url: http://alertmanager:9093
     jsonData:
       implementation: prometheus
+      handleGrafanaManagedAlerts: false
