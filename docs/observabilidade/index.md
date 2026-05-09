@@ -391,21 +391,48 @@ HTTP 503 — não pronto (kubernetes não roteia tráfego)
 
 ## Logs de Eventos de Segurança
 
-O Keycloak emite eventos de segurança (logins com falha, emissão de tokens, brute force detectado) nos logs do container — capturados pelo Promtail e enviados ao Loki automaticamente.
+O Keycloak emite eventos de segurança nos logs do container — capturados pelo Promtail e enviados ao Loki automaticamente. **Configuração já aplicada via [`keycloak/realm-fluxocaixa.json`](../../keycloak/realm-fluxocaixa.json) — nenhuma ação manual no Admin Console necessária.**
 
-Para correlacionar eventos de autenticação com traces de requisição, configure o Keycloak para incluir o `session_id` nos logs de eventos:
+| Campo configurado | Valor | Efeito |
+|-------------------|-------|--------|
+| `eventsEnabled` | `true` | Captura eventos de usuário |
+| `adminEventsEnabled` | `true` | Captura ações administrativas |
+| `adminEventsDetailsEnabled` | `true` | Inclui payload das mudanças |
+| `eventsListeners` | `["jboss-logging"]` | Redireciona para stdout → Promtail → Loki |
+| `eventsExpiration` | `604800` (7 dias) | Retenção interna no Keycloak |
+
+**Eventos capturados:** `LOGIN`, `LOGIN_ERROR`, `LOGOUT`, `CODE_TO_TOKEN`, `CLIENT_LOGIN`, `REFRESH_TOKEN`, `INTROSPECT_TOKEN`, `REGISTER`, `RESET_PASSWORD`, `TOKEN_EXCHANGE` — e variantes `_ERROR` de cada um.
+
+O formato de saída do `jboss-logging` inclui `sessionId` automaticamente:
 
 ```
-Admin Console → fluxocaixa → Events → Config
-  ✅ Save Events: ON
-  ✅ Save Admin Events: ON
-  Event Types: LOGIN_ERROR, BRUTE_FORCE, TOKEN_ISSUE, LOGOUT
+WARN [org.keycloak.events] type=LOGIN_ERROR, realmId=fluxocaixa,
+  clientId=frontend-app, userId=null, ipAddress=192.168.1.1,
+  sessionId=a3f8..., error=invalid_user_credentials, username=caixa.demo
 ```
 
-No Grafana, consulte os eventos de segurança diretamente:
+!!! warning "Re-import do realm"
+    O Keycloak usa estratégia `IGNORE_EXISTING` no import — se o realm já existia antes desta configuração, ela não será aplicada automaticamente. Para forçar o re-import, recrie o volume:
+    ```bash
+    docker compose stop gw-keycloak
+    docker volume rm desafio-carrefour_keycloak-data
+    docker compose up -d gw-keycloak
+    ```
+
+No Grafana, consulte os eventos de segurança:
 
 ```logql
-{service="keycloak"} |= "LOGIN_ERROR" | json
+# Todos os eventos de segurança do Keycloak
+{service="keycloak"} |= "org.keycloak.events"
+
+# Apenas falhas de login
+{service="keycloak"} |= "LOGIN_ERROR"
+
+# Falhas por IP (detectar força bruta)
+{service="keycloak"} |= "LOGIN_ERROR" | regexp `ipAddress=(?P<ip>[0-9.]+)` | line_format "{{.ip}}"
+
+# Ações administrativas
+{service="keycloak"} |= "ADMIN" |= "operationType"
 ```
 
 ---
