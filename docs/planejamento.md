@@ -31,6 +31,34 @@ O TOGAF foi usado como referência metodológica parcial. As fases A a D e F do 
 
 ---
 
+## Cronograma — 9 Etapas em 7 Dias
+
+```mermaid
+gantt
+    title Cronograma do Desafio — 9 Etapas em 7 Dias
+    dateFormat  YYYY-MM-DD
+    axisFormat  D%d
+
+    section Negócio e Arquitetura
+    Etapa 1 — Domínio de Negócio          :done,   2026-01-01, 1d
+    Etapa 2 — Arquitetura da Solução       :done,   2026-01-02, 1d
+    Etapa 3 — Infraestrutura e Plataforma  :done,   2026-01-02, 2d
+
+    section Dados e Transversais
+    Etapa 4 — Dados e Persistência         :done,   2026-01-03, 1d
+    Etapa 5 — Segurança                    :active, 2026-01-04, 1d
+    Etapa 6 — Observabilidade              :active, 2026-01-04, 1d
+
+    section Entrega
+    Etapa 7 — Implementação                :        2026-01-05, 2d
+    Etapa 8 — Pipeline e Entrega           :        2026-01-06, 1d
+    Etapa 9 — Documentação Final           :        2026-01-07, 1d
+```
+
+> As Etapas 2 e 3 se sobrepõem intencionalmente: as decisões arquiteturais (ADRs) e a topologia de infraestrutura evoluem em paralelo. As Etapas 5 e 6 também são paralelas — segurança e observabilidade são preocupações transversais que podem ser trabalhadas no mesmo dia. A Etapa 7 (Implementação) recebe dois dias por ser o maior volume de código.
+
+---
+
 ## As fases do projeto
 
 ### Fase 1 — Domínio de Negócio ✓
