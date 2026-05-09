@@ -281,3 +281,95 @@ sequenceDiagram
 | Payload oversized | Content-Length limit no API Gateway (ex: 64 KB para lançamentos) |
 | Formato inválido | Validação de schema na camada de aplicação antes de qualquer persistência |
 | Replay de evento | Idempotência via PK em `lancamentos_processados` — evento duplicado é absorvido sem efeito |
+
+---
+
+## Trilha de Auditoria
+
+**Requisito:** [NFR-09](../negocio/requisitos.md#nfr-09) — toda operação de escrita deve gerar trilha imutável com identidade, timestamp UTC e recurso afetado.
+
+### Schema da tabela `audit_log`
+
+Cada serviço mantém sua própria `audit_log` no PostgreSQL local — sem cruzar fronteiras de serviço.
+
+```sql
+CREATE TABLE audit_log (
+    id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    operador_id  VARCHAR(64) NOT NULL,   -- claim "sub" do JWT
+    operador_role VARCHAR(20) NOT NULL,  -- claim "role" do JWT
+    acao         VARCHAR(50) NOT NULL,   -- ex: "lancamento.criado", "estorno.registrado"
+    recurso_id   UUID,                  -- ID do recurso afetado (lancamento, estorno)
+    payload      JSONB,                 -- snapshot do recurso no momento da ação
+    ip_origem    INET,                  -- IP extraído do header X-Forwarded-For pelo gateway
+    criado_em    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Índices para auditoria por operador e por recurso
+CREATE INDEX idx_audit_operador ON audit_log(operador_id, criado_em DESC);
+CREATE INDEX idx_audit_recurso  ON audit_log(recurso_id)  WHERE recurso_id IS NOT NULL;
+```
+
+A tabela é **append-only** — sem UPDATE nem DELETE. Registros são retidos por 2 anos ([política de retenção](../arquitetura/dados.md#política-de-retenção)).
+
+### Como o serviço captura a identidade
+
+O gateway injeta os claims do JWT como headers antes de encaminhar a requisição:
+
+```
+X-User-Id:   usr_7f3b9a10        ← claim "sub"
+X-User-Role: caixa               ← claim "role"
+X-Forwarded-For: 203.0.113.5    ← IP do cliente (adicionado pelo gateway)
+```
+
+O serviço lê esses headers e os persiste no `audit_log` a cada operação de escrita confirmada. A gravação na `audit_log` ocorre **na mesma transação** que a operação principal — se a transação falhar, não há registro de auditoria parcial.
+
+### Ações auditadas
+
+| Ação | Serviço | Recurso afetado |
+|------|---------|----------------|
+| `lancamento.criado` | Lançamentos | `lancamentos.id` |
+| `estorno.registrado` | Lançamentos | `lancamentos.id` (estorno) |
+| `recalculo.solicitado` | Lançamentos | job_id |
+| `reconciliacao.executada` | Consolidação | — (operação global) |
+
+---
+
+## Rate Limiting
+
+**Requisito:** [NFR-07](../negocio/requisitos.md#nfr-07) — proteção contra sobrecarga de requisições.
+
+### Thresholds por camada
+
+| Camada | Escopo | Limite | Resposta ao exceder |
+|--------|--------|--------|-------------------|
+| **CloudFront** (prod) | Por IP | 1.000 req/min | HTTP 429 + Retry-After |
+| **WAF v2** (prod) | Por IP | 500 req/5min | HTTP 429 bloqueado na borda |
+| **API Gateway / Traefik** | Por IP | 60 req/min global | HTTP 429 |
+| **API Gateway / Traefik** | Por IP + rota `POST /lancamentos` | 30 req/min | HTTP 429 |
+| **API Gateway / Traefik** | Por IP + rota `GET /consolidacao/*` | 100 req/min | HTTP 429 |
+
+**Justificativa dos thresholds:**
+
+- `POST /lancamentos` limitado a 30 req/min por IP — um Caixa legítimo raramente registra mais de 1 lançamento a cada 2 segundos; acima disso é provável abuso ou integração mal configurada
+- `GET /consolidacao/*` mais permissivo (100 req/min) pois é somente leitura e serve do cache Redis na maioria dos casos
+- O limite global de 60 req/min cobre rotas não especificadas como fallback
+
+Traefik configura os limites via middleware `RateLimit` por rota. Em produção, o API Gateway HTTP API delega à camada CloudFront + WAF para as primeiras proteções.
+
+---
+
+## Rotação de Secrets
+
+**Contexto:** credenciais de banco de dados, RabbitMQ e Redis são gerenciadas pelo AWS Secrets Manager em produção ([ADR-010](../adr/ADR-010-seguranca.md)).
+
+| Secret | Frequência de rotação | Mecanismo |
+|--------|----------------------|-----------|
+| Senha PostgreSQL (Lançamentos) | **30 dias** | Rotação automática via Lambda do Secrets Manager — sem downtime (RDS Proxy absorve a troca) |
+| Senha PostgreSQL (Consolidação) | **30 dias** | Idem |
+| Senha RabbitMQ (Relay + Consumer) | **90 dias** | Rotação manual com rolling restart dos pods |
+| Senha Redis | **90 dias** | Rotação manual — Redis suporta dois passwords simultâneos durante a janela de troca |
+| Chaves assimétricas do Keycloak (RS256) | **365 dias** | Rotação via console Keycloak — par novo adicionado ao JWKS antes da expiração do par antigo; serviços renovam cache automaticamente via `kid` lookup |
+
+**Por que PostgreSQL rota com mais frequência:** é o dado mais sensível (lançamentos financeiros). O RDS Proxy elimina o custo operacional da rotação — as conexões existentes não são derrubadas durante a troca de senha.
+
+**Por que as chaves Keycloak não rotam mensalmente:** rotação de chaves assimétricas exige janela de coexistência (o JWKS deve conter o par antigo até todos os tokens emitidos com ele expirarem — máximo 5 minutos com o TTL atual). A rotação anual com janela de 10 minutos é suficiente para o perfil de risco.
