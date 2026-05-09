@@ -60,8 +60,11 @@ Construir um servidor OAuth2/OIDC do zero.
 
 **Por que foi descartado:**
 
-- Segurança de autenticação é um domínio especializado — erros de implementação em criptografia, refresh token handling ou PKCE têm consequências graves.
-- Viola o princípio de não reinventar a roda para domínios genéricos (Identidade e Acesso é *generic domain* conforme [dominios.md](../negocio/dominios.md)).
+- **DDD Strategic Design** — Identidade e Acesso é classificado como **Supporting Domain** no [mapa de domínios](../negocio/dominios.md#2-classificação-estratégica-ddd-strategic-design): *"Comprar ou adaptar — suporta o core, mas não é diferenciador"*. A diretriz do DDD estratégico é explícita: esforço de engenharia máximo vai para o Core Domain (Gestão de Fluxo de Caixa). Construir um servidor OAuth2 próprio investe tempo de design e implementação em um domínio que não diferencia o produto — e que já tem soluções maduras e auditadas disponíveis.
+
+- **Risco de segurança** — implementação própria de criptografia assimétrica, PKCE, refresh token rotation e JWKS exige conhecimento especializado. Erros nessa camada têm consequências graves e difíceis de detectar. Soluções consolidadas como o Keycloak têm décadas de uso em produção e auditorias de segurança independentes.
+
+- **Custo de manutenção** — um servidor OAuth2 próprio exige atualizações de segurança, gestão de chaves, testes de conformidade com a RFC. Esse custo recorrente é incompatível com a prioridade de entregar o Core Domain.
 
 ---
 
