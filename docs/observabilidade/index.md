@@ -259,11 +259,14 @@ OTEL SDK (profiling) → OTEL Collector → Pyroscope
 
 ## Estratégia de Alertas
 
-| Severidade | Critério | Canal | Resposta |
-|------------|----------|-------|---------|
-| **Critical** | Burn rate > 14,4× do SLO (budget consumido em < 1h) | PagerDuty | Imediata — pausar deploys |
-| **Warning** | Burn rate > 1× (consumindo budget acima do normal) | Slack `#alertas-infra` | Investigar no turno |
-| **Info** | Anomalia sem impacto em SLO ainda | Slack `#alertas-info` | Monitorar |
+| Severidade | Critério | Canal (dev) | Canal (prod) | Resposta |
+|------------|----------|------------|-------------|---------|
+| **Critical** | Burn rate > 14,4× do SLO (budget consumido em < 1h) | Telegram 🔴 | PagerDuty + Slack | Imediata — pausar deploys |
+| **Warning** | Burn rate > 1× (consumindo budget acima do normal) | Telegram ⚠️ | Slack `#alertas-infra` | Investigar no turno |
+| **Info** | Anomalia sem impacto em SLO ainda | Telegram ℹ️ | Slack `#alertas-info` | Monitorar |
+
+> **Dev:** Telegram configurado no `alertmanager.yml` — setup em 3 minutos via `@BotFather`. Credenciais em `TELEGRAM_BOT_TOKEN` e `TELEGRAM_CHAT_ID` no `.env`.  
+> **Produção:** descomentar receivers Slack + PagerDuty no `alertmanager.yml` e definir `SLACK_WEBHOOK_URL` e `PAGERDUTY_INTEGRATION_KEY`.
 
 **Regras críticas (PromQL):**
 
