@@ -70,7 +70,7 @@ Construir um servidor OAuth2/OIDC do zero.
 
 ## Decisão
 
-Adotar **Keycloak 24** como servidor de identidade OAuth2/OIDC.
+Adotar **Keycloak 26** como servidor de identidade OAuth2/OIDC.
 
 | Requisito | Como o Keycloak atende |
 |-----------|----------------------|
@@ -79,7 +79,7 @@ Adotar **Keycloak 24** como servidor de identidade OAuth2/OIDC.
 | JWKS endpoint | `{base_url}/realms/{realm}/protocol/openid-connect/certs` |
 | RS256 / ES256 | Configurável por realm — RS256 como padrão |
 | Refresh token rotation | Configurável por cliente: `Refresh Token Max Reuse: 0` |
-| Execução local | `docker-compose up keycloak` — imagem oficial `quay.io/keycloak/keycloak:24` |
+| Execução local | `docker-compose up keycloak` — imagem oficial `quay.io/keycloak/keycloak:26.6.1` |
 | Claims customizados | Protocol mappers — sem código externo |
 | Alta disponibilidade (prod) | Modo cluster com Infinispan; ou substituído por Cognito sem mudar o código da aplicação |
 
