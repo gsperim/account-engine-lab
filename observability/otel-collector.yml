@@ -18,15 +18,15 @@ processors:
         action: upsert
 
   # Redação de PII antes de persistir no Loki (ADR-016)
+  # Regex compatível com re2 (Go) — sem lookahead/lookbehind
   redaction:
     allow_all_keys: true
     blocked_values:
-      - "\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}"          # CPF formatado
-      - "(?<!\\d)\\d{11}(?!\\d)"                    # CPF só dígitos
-      - "\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}"   # CNPJ
-      - "[\\w.+-]+@[\\w-]+\\.[\\w.-]+"              # e-mail
-      - "\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}"  # cartão
-      - "(?:\\+55\\s?)?\\(?\\d{2}\\)?\\s?\\d{4,5}[\\s-]?\\d{4}"  # telefone BR
+      - "\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}"                         # CPF formatado
+      - "\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}"                  # CNPJ
+      - "[\\w.+-]+@[\\w-]+\\.[\\w.-]+"                             # e-mail
+      - "\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}"          # cartão
+      - "(\\+55[\\s-]?)?\\(?\\d{2}\\)?[\\s-]?\\d{4,5}[\\s-]?\\d{4}"  # telefone BR
     summary: debug
 
 exporters:

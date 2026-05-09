@@ -81,14 +81,25 @@ Serviços (OTLP)
 
 ### Padrões de PII detectados
 
-| Dado | Regex | Substituição |
-|------|-------|-------------|
-| CPF (formatado) | `\d{3}\.\d{3}\.\d{3}-\d{2}` | `[CPF REDACTED]` |
-| CPF (somente dígitos) | `(?<!\d)\d{11}(?!\d)` | `[CPF REDACTED]` |
-| CNPJ (formatado) | `\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}` | `[CNPJ REDACTED]` |
-| E-mail | `[\w.+-]+@[\w-]+\.[\w.-]+` | `[EMAIL REDACTED]` |
-| Cartão de crédito | `\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}` | `[CARD REDACTED]` |
-| Telefone BR | `(?:\+55\s?)?\(?\d{2}\)?\s?\d{4,5}[\s-]?\d{4}` | `[PHONE REDACTED]` |
+| Dado | Regex | Substituição | Cobertura |
+|------|-------|-------------|-----------|
+| CPF (formatado) | `\d{3}\.\d{3}\.\d{3}-\d{2}` | `[CPF REDACTED]` | Ambos os pipelines |
+| CNPJ (formatado) | `\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}` | `[CNPJ REDACTED]` | Ambos os pipelines |
+| E-mail | `[\w.+-]+@[\w-]+\.[\w.-]+` | `[EMAIL REDACTED]` | Ambos os pipelines |
+| Cartão de crédito | `\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}` | `[CARD REDACTED]` | Ambos os pipelines |
+| Telefone BR | `(\+55[\s-]?)?\(?\d{2}\)?[\s-]?\d{4,5}[\s-]?\d{4}` | `[PHONE REDACTED]` | Ambos os pipelines |
+
+!!! warning "CPF sem formatação (somente dígitos) — limitação de implementação"
+    O padrão `(?<!\d)\d{11}(?!\d)` para CPF sem formatação usa lookbehind/lookahead, **não suportados pelo motor re2 do Go** usado pelo OTEL Collector. Tentativa de uso resulta em erro de inicialização:
+
+    ```
+    error compiling regex in block list: error parsing regexp:
+    invalid named capture: `(?<!\d)\d{11}(?!\d)`
+    ```
+
+    **Mitigação aceita:** CPF sem formatação é raro em campos de log estruturado (o campo `descricao` tipicamente contém CPF no formato `XXX.XXX.XXX-XX`). O Promtail (Go puro, Oniguruma) também não suporta lookbehind em releases estáveis. O padrão formatado (`\d{3}\.\d{3}\.\d{3}-\d{2}`) cobre o caso de uso mais relevante.
+
+    **Quando revisar:** se logs de aplicação passarem a incluir CPFs não formatados com frequência, avaliar pré-processamento na camada de aplicação antes de emitir o log.
 
 **Estratégia de substituição:** placeholder descritivo (não hash). O hash impede correlação mas também impede auditoria — o operador precisa saber que um CPF estava ali, não recuperar o valor. Para investigações que exijam o dado original, consulta-se a fonte canônica (tabela `lancamentos`).
 
