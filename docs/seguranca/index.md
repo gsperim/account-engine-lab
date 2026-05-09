@@ -18,6 +18,39 @@ A segurança é endereçada em duas camadas complementares:
 
 ---
 
+## Alinhamento com Zero Trust
+
+Zero Trust é o modelo onde nenhum usuário, dispositivo ou rede é confiável por padrão — mesmo dentro do perímetro. O princípio central é **"nunca confie, sempre verifique"**.
+
+O sistema foi projetado com os cinco pilares do Zero Trust desde a concepção:
+
+| Pilar | Decisões que o implementam | Lacuna / limitação |
+|-------|--------------------------|-------------------|
+| **Identidade** | JWT validado em toda requisição ([ADR-004](../adr/ADR-004-jwt-validacao-local.md)) · Keycloak como IdP ([ADR-014](../adr/ADR-014-identity-provider.md)) · Access token TTL 5min + refresh rotation ([ADR-013](../adr/ADR-013-revogacao-tokens.md)) · Escopos mínimos por ator | Revogação com janela de até 5min (trade-off aceito — [ADR-013](../adr/ADR-013-revogacao-tokens.md)) |
+| **Dispositivo** | mTLS na borda CloudFront ([ADR-010](../adr/ADR-010-seguranca.md)) · WAF v2 filtra tráfego malicioso · IMDSv2 nos nós EKS | Sem verificação de postura do dispositivo cliente (aceitável — sistema B2B interno) |
+| **Rede** | VPC com subnets privadas · SGs com allow-list mínima · VPC Endpoints para serviços AWS · Redes Docker internas isoladas localmente | NAT Gateway como saída necessária para imagens externas |
+| **Aplicação** | Serviços recebem apenas claims pré-validados em headers · Autorização por escopo por endpoint · Credenciais por serviço (sem credencial compartilhada) · Outbox Relay com blast radius limitado | Sem service mesh (Istio/Linkerd) — mTLS intra-pod não implementado; SGs compensam |
+| **Dados** | KMS CMK para PostgreSQL, Redis e backups ([ADR-010](../adr/ADR-010-seguranca.md)) · TLS em todos os canais de produção · LGPD compliance por design (sem PII nas tabelas financeiras) | Sem DLP (Data Loss Prevention) — aceitável para o volume e perfil de risco atual |
+
+```mermaid
+flowchart LR
+    subgraph ZT["Zero Trust — verificação em cada camada"]
+        ID["🪪 Identidade\nKeycloak · JWT · PKCE"]
+        NW["🌐 Rede\nVPC · SG · VPC Endpoints"]
+        AP["⚙️ Aplicação\nEscopos · Headers · Blast radius"]
+        DT["🗄️ Dados\nKMS · TLS · LGPD"]
+    end
+
+    U["Usuário / PDV"] -->|"1. autentica"| ID
+    ID -->|"2. JWT validado"| NW
+    NW -->|"3. tráfego autorizado"| AP
+    AP -->|"4. acesso mínimo"| DT
+```
+
+> **Zero Trust não é um produto** — é a consequência de decisões de design que tratam cada requisição como não confiável até prova em contrário. As decisões documentadas neste projeto implementam esse modelo sem depender de nenhuma ferramenta específica de "ZT".
+
+---
+
 ## Modelo de Identidade
 
 ### Atores e Fluxos OAuth2

@@ -14,6 +14,21 @@ Escolhas de ferramentas para documentação, modelagem e operação do projeto, 
 
 ## Infraestrutura de Plataforma
 
+### Keycloak 24 — Identity Provider (OAuth2/OIDC)
+
+Servidor de identidade escolhido como auth service do sistema. Decisão completa em [ADR-014](adr/ADR-014-identity-provider.md).
+
+**Por que Keycloak:** único candidato que executa localmente via Docker sem emuladores ou mocks, suportando todos os fluxos necessários nativamente — Authorization Code + PKCE (Caixa/Gestor) e Client Credentials (PDV). JWKS endpoint nativo alinhado com [ADR-004](adr/ADR-004-jwt-validacao-local.md). Refresh token rotation configurável por cliente, sem código adicional.
+
+**Estratégia de produção:** substituível por AWS Cognito sem alteração no código da aplicação — apenas o JWKS URL muda (variável de ambiente). Essa portabilidade elimina o vendor lock-in do provedor de identidade.
+
+```bash
+# Keycloak disponível em http://localhost:8180
+# Admin console: http://localhost:8180/admin (admin/admin em dev)
+# JWKS: http://localhost:8180/realms/fluxocaixa/protocol/openid-connect/certs
+docker-compose up keycloak
+```
+
 ### Traefik v3 — API Gateway
 
 Escolhido sobre nginx e Kong para este projeto. Decisão completa em [ADR-007](adr/ADR-007-api-gateway.md).
