@@ -67,40 +67,37 @@ plugins:
 nav:
   - Início: index.md
   - Visão Executiva: visao-executiva.md
-  - Planejamento do Projeto: planejamento.md
 
   - Negócio:
     - Drivers e Stakeholders: negocio/drivers.md
     - Principles Catalog: negocio/principios.md
-    - Domínios, Value Stream e Capacidades: negocio/dominios.md
+    - Domínios e Value Stream: negocio/dominios.md
     - Requisitos: negocio/requisitos.md
 
-  - Engenharia:
-    - Ferramentas e Stack: stack.md
+  - Arquitetura:
+    - Diagramas C4: arquitetura/diagramas-c4.md
     - Contratos de Integração: engenharia/contratos.md
-    - Plano de Entrega Incremental: engenharia/plano-entregas.md
+    - Dados e Persistência: arquitetura/dados.md
+    - Stack e Ferramentas: stack.md
+    - Decisões Arquiteturais: adr/index.md
+
+  - Segurança: seguranca/index.md
+
+  - Observabilidade: observabilidade/index.md
+
+  - Implementação: implementacao/index.md
+
+  - Infraestrutura:
+    - Local — docker-compose: infraestrutura/topologia.md
+    - Cloud AWS:
+      - Visão Geral: cloud/index.md
+      - Custos: cloud/custos.md
+    - Pipeline CI/CD: infraestrutura/pipeline.md
+
+  - Planejamento:
+    - Visão do Projeto: planejamento.md
+    - Plano de Entrega: engenharia/plano-entregas.md
     - Arquitetura de Transição: engenharia/transicao.md
-    - Topologia Local (docker-compose): infraestrutura/topologia.md
-
-  - Decisões do Sistema:
-    - Índice: adr/index.md
-    - ADR-001 — Padrão Arquitetural: adr/ADR-001-padrao-arquitetural.md
-    - ADR-002 — Message Broker: adr/ADR-002-message-broker.md
-    - ADR-003 — Outbox Pattern: adr/ADR-003-outbox-pattern.md
-    - ADR-004 — JWT e JWKS: adr/ADR-004-jwt-validacao-local.md
-    - ADR-005 — Protocolo Interno REST vs gRPC: adr/ADR-005-protocolo-comunicacao-interna.md
-    - ADR-006 — Container Runtime: adr/ADR-006-container-runtime.md
-    - ADR-007 — API Gateway Traefik: adr/ADR-007-api-gateway.md
-
-  - Nuvem (AWS):
-    - Visão Geral: cloud/index.md
-    - Estimativa de Custos: cloud/custos.md
-    - Decisões de Nuvem:
-      - Índice: cloud/adrs.md
-      - ADR-008 — Cloud Provider: adr/ADR-008-cloud-provider.md
-      - ADR-009 — API Gateway de Produção: adr/ADR-009-api-gateway-producao.md
-      - ADR-010 — Segurança em Profundidade: adr/ADR-010-seguranca.md
-      - ADR-011 — Excelência Operacional: adr/ADR-011-excelencia-operacional.md
 
   - Glossário: glossario.md
   - Tags: tags.md

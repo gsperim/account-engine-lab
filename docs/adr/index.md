@@ -1,12 +1,12 @@
-# Decisões Arquiteturais do Sistema
+# Decisões Arquiteturais
 
-Decisões de arquitetura do sistema **independentes de provedor de nuvem** — padrões, protocolos, mecanismos de resiliência e escolhas de plataforma local.
-
-> As decisões de **implementação em AWS** (cloud provider, API Gateway gerenciado, segurança, operacional) estão documentadas separadamente em [Decisões de Nuvem](../cloud/adrs.md).
+Registro de todas as decisões arquiteturais do projeto — tanto as decisões sobre **o sistema** (cloud-agnostic) quanto as decisões sobre **como ele roda em produção** (AWS).
 
 ---
 
-## Índice
+## Decisões do Sistema
+
+Decisões independentes de provedor de nuvem — padrões, protocolos e mecanismos de resiliência.
 
 | ADR | Decisão | Status | Data |
 |-----|---------|--------|------|
@@ -18,20 +18,26 @@ Decisões de arquitetura do sistema **independentes de provedor de nuvem** — p
 | [ADR-006](ADR-006-container-runtime.md) | Container Runtime: docker-compose local, Kubernetes para produção | Aceito | 2026-05-07 |
 | [ADR-007](ADR-007-api-gateway.md) | API Gateway Local: Traefik — TLS, rate limiting e service discovery | Aceito | 2026-05-08 |
 
+## Decisões de Nuvem (AWS)
+
+Decisões sobre a implementação de produção na AWS — separadas para preservar a natureza cloud-agnostic do sistema.
+
+| ADR | Decisão | Status | Data |
+|-----|---------|--------|------|
+| [ADR-008](ADR-008-cloud-provider.md) | Provedor de Nuvem: AWS `sa-east-1` | Aceito | 2026-05-08 |
+| [ADR-009](ADR-009-api-gateway-producao.md) | API Gateway de Produção: HTTP API + CloudFront | Aceito | 2026-05-08 |
+| [ADR-010](ADR-010-seguranca.md) | Segurança em Profundidade: WAF, mTLS, KMS, GuardDuty, SIEM | Aceito | 2026-05-08 |
+| [ADR-011](ADR-011-excelencia-operacional.md) | Excelência Operacional: RDS Proxy, Karpenter, Backup, FinOps | Aceito | 2026-05-08 |
+
 ---
 
 ## Convenção
 
-Cada ADR segue a estrutura:
-
-- **Contexto** — situação que originou a necessidade de decisão
-- **Decisão** — o que foi decidido e por quê
-- **Alternativas Consideradas** — o que foi avaliado e descartado
-- **Consequências** — impactos positivos e trade-offs
+Cada ADR segue a estrutura: **Contexto** → **Decisão** → **Alternativas Consideradas** → **Trade-offs** → **Consequências**
 
 **Status possíveis:** Proposto · Aceito · Depreciado · Substituído
 
-> Decisões sobre ferramentas e stack de desenvolvimento estão em [Ferramentas e Stack](../stack.md).
+> Decisões sobre ferramentas e stack de desenvolvimento estão em [Stack e Ferramentas](../stack.md).
 
 ---
 
@@ -39,8 +45,8 @@ Cada ADR segue a estrutura:
 
 | Tema | Recurso |
 |------|---------|
-| Estratégias de cache com Redis (Cache-Aside, Write-Through, TTL, eviction) | [Database Caching Strategies Using Redis — AWS Whitepaper](https://docs.aws.amazon.com/pdfs/whitepapers/latest/database-caching-strategies-using-redis/database-caching-strategies-using-redis.pdf) |
-| Instrumentação de observabilidade — padrão unificado para traces, métricas e logs | [OpenTelemetry — especificação e SDKs](https://opentelemetry.io/docs/) |
-| Rastreamento distribuído — visualização de traces em microserviços | [Jaeger — distributed tracing](https://www.jaegertracing.io/docs/) |
-| Schema de referência para JSON logs estruturados | [Elastic Common Schema (ECS)](https://www.elastic.co/guide/en/ecs/current/index.html) |
-| Pipeline de linhagem de dados e catálogo | [OpenMetadata — documentação](https://docs.open-metadata.org/) |
+| Estratégias de cache com Redis | [Database Caching Strategies Using Redis — AWS Whitepaper](https://docs.aws.amazon.com/pdfs/whitepapers/latest/database-caching-strategies-using-redis/database-caching-strategies-using-redis.pdf) |
+| Instrumentação de observabilidade | [OpenTelemetry — especificação e SDKs](https://opentelemetry.io/docs/) |
+| Rastreamento distribuído | [Jaeger — distributed tracing](https://www.jaegertracing.io/docs/) |
+| Schema de referência para JSON logs | [Elastic Common Schema (ECS)](https://www.elastic.co/guide/en/ecs/current/index.html) |
+| Pipeline de linhagem de dados | [OpenMetadata — documentação](https://docs.open-metadata.org/) |
