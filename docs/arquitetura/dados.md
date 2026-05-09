@@ -326,6 +326,180 @@ Em condições normais, o saldo consolidado fica disponível atualizado dentro d
 
 ---
 
+## Migrações de Schema
+
+**Papéis:** 📊 Arquiteto de Dados · 🛠️ Engenheiro de Software
+
+Cada serviço gerencia seu próprio schema com uma ferramenta de migração versionada. As migrações executam automaticamente na inicialização do serviço — sem intervenção manual em deploy.
+
+| Serviço | Ferramenta recomendada | Alternativa |
+|---------|----------------------|-------------|
+| Serviço de Lançamentos | **Flyway** (Java/Kotlin) ou **Alembic** (Python) | Liquibase |
+| Serviço de Consolidação | Mesma escolha da linguagem da Etapa 7 | — |
+
+**Convenção de nomenclatura dos arquivos:**
+
+```
+migrations/
+  V1__create_lancamentos.sql
+  V2__create_outbox.sql
+  V3__add_index_data_tipo.sql
+```
+
+**Regras invioláveis:**
+
+1. **Nunca alterar uma migration já aplicada** — cada arquivo é imutável após merge na branch principal
+2. **Toda alteração de schema é uma nova migration** — mesmo correção de typo em `CHECK` constraint
+3. **Migrations devem ser retrocompatíveis com a versão anterior do código** durante o janela de deploy — adicionar coluna com `DEFAULT`, nunca renomear ou remover sem ciclo de deprecação
+
+**Estratégia para colunas `NOT NULL` em tabelas com dados:**
+
+```sql
+-- Passo 1 (migration V_n): adicionar como nullable
+ALTER TABLE lancamentos ADD COLUMN canal VARCHAR(50);
+
+-- Passo 2: preencher valores existentes (em migration ou job separado)
+UPDATE lancamentos SET canal = 'legado' WHERE canal IS NULL;
+
+-- Passo 3 (migration V_n+1, após deploy estável): aplicar constraint
+ALTER TABLE lancamentos ALTER COLUMN canal SET NOT NULL;
+```
+
+Essa sequência permite deploy sem downtime — o código novo escreve o campo, o código antigo ignora, e a constraint só entra quando todos os registros foram preenchidos.
+
+---
+
+## Limpeza da Tabela `outbox`
+
+**Papéis:** 📊 Arquiteto de Dados · 👁️ Arquiteto de Observabilidade
+
+A tabela `outbox` é append-only por natureza: o relay marca registros como processados (`processado_em IS NOT NULL`) mas nunca os apaga. Sem limpeza, a tabela cresce indefinidamente — degradando o índice partial `WHERE processado_em IS NULL` e consumindo espaço desnecessário.
+
+**Job de arquivamento (executar diariamente):**
+
+```sql
+-- Remove mensagens processadas há mais de 7 dias
+-- Executar em lotes para não bloquear a tabela por longos períodos
+DELETE FROM outbox
+WHERE processado_em IS NOT NULL
+  AND processado_em < NOW() - INTERVAL '7 days'
+  AND id IN (
+    SELECT id FROM outbox
+    WHERE processado_em IS NOT NULL
+      AND processado_em < NOW() - INTERVAL '7 days'
+    LIMIT 1000
+  );
+```
+
+| Parâmetro | Valor | Motivo |
+|-----------|-------|--------|
+| Retenção de processados | 7 dias | Janela de auditoria operacional — permite investigar falhas recentes |
+| Tamanho do lote | 1.000 registros | Evita lock prolongado da tabela durante produção |
+| Frequência | Diária (madrugada) | Baixo tráfego; reduz contenção com o relay |
+
+**Alternativa para volumes altos:** particionamento da `outbox` por `criado_em` (RANGE mensal), permitindo `DROP PARTITION` em vez de `DELETE` — operação instantânea e sem bloqueio.
+
+---
+
+## Capacidade e Crescimento
+
+**Papéis:** 📊 Arquiteto de Dados · 🏗️ Arquiteto de Infraestrutura
+
+Estimativa de crescimento baseada no perfil de um comerciante de médio porte com operação diária.
+
+**Premissas:**
+
+| Parâmetro | Estimativa | Base |
+|-----------|-----------|------|
+| Lançamentos por dia | ~500 | Comerciante com fluxo moderado |
+| Tamanho médio por linha (`lancamentos`) | ~200 bytes | UUID + campos fixos + descrição média |
+| Retenção fiscal obrigatória | 5 anos | Lei 9.613/98 + Receita Federal |
+
+**Projeção de crescimento:**
+
+| Horizonte | Registros (`lancamentos`) | Espaço estimado |
+|-----------|--------------------------|----------------|
+| 1 mês | ~15.000 | ~3 MB |
+| 1 ano | ~182.500 | ~37 MB |
+| 5 anos | ~912.500 | ~183 MB |
+
+A tabela `lancamentos` permanece pequena mesmo em 5 anos para este perfil. **Particionamento não é necessário** para o volume especificado — fica como evolução natural se o comerciante crescer para volumes 10× maiores (>5.000 lançamentos/dia).
+
+A tabela `lancamentos_processados` cresce na mesma proporção. A `consolidacao_diaria` tem exatamente **1 linha por dia** — 365 linhas/ano, trivialmente pequena.
+
+**Sinal para reavaliar particionamento:** query `SELECT SUM(valor) FROM lancamentos_processados WHERE data_competencia = :data` ultrapassar 10ms de latência — indício de que o índice `idx_lancamentos_proc_data` não é mais eficiente o suficiente.
+
+**Estimativa de storage PostgreSQL total (5 anos):**
+
+| Tabela | Tamanho estimado |
+|--------|----------------|
+| `lancamentos` | ~183 MB |
+| `outbox` (com limpeza semanal) | ~5 MB (estável) |
+| `lancamentos_processados` | ~183 MB |
+| `consolidacao_diaria` | < 1 MB |
+| Índices (estimativa 40% das tabelas) | ~150 MB |
+| **Total** | **~522 MB** |
+
+Bem dentro do `db.t3.medium` (20 GB gp3) provisionado no Terraform — há espaço para crescimento de 40× antes de precisar aumentar o volume.
+
+---
+
+## Privacidade e LGPD
+
+**Papéis:** 📊 Arquiteto de Dados · 🔒 Arquiteto de Segurança
+
+### Classificação dos dados por tabela
+
+| Tabela | Dados pessoais? | Justificativa |
+|--------|----------------|---------------|
+| `lancamentos` | **Não** (por design) | Armazena tipo, valor, data e descrição — dados transacionais sem identificação de pessoa natural |
+| `outbox` | **Não** | Payload dos eventos — espelho dos campos de `lancamentos` |
+| `lancamentos_processados` | **Não** | Projeção dos mesmos dados financeiros |
+| `consolidacao_diaria` | **Não** | Totais agregados por dia — impossível identificar indivíduo |
+| Redis (`saldo:{data}`) | **Não** | Apenas valores numéricos agregados |
+
+O schema financeiro adota por design o **princípio da minimização** (LGPD art. 6º, V): nenhum dado de identificação pessoal é coletado nas tabelas de negócio.
+
+### Vetores de risco
+
+**1. Campo `descricao` — risco indireto**
+
+O campo é livre e um operador descuidado pode inserir dados pessoais (`"Venda CPF 123.456.789-00"`, `"Serviço João Silva"`). Mitigações:
+
+- Documentar no manual operacional que `descricao` é campo de natureza do lançamento, não de identificação do cliente
+- Validação no frontend: bloquear padrões de CPF/CNPJ com regex antes do envio
+- Validação no backend: `RF-05` pode incluir rejeição de payloads que contenham padrões de CPF/CNPJ
+
+**2. Trilha de auditoria (NFR-09) — risco planejado**
+
+A implementação de auditoria na Etapa 7 registrará *quem* criou cada lançamento — o `sub` (subject) do JWT, que identifica o Caixa/Gestor. **Isso é dado pessoal** de uma pessoa natural.
+
+| Artefato de auditoria | Onde fica | Contém dado pessoal |
+|----------------------|-----------|---------------------|
+| Log estruturado de cada requisição | CloudWatch Logs | Sim — `user_id`, IP |
+| Tabela `audit_log` (Etapa 7) | PostgreSQL (Lançamentos) | Sim — `operador_id`, timestamp |
+
+**3. Serviço de Autenticação (Etapa 7)**
+
+Nome, e-mail e possivelmente CPF do Gestor e do Caixa. Completamente fora do escopo da Etapa 4 — documentado aqui para rastreabilidade do risco.
+
+### Política de retenção
+
+| Dado | Retenção | Base legal |
+|------|----------|-----------|
+| Registros financeiros (`lancamentos`, `consolidacao_diaria`) | **5 anos** | Obrigação fiscal — Lei 9.613/98, IN RFB 1.990/2020 |
+| Logs de auditoria (`audit_log`, CloudWatch) | **2 anos** | LGPD art. 16 — dados de legítimo interesse com prazo razoável |
+| Cache Redis (`saldo:{data}`) | TTL 60s–1h | Dado derivado, não retido |
+| Outbox processada | **7 dias** | Janela operacional — sem obrigação legal após processamento |
+
+### Direito de exclusão (LGPD art. 18)
+
+Os dados financeiros em `lancamentos` **não podem ser apagados** durante o período de retenção fiscal (5 anos) — a obrigação legal prevalece sobre o direito de exclusão (LGPD art. 16, II). Após o período obrigatório, a exclusão é viável porque os registros não contêm PII estruturado.
+
+Para os logs de auditoria (que contêm `operador_id`): o direito de exclusão se aplica após 2 anos, com anonimização como alternativa ao apagamento — substituir `operador_id` por hash irreversível preserva a integridade do log sem identificar a pessoa.
+
+---
+
 ## ABB → SBB — Mapeamento de Blocos Arquiteturais
 
 | ABB (conceito arquitetural) | SBB (implementação concreta) |
