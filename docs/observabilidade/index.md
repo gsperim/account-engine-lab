@@ -14,35 +14,90 @@ tags:
 
 ---
 
-## Stack
+## Arquitetura do Pipeline — Componentes por Papel
 
 ```mermaid
 flowchart LR
-    subgraph Servicos["Serviços de Aplicação"]
-        LA["Lançamentos\n(OTEL SDK + Pyroscope SDK)"]
-        CO["Consolidação\n(OTEL SDK + Pyroscope SDK)"]
+    subgraph FONTES["Fontes"]
+        direction TB
+        SVC["Serviços\nlancamentos · consolidado\n· outbox-relay"]
+        INFRA["Infraestrutura\nPostgreSQL · Redis · RabbitMQ\nTraefik · Keycloak"]
     end
 
-    COL["OTEL Collector\n:4317 / :4318"]
-
-    subgraph Backends["Backends"]
-        TM["Tempo :3200\ntraces"]
-        PR["Prometheus :9090\nmétricas"]
-        LK["Loki :3100\nlogs"]
-        PY["Pyroscope :4040\nprofiles"]
+    subgraph INSTRUMENTACAO["Instrumentação\n(embutida nos serviços)"]
+        direction TB
+        OTEL_SDK["OTEL SDK\ntraces · métricas · logs"]
+        PYRO_SDK["Pyroscope SDK\nCPU · heap · goroutines"]
     end
 
-    GF["Grafana :3000\nUI unificada"]
+    subgraph AGENTES["Agentes\n(coletores externos)"]
+        direction TB
+        PROMTAIL["Promtail\nDocker socket\nstdout de todos containers"]
+        EXPORTERS["Exporters\npostgres-exporter ×2\nredis-exporter\nblackbox-exporter"]
+        SELF["Self-expose\n/metrics nativos\nrabbitmq · traefik · keycloak"]
+    end
 
-    LA -->|"OTLP"| COL
-    CO -->|"OTLP"| COL
-    LA -->|"profiles"| PY
-    CO -->|"profiles"| PY
-    COL -->|"OTLP"| TM
-    COL -->|"remote write"| PR
-    COL -->|"push"| LK
-    GF -->|"query"| TM & PR & LK & PY
+    subgraph PIPELINE["Pipeline — Processamento · Enriquecimento · Roteamento"]
+        direction TB
+        OTELCOL["OTEL Collector  :4317/:4318\n────────────────────────────\nrecv   OTLP gRPC + HTTP\nproc   batch · resource attrs · redaction PII\nexport Tempo · Prom · Loki"]
+        PROMTAIL_PROC["Promtail pipeline stages\nJSON parse · label extract\nredaction PII  CPF · CNPJ · e-mail · cartão"]
+    end
+
+    subgraph BACKENDS["Backends — Armazenamento por Sinal"]
+        direction TB
+        TEMPO["Tempo :3200\ntraces  15 dias"]
+        PROM["Prometheus :9090\nmétricas  15 dias\n+ regras de alerta"]
+        LOKI["Loki :3100\nlogs  31 dias"]
+        PYRO["Pyroscope :4040\nprofiles"]
+    end
+
+    subgraph ALERTAS["Alertas"]
+        AM["Alertmanager :9093\nburn rate · DLQ · SLOs\nrotas · inibições · silences"]
+    end
+
+    subgraph VISUALIZACAO["Visualização"]
+        GRAFANA["Grafana :3000\nDashboards · Explore\ncorrelação trace → log → metric → profile"]
+    end
+
+    SVC --> OTEL_SDK & PYRO_SDK
+    INFRA --> EXPORTERS
+    INFRA -. "scrape pull" .-> SELF
+
+    OTEL_SDK -->|"OTLP\ntraces+metrics+logs"| OTELCOL
+    SVC -->|"stdout"| PROMTAIL
+    INFRA -->|"stdout"| PROMTAIL
+
+    PROMTAIL --> PROMTAIL_PROC
+    PROMTAIL_PROC -->|"push logs"| LOKI
+
+    OTELCOL -->|"OTLP"| TEMPO
+    OTELCOL -->|"remote write"| PROM
+    OTELCOL -->|"push logs"| LOKI
+
+    PYRO_SDK -->|"profiles"| PYRO
+
+    EXPORTERS -->|"scrape pull"| PROM
+    SELF -->|"scrape pull"| PROM
+
+    PROM -->|"alertas disparados"| AM
+    AM -->|"notificações"| GRAFANA
+
+    GRAFANA -->|"query"| TEMPO & PROM & LOKI & PYRO
 ```
+
+| Papel | Componentes | Responsabilidade |
+|-------|-------------|-----------------|
+| **Fontes** | Serviços de aplicação, infraestrutura | Geram os dados — não sabem para onde vão |
+| **Instrumentação** | OTEL SDK, Pyroscope SDK | Captura embutida no processo — zero impacto no domínio |
+| **Agentes** | Promtail, exporters, self-expose | Coletam de fora do processo — sem mudança de código |
+| **Pipeline** | OTEL Collector, Promtail stages | Processa, enriquece, redacta PII e roteia por sinal |
+| **Backends** | Prometheus, Loki, Tempo, Pyroscope | Armazenam por tipo de dado — cada um otimizado para seu sinal |
+| **Alertas** | Alertmanager | Agrega, deduplica e roteia notificações |
+| **Visualização** | Grafana | Correlação entre todos os sinais numa única UI |
+
+> **Ponto de design:** o OTEL Collector é o único componente que vê todos os três sinais de aplicação (traces, métricas, logs). É ali que a redação de PII e o enriquecimento com atributos de ambiente acontecem de forma centralizada — sem tocar o código dos serviços.
+
+## Stack
 
 | Porta local | Componente | Pilar |
 |-------------|-----------|-------|
