@@ -32,6 +32,9 @@ traefik/certs/*-key.pem
 # Variáveis de ambiente locais
 .env
 
+# Alertmanager — contém token do Telegram quando configurado
+observability/alertmanager.yml
+
 # Terraform — arquivos gerados e dados sensíveis
 terraform/.terraform/
 terraform/.terraform.lock.hcl
