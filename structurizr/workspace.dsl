@@ -164,6 +164,12 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
         consolidado -> otelCollector "Envia traces, métricas e logs" "OTLP gRPC"
 
         # ── Relacionamentos — Observabilidade Interna ─────────────────────────
+        # IdP externo também é observado em dev (Promtail captura stdout,
+        # Prometheus raspa :9000/metrics). Em prod (Cognito) a telemetria
+        # vai para CloudWatch — este relacionamento não existe em produção.
+        idp -> promtail "Emite logs de eventos de segurança (stdout)" "Docker stdout"
+        prometheus -> idp "Raspa métricas JVM e de autenticação" "HTTP /metrics scrape"
+
         otelCollector -> tempo "Exporta traces" "OTLP"
         otelCollector -> prometheus "Exporta métricas" "remote write"
         otelCollector -> loki "Exporta logs (pós-redação PII)" "push"
