@@ -1,0 +1,56 @@
+# Copie para terraform.tfvars e preencha os valores sensíveis.
+# NUNCA commite terraform.tfvars — está no .gitignore.
+
+aws_region   = "sa-east-1"
+project_name = "fluxo-caixa"
+environment  = "production"
+
+# ── DNS ───────────────────────────────────────────────────────────────────────
+domain_name = "fluxo-caixa.com.br"   # substitua pelo domínio real
+
+# ── EKS ──────────────────────────────────────────────────────────────────────
+eks_cluster_version    = "1.30"
+eks_node_instance_type = "t3.medium"
+eks_node_min           = 2
+eks_node_max           = 6
+eks_node_desired       = 2
+# Restrinja ao IP do bastion/VPN em produção real:
+eks_admin_cidrs = ["SEU_IP_CORPORATIVO/32"]
+
+# ── RDS ──────────────────────────────────────────────────────────────────────
+# Senhas gerenciadas pelo Secrets Manager — não há variável de senha para RDS.
+db_instance_class        = "db.t3.medium"
+db_allocated_storage     = 20
+db_max_allocated_storage = 100
+
+# ── ElastiCache ───────────────────────────────────────────────────────────────
+redis_node_type  = "cache.t3.micro"
+redis_auth_token = "SUBSTITUA_POR_TOKEN_MIN_16_CHARS"
+
+# ── RabbitMQ (self-hosted) ────────────────────────────────────────────────────
+rabbitmq_username = "fluxo_caixa"
+rabbitmq_password = "SUBSTITUA_POR_SENHA_SEGURA_12_CHARS"
+
+# ── CloudFront ────────────────────────────────────────────────────────────────
+cloudfront_price_class   = "PriceClass_200"
+# Header secreto que o API Gateway valida — impede bypass direto ao execute-api:
+cloudfront_origin_secret = "SUBSTITUA_POR_STRING_ALEATORIA_32_CHARS"
+
+# ── API Gateway — JWT ─────────────────────────────────────────────────────────
+jwt_issuer   = "https://PROVEDOR_DE_IDENTIDADE.com"
+jwt_audience = "fluxo-caixa-api"
+
+# ── API Gateway — VPC Link ────────────────────────────────────────────────────
+# Preencha após o primeiro deploy Kubernetes (Etapa 8):
+#   kubectl get ingress -n default -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}'
+alb_dns_name = ""
+
+# ── mTLS ─────────────────────────────────────────────────────────────────────
+# Deixe vazio para desabilitar. Para habilitar, gere a CA interna primeiro:
+#   openssl req -x509 -newkey rsa:4096 -keyout ca-key.pem -out ca.pem -days 3650 -nodes
+# Depois: mtls_truststore_path = "./ca.pem"
+mtls_truststore_path = ""
+
+# ── Monitoramento e FinOps ────────────────────────────────────────────────────
+alert_email        = "ops@fluxo-caixa.com.br"
+monthly_budget_usd = "1200"
