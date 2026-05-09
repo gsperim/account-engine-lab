@@ -46,11 +46,11 @@ gantt
 
     section Dados e Transversais
     Etapa 4 — Dados e Persistência         :done,   2026-01-03, 1d
-    Etapa 5 — Segurança                    :active, 2026-01-04, 1d
-    Etapa 6 — Observabilidade              :active, 2026-01-04, 1d
+    Etapa 5 — Segurança                    :done,   2026-01-04, 1d
+    Etapa 6 — Observabilidade              :done,   2026-01-04, 1d
 
     section Entrega
-    Etapa 7 — Implementação                :        2026-01-05, 2d
+    Etapa 7 — Implementação                :active, 2026-01-05, 2d
     Etapa 8 — Pipeline e Entrega           :        2026-01-06, 1d
     Etapa 9 — Documentação Final           :        2026-01-07, 1d
 ```
@@ -119,7 +119,7 @@ Define como o sistema é executado: ambiente de containers, estratégia de escal
 
 ---
 
-### Fase 4 — Dados e Persistência
+### Fase 4 — Dados e Persistência ✓
 
 Cada serviço possui e controla exclusivamente seus próprios dados — esse princípio (*database per service*) foi decidido na Fase 1. Esta fase o implementa: define os modelos de dados por serviço, escolhe os mecanismos de persistência com justificativa e formaliza os contratos dos eventos de domínio.
 
@@ -127,13 +127,13 @@ A estratégia de consistência eventual entre os serviços, que foi aceita como 
 
 ---
 
-### Fase 5 — Segurança
+### Fase 5 — Segurança ✓
 
 Define o modelo de autenticação e autorização, a estratégia de proteção de dados em trânsito e em repouso, e o mapeamento da superfície de ataque. O princípio *segurança por design* estabelecido na Fase 1 é operacionalizado.
 
 ---
 
-### Fase 6 — Observabilidade e Monitoramento
+### Fase 6 — Observabilidade e Monitoramento ✓
 
 Logs estruturados, métricas e rastreamento distribuído são requisitos do sistema, não opcionais — isso foi decidido na Fase 1 como NFR-04. Esta fase define os três pilares, os SLOs, as ferramentas e a estratégia de alertas.
 
