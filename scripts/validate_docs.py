@@ -212,7 +212,59 @@ if adr_dir.exists():
                 err(adr_path.name, f"seção obrigatória ausente: '{section}'")
 
 
-# ── 8. Tags obrigatórias nas páginas de conteúdo ────────────────────────────
+# ── 8. Referências parentéticas não linkadas ─────────────────────────────────
+# Detecta padrões como (RF-05), (NFR-07), (ADR-004) em texto puro que deveriam
+# ser links markdown. Ignora: declarações com <span id=...>, títulos de ADR
+# nos próprios arquivos, e referências já dentro de links [texto](url).
+
+PAREN_REF_RE = re.compile(
+    r'(?<!\])'          # não precedido por ] (seria [texto](RF-xx))
+    r'\('               # abre parêntese
+    r'((?:RF|NFR|ADR)-\d+)'  # a referência em si
+    r'[^)]*?\)'         # resto até fechar (pode ter texto extra como "RF-05: bla")
+)
+# Padrão: "Requisito de origem: NFR-xx, NFR-yy" sem links
+ORIGIN_BARE_RE = re.compile(
+    r'\*\*Requisito(?:s)?(?: de origem)?:\*\*\s+'
+    r'(?!\[)'           # logo após o cabeçalho, não começa com [
+    r'((?:RF|NFR|ADR)-\d+)'
+)
+
+SKIP_UNLINKED = {"tags.md", "glossario.md", "abbreviations.md"}
+
+for source_path in DOCS_DIR.rglob("*.md"):
+    if source_path.name in SKIP_UNLINKED:
+        continue
+    raw = source_path.read_text(encoding="utf-8")
+    clean = strip_code_blocks(raw)
+    source_rel = str(source_path.relative_to(DOCS_DIR))
+
+    # Conjunto de IDs já linkados neste arquivo
+    linked_ids: set[str] = set()
+    for lm in re.finditer(r'\[([^\]]+)\]\(([^)]+)\)', clean):
+        for part in (lm.group(1), lm.group(2)):
+            for ref in re.findall(r'\b(?:RF|NFR|ADR)-\d+\b', part):
+                linked_ids.add(ref)
+
+    # Remove linhas de heading para evitar falso positivo no título do próprio ADR
+    clean_no_headings = re.sub(r'^#{1,6}[^\n]+\n?', '', clean, flags=re.MULTILINE)
+    # Remove declarações <span id=...> (são IDs, não referências)
+    clean_no_headings = re.sub(r'<span[^>]+>[^<]*</span>', '', clean_no_headings)
+    # Remove frontmatter
+    clean_no_headings = re.sub(r'^---\n.*?\n---\n?', '', clean_no_headings, flags=re.DOTALL)
+
+    for m in PAREN_REF_RE.finditer(clean_no_headings):
+        ref = m.group(1)
+        if ref not in linked_ids:
+            warn(source_rel, f"referência não linkada: {m.group(0).strip()} — considere [{ref}](...)")
+
+    for m in ORIGIN_BARE_RE.finditer(clean_no_headings):
+        ref = m.group(1)
+        if ref not in linked_ids:
+            warn(source_rel, f"'Requisito de origem' sem link: {ref} — considere [{ref}](...)")
+
+
+# ── 9. Tags obrigatórias nas páginas de conteúdo ────────────────────────────
 
 FRONTMATTER_RE = re.compile(r"^---\n.*?\n---", re.DOTALL)
 

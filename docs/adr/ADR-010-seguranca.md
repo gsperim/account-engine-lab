@@ -3,13 +3,13 @@
 **Status:** Aceito  
 **Data:** 2026-05-08  
 **Papéis:** 🔒 Arquiteto de Segurança · 🔐 DevSecOps · 🏗️ Arquiteto de Infraestrutura  
-**Requisito de origem:** NFR-05 (autenticação/autorização), NFR-06 (dados em trânsito e repouso), Compliance LGPD
+**Requisito de origem:** [NFR-05](../negocio/requisitos.md#nfr-05) (autenticação/autorização), [NFR-06](../negocio/requisitos.md#nfr-06) (dados em trânsito e repouso), Compliance LGPD
 
 ---
 
 ## Contexto
 
-A arquitetura de infraestrutura (ADR-006, ADR-008, ADR-009) definiu a topologia de produção na AWS. Este ADR registra as decisões de segurança em camadas aplicadas sobre essa topologia, seguindo o princípio de *defense in depth* — cada camada assume que as externas podem falhar.
+A arquitetura de infraestrutura ([ADR-006](ADR-006-container-runtime.md), [ADR-008](ADR-008-cloud-provider.md), [ADR-009](ADR-009-api-gateway-producao.md)) definiu a topologia de produção na AWS. Este ADR registra as decisões de segurança em camadas aplicadas sobre essa topologia, seguindo o princípio de *defense in depth* — cada camada assume que as externas podem falhar.
 
 ---
 

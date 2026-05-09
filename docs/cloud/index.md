@@ -9,7 +9,7 @@
 
 O sistema foi projetado **cloud-agnostic**: os serviços comunicam via variáveis de ambiente, os contratos são definidos em OpenAPI e AsyncAPI, e o docker-compose local é funcionalmente equivalente ao ambiente de produção. Mudar de provedor de nuvem exigiria ajustar variáveis e manifests, não o código da aplicação.
 
-As decisões de nuvem são portanto uma **camada separada** — opções de implementação dentro de um envelope de requisitos que o sistema define (NFR-02, NFR-04, NFR-08).
+As decisões de nuvem são portanto uma **camada separada** — opções de implementação dentro de um envelope de requisitos que o sistema define ([NFR-02](../negocio/requisitos.md#nfr-02), [NFR-04](../negocio/requisitos.md#nfr-04), [NFR-08](../negocio/requisitos.md#nfr-08)).
 
 ---
 

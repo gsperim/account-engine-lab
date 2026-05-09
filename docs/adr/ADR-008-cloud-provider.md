@@ -3,14 +3,14 @@
 **Status:** Aceito  
 **Data:** 2026-05-08  
 **Papéis:** 🏗️ Arquiteto de Infraestrutura · ⚙️ Arquiteto de Tecnologia · 🏛️ Arquiteto Corporativo  
-**Requisito de origem:** NFR-02 (50 req/s), NFR-04 (99,9% disponibilidade), NFR-08 (RTO ≤ 1h)
+**Requisito de origem:** [NFR-02](../negocio/requisitos.md#nfr-02) (50 req/s), [NFR-04](../negocio/requisitos.md#nfr-04) (99,9% disponibilidade), [NFR-08](../negocio/requisitos.md#nfr-08) (RTO ≤ 1h)
 
 ---
 
 ## Contexto
 
-Com a infraestrutura local definida em docker-compose (ADR-006) e o ambiente de produção
-previsto para Kubernetes (também ADR-006), é necessário escolher o provedor de nuvem
+Com a infraestrutura local definida em docker-compose ([ADR-006](ADR-006-container-runtime.md)) e o ambiente de produção
+previsto para Kubernetes (também [ADR-006](ADR-006-container-runtime.md)), é necessário escolher o provedor de nuvem
 que hospedará o cluster e os serviços gerenciados de produção.
 
 Os critérios de avaliação foram:
@@ -99,7 +99,7 @@ Descartado. Adiciona complexidade operacional sem benefício real no porte do si
 |-----------|-----------|
 | Vendor lock-in em RDS, ElastiCache e serviços AWS | Mitigado pela camada de abstração via variáveis de ambiente — trocar o provider exige alterar credenciais e manifests, não código de aplicação |
 | AWS `sa-east-1` tem preços ~20% superiores a `us-east-1` | Aceito por latência e LGPD |
-| Self-hosted RabbitMQ requer conhecimento operacional de RabbitMQ | Helm `bitnami/rabbitmq` abstrai grande parte da operação; Outbox Pattern (ADR-003) garante zero perda de mensagens durante failover |
+| Self-hosted RabbitMQ requer conhecimento operacional de RabbitMQ | Helm `bitnami/rabbitmq` abstrai grande parte da operação; Outbox Pattern ([ADR-003](ADR-003-outbox-pattern.md)) garante zero perda de mensagens durante failover |
 
 ---
 

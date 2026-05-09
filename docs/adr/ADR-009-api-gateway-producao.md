@@ -3,7 +3,7 @@
 **Status:** Aceito  
 **Data:** 2026-05-08  
 **Papéis:** 🧩 Arquiteto de Soluções · 🔒 Arquiteto de Segurança · 🏗️ Arquiteto de Infraestrutura  
-**Requisito de origem:** ADR-004 (JWT validação local), NFR-02 (50 req/s), NFR-05 (segurança)
+**Requisito de origem:** [ADR-004](ADR-004-jwt-validacao-local.md) (JWT validação local), [NFR-02](../negocio/requisitos.md#nfr-02) (50 req/s), [NFR-05](../negocio/requisitos.md#nfr-05) (segurança)
 
 ---
 
@@ -14,9 +14,9 @@ Para produção na AWS, é necessário decidir se o Traefik segue como Ingress C
 no EKS ou se um serviço gerenciado de API Gateway assume essa função.
 
 Os requisitos da camada de gateway em produção são:
-1. **TLS terminado** com certificado confiável (ADR-007)
-2. **Validação de JWT** sem roundtrip ao IdP por requisição (ADR-004)
-3. **Rate limiting** por rota para proteção de abuso (NFR-07)
+1. **TLS terminado** com certificado confiável ([ADR-007](ADR-007-api-gateway.md))
+2. **Validação de JWT** sem roundtrip ao IdP por requisição ([ADR-004](ADR-004-jwt-validacao-local.md))
+3. **Rate limiting** por rota para proteção de abuso ([NFR-07](../negocio/requisitos.md#nfr-07))
 4. **Integração com WAF** para filtragem de tráfego malicioso
 5. **Observabilidade** — logs estruturados de acesso
 
@@ -98,7 +98,7 @@ flowchart TD
 
 ### Manter Traefik como gateway de produção
 
-**Prós:** zero custo adicional, portabilidade, já documentado (ADR-007).  
+**Prós:** zero custo adicional, portabilidade, já documentado ([ADR-007](ADR-007-api-gateway.md)).  
 **Contras:** plugin JWT experimental, rate limiting por pod (não global),
 WAF exige configuração separada.  
 **Descartado** pelo risco do plugin JWT em sistema financeiro.

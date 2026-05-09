@@ -47,7 +47,7 @@ Os mesmos artefatos Docker (imagens) são usados nos dois ambientes. A diferenç
 
 | Necessidade | Mecanismo Kubernetes |
 |-------------|---------------------|
-| Escalabilidade horizontal do Consolidado (NFR-02) | `HorizontalPodAutoscaler` por CPU/RPS |
+| Escalabilidade horizontal do Consolidado ([NFR-02](../negocio/requisitos.md#nfr-02)) | `HorizontalPodAutoscaler` por CPU/RPS |
 | Self-healing após falha de container | `restartPolicy: Always` + liveness probe |
 | Rolling deployments sem downtime | `RollingUpdate` strategy |
 | Gestão de segredos em produção | `Secret` + integração com vault (AWS Secrets Manager, HashiCorp Vault) |

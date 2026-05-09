@@ -1,7 +1,7 @@
 # Estimativa de Custos de Infraestrutura
 
 **Perspectiva:** 🏗️ Arquiteto de Infraestrutura · ⚙️ Arquiteto de Tecnologia  
-**Requisito de origem:** NFR-02 (50 req/s), NFR-04 (99,9% disponibilidade), NFR-08 (RTO ≤ 1h)  
+**Requisito de origem:** [NFR-02](../negocio/requisitos.md#nfr-02) (50 req/s), [NFR-04](../negocio/requisitos.md#nfr-04) (99,9% disponibilidade), [NFR-08](../negocio/requisitos.md#nfr-08) (RTO ≤ 1h)  
 **Região:** `sa-east-1` (São Paulo) — conformidade LGPD e menor latência para usuários brasileiros  
 **Método:** IaC declarativa em Terraform + análise Infracost
 

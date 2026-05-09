@@ -3,13 +3,13 @@
 **Status:** Aceito  
 **Data:** 2026-05-08  
 **Papéis:** 🧩 Arquiteto de Soluções · 🏗️ Arquiteto de Infraestrutura · ⚙️ Arquiteto de Tecnologia  
-**Requisito de origem:** NFR-02 (50 req/s), NFR-04 (99,9% disponibilidade), NFR-08 (RTO ≤ 1h)
+**Requisito de origem:** [NFR-02](../negocio/requisitos.md#nfr-02) (50 req/s), [NFR-04](../negocio/requisitos.md#nfr-04) (99,9% disponibilidade), [NFR-08](../negocio/requisitos.md#nfr-08) (RTO ≤ 1h)
 
 ---
 
 ## Contexto
 
-Com a topologia de rede (ADR-006, ADR-008) e a segurança (ADR-010) definidas, um conjunto de decisões operacionais complementares foi necessário para tornar a infraestrutura genuinamente produtiva: connection pooling entre pods e banco, registro privado de imagens, autoscaling inteligente de nós, DR formal, monitoramento com thresholds reais e controle financeiro.
+Com a topologia de rede ([ADR-006](ADR-006-container-runtime.md), [ADR-008](ADR-008-cloud-provider.md)) e a segurança ([ADR-010](ADR-010-seguranca.md)) definidas, um conjunto de decisões operacionais complementares foi necessário para tornar a infraestrutura genuinamente produtiva: connection pooling entre pods e banco, registro privado de imagens, autoscaling inteligente de nós, DR formal, monitoramento com thresholds reais e controle financeiro.
 
 ---
 
@@ -75,7 +75,7 @@ Implementar sete controles complementares de excelência operacional: RDS Proxy 
 - Exclusão acidental (humana ou por deploy defeituoso)
 - Catástrofe regional (todos os dados em sa-east-1 inacessíveis)
 
-O backup cobre esses cenários com RPO de 24h e RTO ≤ 1h (NFR-08) para restore a partir de snapshot.
+O backup cobre esses cenários com RPO de 24h e RTO ≤ 1h ([NFR-08](../negocio/requisitos.md#nfr-08)) para restore a partir de snapshot.
 
 **WORM lock (3 dias):** impede exclusão acidental do próprio backup por erros de automação. Janela de 3 dias é suficiente para detectar e reverter sem impedir manutenção normal.
 
