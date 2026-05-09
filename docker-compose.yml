@@ -185,10 +185,13 @@ services:
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
       - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
     networks:
       - messaging
+      - observability
     ports:
       - "15672:15672"  # Management UI — apenas desenvolvimento local
+      - "15692:15692"  # Prometheus metrics
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
@@ -202,6 +205,33 @@ services:
   # Grafana:        http://localhost:3000
   # Prometheus:     http://localhost:9090
   # OTEL Collector: localhost:4317 (gRPC) / 4318 (HTTP)
+
+  postgres-exporter-lancamentos:
+    image: prom/postgres-exporter:v0.15.0
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_LANCAMENTOS_USER:-lancamentos}:${POSTGRES_LANCAMENTOS_PASSWORD}@postgres-lancamentos:5432/${POSTGRES_LANCAMENTOS_DB:-lancamentos}?sslmode=disable"
+    networks:
+      - lancamentos-data
+      - observability
+    restart: unless-stopped
+
+  postgres-exporter-consolidado:
+    image: prom/postgres-exporter:v0.15.0
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_CONSOLIDADO_USER:-consolidado}:${POSTGRES_CONSOLIDADO_PASSWORD}@postgres-consolidado:5432/${POSTGRES_CONSOLIDADO_DB:-consolidado}?sslmode=disable"
+    networks:
+      - consolidacao-data
+      - observability
+    restart: unless-stopped
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.62.0
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    networks:
+      - consolidacao-data
+      - observability
+    restart: unless-stopped
 
   alertmanager:
     image: prom/alertmanager:v0.27.0

@@ -13,6 +13,8 @@ alerting:
         - targets: [alertmanager:9093]
 
 scrape_configs:
+
+  # ── Própria stack de observabilidade ──────────────────────────────────────
   - job_name: prometheus
     static_configs:
       - targets: [localhost:9090]
@@ -21,17 +23,62 @@ scrape_configs:
     static_configs:
       - targets: [otel-collector:8888]
 
-  # Blackbox — probes sintéticos externos aos serviços
+  - job_name: grafana
+    static_configs:
+      - targets: [grafana:3000]
+
+  - job_name: loki
+    static_configs:
+      - targets: [loki:3100]
+    metrics_path: /metrics
+
+  - job_name: tempo
+    static_configs:
+      - targets: [tempo:3200]
+    metrics_path: /metrics
+
+  - job_name: alertmanager
+    static_configs:
+      - targets: [alertmanager:9093]
+
+  # ── Infraestrutura de aplicação ────────────────────────────────────────────
+  - job_name: traefik
+    static_configs:
+      - targets: [traefik:8082]
+
+  - job_name: rabbitmq
+    static_configs:
+      - targets: [rabbitmq:15692]
+
+  - job_name: keycloak
+    static_configs:
+      - targets: [keycloak:9000]
+    metrics_path: /metrics
+
+  - job_name: postgres-lancamentos
+    static_configs:
+      - targets: [postgres-exporter-lancamentos:9187]
+
+  - job_name: postgres-consolidado
+    static_configs:
+      - targets: [postgres-exporter-consolidado:9187]
+
+  - job_name: redis
+    static_configs:
+      - targets: [redis-exporter:9121]
+
+  # ── Blackbox — probes sintéticos externos ─────────────────────────────────
   - job_name: blackbox
     metrics_path: /probe
     params:
       module: [http_2xx]
     static_configs:
       - targets:
-          # Etapa 7: adicionar endpoints reais quando os serviços existirem
+          - http://keycloak:8080/health/ready
+          - http://traefik:8082/ping
+          # Etapa 7: adicionar endpoints dos serviços de aplicação
           # - http://lancamentos:8080/health
           # - http://consolidado:8080/health
-          - http://keycloak:8080/health/ready
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
@@ -40,7 +87,7 @@ scrape_configs:
       - target_label: __address__
         replacement: blackbox:9115
 
-  # Etapa 7: adicionar quando os serviços existirem
+  # ── Serviços de aplicação (Etapa 7) ───────────────────────────────────────
   # - job_name: lancamentos
   #   static_configs:
   #     - targets: [lancamentos:8080]

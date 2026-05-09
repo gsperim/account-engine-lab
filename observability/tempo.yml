@@ -18,7 +18,7 @@ ingester:
 
 compactor:
   compaction:
-    block_retention: 168h  # 7 dias
+    block_retention: 168h
 
 storage:
   trace:
@@ -27,17 +27,3 @@ storage:
       path: /var/tempo/traces
     wal:
       path: /var/tempo/wal
-
-metrics_generator:
-  registry:
-    external_labels:
-      source: tempo
-      environment: local
-  storage:
-    path: /var/tempo/generator/wal
-  processors: [service-graphs, span-metrics]
-
-overrides:
-  defaults:
-    metrics_generator:
-      processors: [service-graphs, span-metrics]
