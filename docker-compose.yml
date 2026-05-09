@@ -207,7 +207,7 @@ services:
   # OTEL Collector: localhost:4317 (gRPC) / 4318 (HTTP)
 
   postgres-exporter-lancamentos:
-    image: prom/postgres-exporter:v0.15.0
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
     environment:
       DATA_SOURCE_NAME: "postgresql://${POSTGRES_LANCAMENTOS_USER:-lancamentos}:${POSTGRES_LANCAMENTOS_PASSWORD}@postgres-lancamentos:5432/${POSTGRES_LANCAMENTOS_DB:-lancamentos}?sslmode=disable"
     networks:
@@ -216,7 +216,7 @@ services:
     restart: unless-stopped
 
   postgres-exporter-consolidado:
-    image: prom/postgres-exporter:v0.15.0
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
     environment:
       DATA_SOURCE_NAME: "postgresql://${POSTGRES_CONSOLIDADO_USER:-consolidado}:${POSTGRES_CONSOLIDADO_PASSWORD}@postgres-consolidado:5432/${POSTGRES_CONSOLIDADO_DB:-consolidado}?sslmode=disable"
     networks:
@@ -416,7 +416,6 @@ networks:
 
   observability:
     driver: bridge
-    internal: true  # stack PLT não precisa de acesso externo
 
   lancamentos-data:
     driver: bridge
