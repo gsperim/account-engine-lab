@@ -12,6 +12,52 @@ Escolhas de ferramentas para documentação, modelagem e operação do projeto, 
 
 ---
 
+## Infraestrutura de Plataforma
+
+### Traefik v3 — API Gateway
+
+Escolhido sobre nginx e Kong para este projeto. Decisão completa em [ADR-007](adr/ADR-007-api-gateway.md).
+
+**Por que Traefik:** service discovery nativo via labels no docker-compose (rotas coexistem com o serviço), TLS com cert auto-signed para dev sem configuração, plugin JWT para validação local (alinhado com [ADR-004](adr/ADR-004-jwt-validacao-local.md)), rate limiting como middleware declarativo.
+
+### PostgreSQL 16 — Banco de dados relacional
+
+Ambos os serviços usam PostgreSQL com instâncias separadas (*database per service* — [P-04](negocio/principios.md)).
+
+**Por que PostgreSQL:** modelo de dados transacional com requisito de consistência forte dentro de cada serviço (lançamentos são append-only; consolidação é calculada a partir de eventos). ACID nativo, suporte a `ON CONFLICT DO NOTHING` para idempotência do outbox. Ecossistema maduro, drivers disponíveis em qualquer linguagem.
+
+**Por que não MongoDB/DynamoDB:** os dados são relacionais e estruturados; não há requisito de schema flexível ou escala de write que justifique um banco não relacional.
+
+### Redis 7 — Cache de alta performance
+
+Cache de saldos consolidados no Serviço de Consolidação (padrão cache-aside).
+
+**Por que Redis:** latência sub-milissegundo para reads; estrutura de dados key-value ideal para `saldo:{data}` → `{total_creditos, total_debitos}`; AOF para durabilidade do cache; `maxmemory-policy allkeys-lru` para gestão automática de memória.
+
+### RabbitMQ 3.13 — Message Broker
+
+Decisão completa em [ADR-002](adr/ADR-002-message-broker.md). Escolhido sobre Kafka por volume moderado e semântica de fila com DLQ.
+
+### Docker + docker-compose — Container runtime
+
+Decisão completa em [ADR-006](adr/ADR-006-container-runtime.md). docker-compose para local e CI; Kubernetes para produção.
+
+---
+
+## Serviços de Aplicação *(a definir na Etapa 7)*
+
+| Componente | Decisão pendente |
+|------------|-----------------|
+| Linguagem — Serviço de Lançamentos | — |
+| Linguagem — Serviço de Consolidação | — |
+| Framework HTTP | — |
+| ORM / query builder | — |
+| Framework de testes | — |
+
+---
+
+---
+
 ## Documentação Arquitetural
 
 ### ArchiMate 3.x — ferramenta de referência (fora do escopo do desafio)

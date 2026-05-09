@@ -63,11 +63,45 @@ else
   success "Repositório pronto."
 fi
 
+# ── HTTPS Local (mkcert) ──────────────────────────────────────────────────────
+#
+# mkcert gera certificados assinados por uma CA local instalada no sistema.
+# O script gera os certs automaticamente se mkcert estiver disponível,
+# mas NÃO roda `mkcert -install` — isso modifica o trust store do sistema
+# e deve ser feito explicitamente pelo desenvolvedor.
+
+CERT_GENERATED=false
+HTTPS_NOTE="auto-assinado — use: curl -k"
+
+if command -v mkcert &>/dev/null; then
+  if [ -f "traefik/certs/local.pem" ]; then
+    success "Certificado mkcert já existe — HTTPS com CA local."
+    HTTPS_NOTE="CA local — browser confia"
+  else
+    info "mkcert detectado — gerando certificado para localhost..."
+    mkcert \
+      -cert-file traefik/certs/local.pem \
+      -key-file  traefik/certs/local-key.pem \
+      localhost 127.0.0.1
+    success "Certificado gerado em traefik/certs/"
+    HTTPS_NOTE="CA local — browser confia"
+    CERT_GENERATED=true
+  fi
+else
+  warn "mkcert não encontrado — Traefik usará certificado auto-assinado."
+fi
+
 # ── Subir serviços ────────────────────────────────────────────────────────────
 
 info "Iniciando serviços..."
 $COMPOSE pull --quiet
 $COMPOSE up -d
+
+# Se certs foram gerados agora, reinicia o Traefik para carregá-los
+if [ "$CERT_GENERATED" = "true" ]; then
+  info "Recarregando Traefik com o novo certificado..."
+  $COMPOSE restart traefik
+fi
 
 # ── Aguardar disponibilidade ──────────────────────────────────────────────────
 
@@ -75,7 +109,7 @@ info "Aguardando serviços ficarem disponíveis..."
 
 wait_for() {
   local url=$1 name=$2 attempts=0 max=30
-  while ! curl -sf "$url" &>/dev/null; do
+  while ! curl -sf --insecure "$url" &>/dev/null; do
     attempts=$((attempts + 1))
     if [ $attempts -ge $max ]; then
       warn "$name demorou mais que o esperado — verifique com: $COMPOSE logs"
@@ -83,19 +117,34 @@ wait_for() {
     fi
     sleep 1
   done
-  success "$name disponível em $url"
+  success "$name disponível"
 }
 
-wait_for "http://localhost:8000" "Portal de Documentação"
-wait_for "http://localhost:8080" "Diagramas C4 (Structurizr)"
+wait_for "http://localhost:8000"  "Portal de Documentação"
+wait_for "http://localhost:8080"  "Diagramas C4 (Structurizr)"
+wait_for "http://localhost:8091"  "Traefik Dashboard"
+# Nota: lancamentos e consolidado só sobem com --profile app (Etapa 7)
 
 # ── Resumo ────────────────────────────────────────────────────────────────────
 
 echo ""
 echo -e "${BOLD}Serviços ativos:${RESET}"
 echo ""
-echo -e "  ${GREEN}●${RESET} Portal de Documentação   → http://localhost:8000"
-echo -e "  ${GREEN}●${RESET} Diagramas C4              → http://localhost:8080"
+echo -e "  ${GREEN}●${RESET} API Gateway (HTTP)        →  http://localhost:8090"
+echo -e "  ${GREEN}●${RESET} API Gateway (HTTPS)       → https://localhost:8443   ${YELLOW}${HTTPS_NOTE}${RESET}"
+echo -e "  ${GREEN}●${RESET} Traefik Dashboard         →  http://localhost:8091"
+echo -e "  ${GREEN}●${RESET} RabbitMQ Management       →  http://localhost:15672"
+echo -e "  ${GREEN}●${RESET} Portal de Documentação    →  http://localhost:8000"
+echo -e "  ${GREEN}●${RESET} Diagramas C4              →  http://localhost:8080"
 echo ""
+
+if ! command -v mkcert &>/dev/null; then
+  echo -e "${YELLOW}Dica — HTTPS confiável no browser:${RESET}"
+  echo "  1. Instale mkcert → https://github.com/FiloSottile/mkcert#installation"
+  echo "  2. Execute:          mkcert -install"
+  echo "  3. Execute:          bash setup.sh"
+  echo ""
+fi
+
 echo -e "Para parar: ${BOLD}$COMPOSE down${RESET}"
 echo ""

@@ -1,5 +1,203 @@
 services:
 
+  # ── Traefik — API Gateway ──────────────────────────────────────────────────
+  # Roteamento, TLS, rate limiting e (Etapa 7) validação JWT via plugin
+  # Descoberta de serviços via labels — sem arquivo de config de rotas separado
+  # ADR-007: traefik sobre nginx
+  traefik:
+    image: traefik:v3.0
+    entrypoint: ["/usr/local/bin/traefik"]  # bypass entrypoint.sh (shell script musl incompatível com kernel 6.17)
+    command: --configfile=/etc/traefik/traefik.yml
+    ports:
+      - "${GATEWAY_HTTP_PORT:-8090}:80"    # HTTP
+      - "${GATEWAY_HTTPS_PORT:-8443}:443"  # HTTPS (cert auto-assinado em local)
+      - "8091:8080"                        # Dashboard Traefik (dev)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+      - ./traefik/certs:/certs:ro  # certs gerados por mkcert; fallback para auto-assinado se vazio
+    networks:
+      - gateway-services
+    restart: unless-stopped
+
+  # ── Serviço de Lançamentos ─────────────────────────────────────────────────
+  # build implementado na Etapa 7 — sobe com: docker compose --profile app up
+  lancamentos:
+    profiles: [app]
+    build: ./services/lancamentos
+    labels:
+      - "traefik.enable=true"
+      # Rota HTTP
+      - "traefik.http.routers.lancamentos.rule=PathPrefix(`/lancamentos`)"
+      - "traefik.http.routers.lancamentos.entrypoints=web,websecure"
+      - "traefik.http.routers.lancamentos.middlewares=rate-limit-lancamentos@file,secure-headers@file"
+      # TLS
+      - "traefik.http.routers.lancamentos.tls=true"
+      - "traefik.http.services.lancamentos.loadbalancer.server.port=8080"
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_LANCAMENTOS_USER:-lancamentos}:${POSTGRES_LANCAMENTOS_PASSWORD:-changeme}@postgres-lancamentos:5432/${POSTGRES_LANCAMENTOS_DB:-lancamentos}"
+      RABBITMQ_URL: "amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/"
+      LOG_LEVEL: "${LOG_LEVEL:-info}"
+    networks:
+      - gateway-services
+      - lancamentos-data
+    depends_on:
+      postgres-lancamentos:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  # ── Outbox Relay ───────────────────────────────────────────────────────────
+  # Polling na tabela outbox do Lançamentos e publicação no RabbitMQ
+  # Mesmo Dockerfile do lancamentos, entry point diferente (multi-stage)
+  outbox-relay:
+    profiles: [app]
+    build:
+      context: ./services/lancamentos
+      target: outbox-relay
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_LANCAMENTOS_USER:-lancamentos}:${POSTGRES_LANCAMENTOS_PASSWORD:-changeme}@postgres-lancamentos:5432/${POSTGRES_LANCAMENTOS_DB:-lancamentos}"
+      RABBITMQ_URL: "amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/"
+      OUTBOX_POLL_INTERVAL: "${OUTBOX_POLL_INTERVAL:-500ms}"
+      LOG_LEVEL: "${LOG_LEVEL:-info}"
+    networks:
+      - lancamentos-data
+      - messaging
+    depends_on:
+      postgres-lancamentos:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Serviço de Consolidação Diária ─────────────────────────────────────────
+  # Escalonável horizontalmente: docker-compose --profile app up --scale consolidado=3
+  # build implementado na Etapa 7
+  consolidado:
+    profiles: [app]
+    build: ./services/consolidado
+    labels:
+      - "traefik.enable=true"
+      # Rota HTTP + HTTPS
+      - "traefik.http.routers.consolidado.rule=PathPrefix(`/consolidacao`)"
+      - "traefik.http.routers.consolidado.entrypoints=web,websecure"
+      - "traefik.http.routers.consolidado.middlewares=rate-limit-consolidado@file,secure-headers@file"
+      # TLS
+      - "traefik.http.routers.consolidado.tls=true"
+      - "traefik.http.services.consolidado.loadbalancer.server.port=8080"
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_CONSOLIDADO_USER:-consolidado}:${POSTGRES_CONSOLIDADO_PASSWORD:-changeme}@postgres-consolidado:5432/${POSTGRES_CONSOLIDADO_DB:-consolidado}"
+      RABBITMQ_URL: "amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/"
+      REDIS_URL: "redis://redis:6379"
+      LOG_LEVEL: "${LOG_LEVEL:-info}"
+    networks:
+      - gateway-services
+      - consolidacao-data
+      - messaging
+    depends_on:
+      postgres-consolidado:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  # ── PostgreSQL — Lançamentos ───────────────────────────────────────────────
+  postgres-lancamentos:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: "${POSTGRES_LANCAMENTOS_DB:-lancamentos}"
+      POSTGRES_USER: "${POSTGRES_LANCAMENTOS_USER:-lancamentos}"
+      POSTGRES_PASSWORD: "${POSTGRES_LANCAMENTOS_PASSWORD:-changeme}"
+    volumes:
+      - postgres-lancamentos-data:/var/lib/postgresql/data
+    networks:
+      - lancamentos-data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_LANCAMENTOS_USER:-lancamentos}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── PostgreSQL — Consolidação ──────────────────────────────────────────────
+  postgres-consolidado:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: "${POSTGRES_CONSOLIDADO_DB:-consolidado}"
+      POSTGRES_USER: "${POSTGRES_CONSOLIDADO_USER:-consolidado}"
+      POSTGRES_PASSWORD: "${POSTGRES_CONSOLIDADO_PASSWORD:-changeme}"
+    volumes:
+      - postgres-consolidado-data:/var/lib/postgresql/data
+    networks:
+      - consolidacao-data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_CONSOLIDADO_USER:-consolidado}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Redis — Cache de Saldos ────────────────────────────────────────────────
+  # AOF: cache sobrevive a reinicializações
+  # LRU: quando memória esgota, evicta as chaves menos recentes
+  redis:
+    image: redis:7-alpine
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - consolidacao-data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # ── RabbitMQ — Message Broker ──────────────────────────────────────────────
+  # definitions.json pré-configura exchange, filas e DLQ
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    environment:
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER:-guest}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD:-guest}"
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbitmq_management load_definitions \"/etc/rabbitmq/definitions.json\""
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+    networks:
+      - messaging
+    ports:
+      - "15672:15672"  # Management UI — apenas desenvolvimento local
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  # ── Ferramentas de Desenvolvimento ─────────────────────────────────────────
   docs:
     image: squidfunk/mkdocs-material
     ports:
@@ -18,7 +216,26 @@ services:
       - ./docs:/usr/local/structurizr/docs:ro
     command: local
 
-  # lancamentos:     # Serviço de Lançamentos — a definir
-  # consolidado:     # Serviço de Consolidado Diário — a definir
-  # broker:          # Message broker — a definir
-  # db:              # Banco de dados — a definir
+# ── Redes ──────────────────────────────────────────────────────────────────
+networks:
+  gateway-services:
+    driver: bridge
+
+  lancamentos-data:
+    driver: bridge
+    internal: true  # sem saída para internet
+
+  consolidacao-data:
+    driver: bridge
+    internal: true  # sem saída para internet
+
+  messaging:
+    driver: bridge
+    internal: true  # sem saída para internet
+
+# ── Volumes ────────────────────────────────────────────────────────────────
+volumes:
+  postgres-lancamentos-data:
+  postgres-consolidado-data:
+  redis-data:
+  rabbitmq-data:

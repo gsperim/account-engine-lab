@@ -1,0 +1,36 @@
+# Configuração estática do Traefik
+# Configuração dinâmica (middlewares, TLS) em traefik/dynamic/
+
+api:
+  dashboard: true
+  insecure: true  # dashboard sem auth — apenas ambiente local
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+providers:
+  # Descobre serviços e rotas via labels no docker-compose
+  docker:
+    exposedByDefault: false
+    network: gateway-services
+  # Carrega middlewares e opções TLS do diretório dynamic/
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+
+log:
+  level: INFO
+  format: json
+
+accessLog:
+  format: json
+  fields:
+    headers:
+      defaultMode: drop
+      names:
+        User-Agent: keep
+        X-Real-IP: keep
+        Authorization: redact  # nunca loga tokens em claro

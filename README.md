@@ -44,12 +44,19 @@ docker compose up
 
 | Serviço | URL | Descrição |
 |---------|-----|-----------|
+| **API Gateway (HTTP)** | http://localhost:8090 | Entrada da aplicação |
+| **API Gateway (HTTPS)** | https://localhost:8443 | Entrada da aplicação com TLS |
+| Traefik Dashboard | http://localhost:8091 | Rotas e middlewares ativos |
+| RabbitMQ Management | http://localhost:15672 | Filas e mensagens em trânsito |
 | Portal de Documentação | http://localhost:8000 | Arquitetura, requisitos, decisões e planejamento |
 | Diagramas C4 | http://localhost:8080 | Contexto do sistema e containers (Structurizr Lite) |
 
 ```bash
-# Subir todos os serviços
+# Subir infraestrutura + ferramentas de documentação (fase atual)
 docker compose up
+
+# Subir tudo incluindo serviços de aplicação (Etapa 7+)
+docker compose --profile app up
 
 # Subir em background
 docker compose up -d
@@ -57,12 +64,41 @@ docker compose up -d
 # Parar
 docker compose down
 
+# Escalar Consolidação para 3 réplicas (NFR-02)
+docker compose --profile app up --scale consolidado=3
+
 # Subir apenas a documentação
 docker compose up docs
 
 # Subir apenas os diagramas C4
 docker compose up structurizr
 ```
+
+---
+
+## HTTPS Local
+
+Por padrão o gateway usa um certificado auto-assinado — `curl -k https://localhost:8443` funciona, mas o browser exibe aviso de segurança. Para HTTPS com certificado confiável no browser, use [mkcert](https://github.com/FiloSottile/mkcert):
+
+```bash
+# 1. Instalar mkcert (uma vez por máquina)
+#    macOS:  brew install mkcert
+#    Linux:  apt install mkcert  ou  https://github.com/FiloSottile/mkcert/releases
+#    Windows: choco install mkcert
+
+# 2. Instalar a CA local no sistema e browsers (uma vez por máquina)
+mkcert -install
+
+# 3. Gerar certificado para localhost
+mkcert -cert-file traefik/certs/local.pem \
+       -key-file  traefik/certs/local-key.pem \
+       localhost 127.0.0.1
+
+# 4. Recarregar o Traefik
+docker compose restart traefik
+```
+
+Após isso, `https://localhost:8443` abre sem aviso no browser. Os arquivos `.pem` estão no `.gitignore` — cada desenvolvedor gera os seus localmente.
 
 ---
 
