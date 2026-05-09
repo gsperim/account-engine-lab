@@ -45,7 +45,7 @@ Essa classificação teve consequência direta: toda a profundidade de modelagem
 
 Os requisitos funcionais foram detalhados com campos de entrada e saída, regras de negócio, casos de borda e critérios de aceite. Os NFRs foram elevados à mesma importância — particularmente o NFR crítico que diz que o registro de lançamentos não pode ser afetado pela queda do serviço de consolidação. Essa restrição de resiliência moldou toda a arquitetura subsequente.
 
-**Artefatos produzidos:** [Visão Executiva](negocio/visao-executiva.md) · [Drivers e Stakeholders](negocio/drivers.md) · [Principles Catalog](negocio/principios.md) · [Domínios, Value Stream e Capacidades](negocio/dominios.md) · [Glossário](glossario.md) · [Requisitos](negocio/requisitos.md)
+**Artefatos produzidos:** [Visão Executiva](visao-executiva.md) · [Drivers e Stakeholders](negocio/drivers.md) · [Principles Catalog](negocio/principios.md) · [Domínios, Value Stream e Capacidades](negocio/dominios.md) · [Glossário](glossario.md) · [Requisitos](negocio/requisitos.md)
 
 ---
 
@@ -70,13 +70,24 @@ Os contratos de integração foram documentados antes do código — espírito d
 | ADR-004 — Validação de Tokens: JWT com Validação Local via JWKS | [adr/ADR-004](adr/ADR-004-jwt-validacao-local.md) |
 | ADR-005 — Protocolo de Comunicação Interna: REST sobre gRPC | [adr/ADR-005](adr/ADR-005-protocolo-comunicacao-interna.md) |
 | Contratos de Integração (eventos e APIs REST) | [engenharia/contratos](engenharia/contratos.md) |
+| Plano de Entrega Incremental | [engenharia/plano-entregas](engenharia/plano-entregas.md) |
 | Arquitetura de Transição *(diferencial)* | [engenharia/transicao](engenharia/transicao.md) |
 
 ---
 
-### Fase 3 — Infraestrutura e Plataforma
+### Fase 3 — Infraestrutura e Plataforma ✓
 
-Define como o sistema é executado: ambiente de containers, estratégia de escalabilidade horizontal para absorver os picos exigidos pelo NFR-02, topologia de rede e isolamento de componentes. A execução local via `docker-compose` é um requisito obrigatório do desafio e será atendida aqui.
+Define como o sistema é executado: ambiente de containers, estratégia de escalabilidade horizontal para absorver os picos exigidos pelo NFR-02, topologia de rede e isolamento de componentes. A execução local via `docker-compose` é um requisito obrigatório do desafio e foi atendida aqui.
+
+**Artefatos produzidos:**
+
+| Artefato | Link |
+|----------|------|
+| Topologia e Plataforma | [infraestrutura/topologia](infraestrutura/topologia.md) |
+| docker-compose.yml | [docker-compose.yml](https://github.com) |
+| nginx/gateway.conf | [nginx/gateway.conf](https://github.com) |
+| rabbitmq/definitions.json | [rabbitmq/definitions.json](https://github.com) |
+| ADR-006 — Container Runtime | [adr/ADR-006](adr/ADR-006-container-runtime.md) |
 
 ---
 
