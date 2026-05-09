@@ -199,7 +199,9 @@ services:
 
   # ── Ferramentas de Desenvolvimento ─────────────────────────────────────────
   docs:
-    image: squidfunk/mkdocs-material
+    build:
+      context: .
+      dockerfile: Dockerfile.docs
     ports:
       - "8000:8000"
     volumes:
