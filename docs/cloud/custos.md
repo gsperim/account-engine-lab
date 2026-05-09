@@ -19,6 +19,22 @@ infracost breakdown --config-file infracost.yml --format html --out-file infraco
 
 Os números abaixo são estimativas baseadas em preços públicos AWS de 2026 para `sa-east-1`. Execute `infracost breakdown` para o valor exato no momento do provisionamento.
 
+### Dimensionamento vs. Custo
+
+!!! info "50 req/s é pico, não taxa constante"
+    O NFR-02 especifica **capacidade de pico** — o sistema deve suportar 50 req/s quando necessário. Para fins de **dimensionamento de infraestrutura** (nós EKS, conexões RDS, slots Redis), usa-se o pico como referência de capacidade.
+
+    Para fins de **estimativa de custo**, o relevante é a taxa média ao longo do mês. Um sistema de fluxo de caixa de um comerciante não opera a 50 req/s durante 24h/7 dias. Perfil realista:
+
+    | Período | Tráfego estimado | Horas/dia |
+    |---------|-----------------|-----------|
+    | Horário comercial com picos | ~25 req/s (média) | 4h |
+    | Horário comercial normal | ~10 req/s | 8h |
+    | Fora do horário comercial | ~2 req/s | 12h |
+    | **Média ponderada** | **~9,5 req/s ≈ 10 req/s** | 24h |
+
+    10 req/s médios × 86.400 s/dia × 30 dias = **~26M req/mês** (vs. 130M se fosse constante).
+
 ---
 
 ## Breakdown por Camada
@@ -27,13 +43,13 @@ Os números abaixo são estimativas baseadas em preços públicos AWS de 2026 pa
 
 | Recurso | Especificação | Custo/mês |
 |---------|---------------|-----------|
-| CloudFront | 129,6M req/mês (50 req/s) + ~260 GB data out | ~$ 207 |
-| WAF v2 | WebACL + 3 rule groups + $0,60/M req | ~$ 86 |
+| CloudFront | ~26M req/mês (média ~10 req/s) + ~20 GB data out | ~$ 55 |
+| WAF v2 | WebACL + 3 rule groups + $0,60/M req | ~$ 24 |
 | ACM Wildcard | Gratuito com serviços AWS | $ 0 |
 | Route 53 | Hosted zone + queries | ~$ 1 |
-| **Subtotal** | | **~$ 294** |
+| **Subtotal** | | **~$ 80** |
 
-> CloudFront caches GET /consolidacao na edge (~30-40% hit rate estimado), reduzindo chamadas ao API Gateway. WAF cobre OWASP Top 10, SQLi, Known Bad Inputs e rate limit por IP.
+> CloudFront caches GET /consolidacao na edge (~30-40% hit rate estimado), reduzindo chamadas ao API Gateway. WAF cobre OWASP Top 10, SQLi, Known Bad Inputs e rate limit por IP. Custo calculado com taxa média de ~10 req/s — a infraestrutura suporta os picos de 50 req/s sem custo adicional fixo (CloudFront e WAF cobram por requisição processada).
 
 ### Compute (EKS)
 
@@ -52,8 +68,8 @@ Os números abaixo são estimativas baseadas em preços públicos AWS de 2026 pa
 
 | Recurso | Especificação | Custo/mês |
 |---------|---------------|-----------|
-| API Gateway HTTP API | ~91M req/mês (30% absorvidos pelo cache CF) | ~$ 91 |
-| **Subtotal** | | **~$ 91** |
+| API Gateway HTTP API | ~18M req/mês (26M × 70% miss rate no CloudFront) | ~$ 18 |
+| **Subtotal** | | **~$ 18** |
 
 ### Banco de Dados
 
@@ -112,15 +128,17 @@ Os números abaixo são estimativas baseadas em preços públicos AWS de 2026 pa
 
 | Camada | Custo/mês |
 |--------|-----------|
-| Borda (CloudFront + WAF + Route 53) | ~$ 294 |
+| Borda (CloudFront + WAF + Route 53) | ~$ 80 |
 | Compute (EKS + Karpenter + NAT) | ~$ 268 |
-| API Gateway HTTP API | ~$ 91 |
+| API Gateway HTTP API | ~$ 18 |
 | Banco de dados (RDS + Proxy + Backup) | ~$ 349 |
 | Cache (ElastiCache) | ~$ 36 |
 | Rede (VPC Endpoints) | ~$ 153 |
 | Segurança e Detecção | ~$ 32 |
 | Operacional | ~$ 20 |
-| **Total baseline** | **~$ 1.243/mês** |
+| **Total baseline** | **~$ 956/mês** |
+
+> **Sensibilidade ao tráfego real:** borda e API Gateway são cobrados por requisição — cresce linearmente com o uso. Se o tráfego médio chegar a 20 req/s, a borda sobe para ~$145 e o API Gateway para ~$35 (total ~$1.030). Compute, RDS, Redis e VPC Endpoints são fixos.
 
 ---
 
@@ -128,11 +146,12 @@ Os números abaixo são estimativas baseadas em preços públicos AWS de 2026 pa
 
 | Versão | Total/mês | Decisão principal |
 |--------|-----------|-------------------|
-| v1 — Amazon MQ CLUSTER + Traefik no EKS | ~$ 1.405 | Ponto de partida |
+| v1 — Amazon MQ CLUSTER + Traefik no EKS | ~$ 1.405 | Ponto de partida (50 req/s constante, MQ oversized) |
 | v2 — RabbitMQ self-hosted + API Gateway HTTP API | ~$ 753 | −$ 652 (−46%): MQ eliminado, API GW mais barato |
-| v3 — Segurança completa + ops + VPC Endpoints | ~$ 1.243 | +$ 490: camada que transforma funcional em produtivo |
+| v3 — Segurança completa + ops + VPC Endpoints | ~$ 1.243 | +$ 490: camada de produção (custo com 50 req/s constante) |
+| v4 — Custo corrigido para tráfego médio realista | ~$ 956 | −$ 287: CloudFront e API GW calculados a ~10 req/s médios |
 
-A diferença v2 → v3 representa WAF, CloudFront, GuardDuty, CloudTrail, RDS Proxy, VPC Endpoints, Backup e Monitoring — recursos que não aparecem numa demo mas são o que distingue uma arquitetura de produção de um ambiente de desenvolvimento com porta 443.
+A diferença v3 → v4 não representa mudança de infraestrutura — apenas corrige a premissa de custo: 50 req/s é o pico que dimensiona a capacidade, mas o custo variável (CloudFront, WAF, API GW) é proporcional ao tráfego médio mensal.
 
 ---
 
