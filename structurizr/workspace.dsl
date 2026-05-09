@@ -9,6 +9,10 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
             tags "External"
         }
 
+        idp = softwareSystem "Identity Provider" "Capacidade corporativa de identidade e acesso. Emite JWTs RS256 e expõe JWKS para validação local. Dev: Keycloak 26 / Prod: AWS Cognito ou equivalente corporativo. ADR-014." {
+            tags "External"
+        }
+
         # ── Plataforma de Observabilidade ─────────────────────────────────────
         observabilidade = softwareSystem "Plataforma de Observabilidade" "Stack PLT + OpenTelemetry. Coleta, processa e armazena traces, métricas, logs e profiles. ADR-015." {
             tags "Observability"
@@ -71,12 +75,6 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
         # ── Sistema de Negócio ────────────────────────────────────────────────
         sistema = softwareSystem "Sistema de Fluxo de Caixa" "Controla lançamentos financeiros e consolida saldos diários." {
             !docs overview.md
-
-            keycloak = container "Keycloak" {
-                description "Servidor OAuth2/OIDC. Emite JWTs RS256, expõe JWKS para validação local. Authorization Code + PKCE (usuários) e Client Credentials (PDV). ADR-014."
-                technology "Keycloak 26 · OAuth2 · OIDC · :8180"
-                tags "Identity"
-            }
 
             frontend = container "Aplicação Web" {
                 description "Interface para registro de lançamentos (Caixa) e consulta de saldo consolidado (Gestor)."
@@ -143,13 +141,13 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
         caixa -> frontend "Registra lançamentos" "HTTPS"
         gestor -> frontend "Consulta saldo consolidado" "HTTPS"
 
-        frontend -> keycloak "Redireciona para login / troca código por token" "OAuth2 Authorization Code + PKCE"
-        pdv -> keycloak "Obtém access token" "OAuth2 Client Credentials"
+        frontend -> idp "Redireciona para login / troca código por token" "OAuth2 Authorization Code + PKCE"
+        pdv -> idp "Obtém access token" "OAuth2 Client Credentials"
 
         frontend -> gateway "Envia requisições autenticadas" "REST/HTTPS · Bearer JWT"
         pdv -> gateway "Envia lançamentos via API" "REST/HTTPS · Bearer JWT"
 
-        gateway -> keycloak "Obtém chaves públicas (JWKS) — cache local" "HTTPS"
+        gateway -> idp "Obtém chaves públicas (JWKS) — cache local, uma vez por restart" "HTTPS"
         gateway -> lancamentos "Roteia requisições de lançamento" "REST/HTTP · claims em headers"
         gateway -> consolidado "Roteia requisições de saldo" "REST/HTTP · claims em headers"
 
@@ -175,7 +173,7 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
         prometheus -> alertmanager "Dispara alertas" "HTTP"
 
         blackbox -> gateway "Probe HTTP /ping" "HTTP"
-        blackbox -> keycloak "Probe HTTP /health/ready" "HTTP"
+        blackbox -> idp "Probe HTTP /health/ready" "HTTP"
         blackbox -> grafana "Probe HTTP /api/health" "HTTP"
         blackbox -> prometheus "Probe HTTP /-/healthy" "HTTP"
         blackbox -> loki "Probe HTTP /ready" "HTTP"
