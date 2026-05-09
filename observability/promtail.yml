@@ -1,0 +1,50 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: warn
+
+positions:
+  filename: /tmp/promtail-positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: status
+            values: [running]
+    relabel_configs:
+      # Nome do container sem o prefixo /
+      - source_labels: [__meta_docker_container_name]
+        regex: '/(.+)'
+        target_label: container
+      # Service name do docker-compose
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        target_label: service
+      # stdout vs stderr
+      - source_labels: [__meta_docker_container_log_stream]
+        target_label: stream
+      # Ignora o próprio Promtail para evitar loop
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        regex: promtail
+        action: drop
+
+    pipeline_stages:
+      # Tenta parsear como JSON estruturado (serviços com OTEL SDK)
+      - json:
+          expressions:
+            level:    level
+            trace_id: trace_id
+            span_id:  span_id
+            message:  message
+      # Promove campos encontrados como labels do Loki
+      - labels:
+          level:
+          trace_id:
+      # Usa o campo message como linha de log se disponível
+      - output:
+          source: message

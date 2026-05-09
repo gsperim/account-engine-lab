@@ -284,24 +284,109 @@ increase(redis_evicted_keys_total[5m]) > 0
 
 ---
 
+## Contrato de Health Endpoints
+
+**Requisito para Etapa 7:** todo serviço deve expor dois endpoints padronizados usados pelo Blackbox Exporter (probes sintéticos), pelo Kubernetes (liveness/readiness probes) e pelo docker-compose `healthcheck`.
+
+### `GET /health/live` — Liveness
+
+O processo está vivo? Nunca checa dependências externas — se o processo responde, retorna 200.
+
+```json
+HTTP 200
+{ "status": "UP" }
+```
+
+### `GET /health/ready` — Readiness
+
+O serviço está pronto para receber tráfego? Checa conexões com PostgreSQL e RabbitMQ.
+
+```json
+HTTP 200 — pronto
+{
+  "status": "UP",
+  "checks": {
+    "database": "UP",
+    "broker":   "UP"
+  }
+}
+
+HTTP 503 — não pronto (kubernetes não roteia tráfego)
+{
+  "status": "DOWN",
+  "checks": {
+    "database": "DOWN",
+    "broker":   "UP"
+  }
+}
+```
+
+| Probe | Endpoint | Falha → | K8s comportamento |
+|-------|----------|---------|-------------------|
+| Liveness | `/health/live` | Reinicia o container | Evita containers zumbis |
+| Readiness | `/health/ready` | Remove do load balancer | Evita tráfego em container inicializando |
+
+---
+
+## Logs de Eventos de Segurança
+
+O Keycloak emite eventos de segurança (logins com falha, emissão de tokens, brute force detectado) nos logs do container — capturados pelo Promtail e enviados ao Loki automaticamente.
+
+Para correlacionar eventos de autenticação com traces de requisição, configure o Keycloak para incluir o `session_id` nos logs de eventos:
+
+```
+Admin Console → fluxocaixa → Events → Config
+  ✅ Save Events: ON
+  ✅ Save Admin Events: ON
+  Event Types: LOGIN_ERROR, BRUTE_FORCE, TOKEN_ISSUE, LOGOUT
+```
+
+No Grafana, consulte os eventos de segurança diretamente:
+
+```logql
+{service="keycloak"} |= "LOGIN_ERROR" | json
+```
+
+---
+
 ## Como usar localmente
 
 ```bash
-# Subir o stack de observabilidade
-docker compose up otel-collector prometheus loki tempo grafana -d
+# Subir o stack completo de observabilidade
+docker compose up otel-collector prometheus loki promtail tempo grafana \
+                  pyroscope alertmanager blackbox -d
 
 # Verificar saúde dos componentes
-docker compose ps otel-collector prometheus loki tempo grafana
+docker compose ps otel-collector prometheus loki promtail tempo grafana \
+                  pyroscope alertmanager blackbox
 ```
 
 Após subir, acesse:
 
-- **Grafana:** `http://localhost:3000` — datasources já provisionados (Prometheus, Loki, Tempo)
-- **Prometheus:** `http://localhost:9090`
+- **Grafana:** `http://localhost:3000` — datasources já provisionados (Prometheus, Loki, Tempo, Pyroscope)
+- **Prometheus:** `http://localhost:9090` — 13 targets ativos
+- **Alertmanager:** `http://localhost:9093`
+
+**Logs já disponíveis no Loki** (via Promtail) assim que os containers sobem:
+
+```logql
+# Todos os logs da stack
+{service=~".+"}
+
+# Logs do Keycloak
+{service="keycloak"}
+
+# Logs do RabbitMQ
+{service="rabbitmq"}
+
+# Apenas erros
+{service=~".+"} |= "ERROR"
+```
 
 No Grafana, a correlação entre pilares já está configurada:
 
-1. `Explore` → `Tempo` → buscar traces por `service.name`
-2. Clicar em um trace → ver os spans
-3. "Logs for this span" → abre Loki filtrado pelo `trace_id`
-4. "Metrics for this span" → abre Prometheus no período do trace
+1. `Explore` → `Loki` → buscar `{service="keycloak"}` — logs imediatos sem OTEL SDK
+2. `Explore` → `Tempo` → buscar traces por `service.name` — disponível após Etapa 7
+3. Clicar em um trace → "Logs for this span" → Loki filtrado por `trace_id`
+4. "Metrics for this span" → Prometheus no período do trace
+5. "Profile for this span" → Pyroscope flamegraph (linha de código)
