@@ -106,13 +106,14 @@ docker-compose up docs
 
 Referência metodológica parcial — usamos os conceitos do ADM sem implementar o framework completo:
 
-| Fase ADM | Aplicação |
-|----------|-----------|
-| A — Architecture Vision | Visão da solução, escopo e stakeholders |
-| B — Business Architecture | ArchiMate Business Layer |
-| C — Information Systems | ArchiMate Application Layer + C4 |
-| D — Technology Architecture | ArchiMate Technology Layer |
-| F — Migration Planning | Arquitetura de Transição *(diferencial)* |
+| Fase ADM | Aplicação | Status |
+|----------|-----------|--------|
+| A — Architecture Vision | Visão Executiva + Drivers + Stakeholders + Requisitos | ✅ |
+| B — Business Architecture | Value Stream, Capability Map, Bounded Contexts, Principles Catalog | ✅ |
+| C1 — Application Architecture | C4 L1/L2 (Structurizr) + Contratos de Integração (AsyncAPI + REST) | ✅ |
+| C2 — Data Architecture | Modelagem de dados por serviço, consistência eventual | ⏳ Etapa 4 |
+| D — Technology Architecture | Topologia docker-compose, Stack, Terraform AWS (21 arquivos) | ✅ |
+| F — Migration Planning | Arquitetura de Transição + Plano de Entrega Incremental | ✅ |
 
 **Fora do escopo:** Fases G e H (governança e gestão de mudanças), Architecture Contracts, Enterprise Continuum e TOGAF Reference Models.
 
