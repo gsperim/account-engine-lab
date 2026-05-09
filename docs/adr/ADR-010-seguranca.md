@@ -1,4 +1,4 @@
-# ADR-010 — Arquitetura de Segurança em Profundidade
+# ADR-010 — Segurança Multicamada (Defense in Depth)
 
 **Status:** Aceito  
 **Data:** 2026-05-08  

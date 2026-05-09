@@ -19,7 +19,7 @@ São decisões de natureza diferente — as primeiras guiam o design do software
 |-----|---------|--------|------|
 | [ADR-008](../adr/ADR-008-cloud-provider.md) | Provedor de Nuvem: AWS `sa-east-1` | Aceito | 2026-05-08 |
 | [ADR-009](../adr/ADR-009-api-gateway-producao.md) | API Gateway de Produção: AWS API Gateway HTTP API + CloudFront | Aceito | 2026-05-08 |
-| [ADR-010](../adr/ADR-010-seguranca.md) | Segurança em Profundidade: WAF, mTLS, KMS, GuardDuty, SIEM | Aceito | 2026-05-08 |
+| [ADR-010](../adr/ADR-010-seguranca.md) | Segurança Multicamada (Defense in Depth): WAF, mTLS, KMS, GuardDuty, SIEM | Aceito | 2026-05-08 |
 | [ADR-011](../adr/ADR-011-excelencia-operacional.md) | Excelência Operacional: RDS Proxy, VPC Endpoints, ECR, Karpenter, Backup, Monitoring, FinOps | Aceito | 2026-05-08 |
 
 ---

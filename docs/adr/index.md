@@ -26,7 +26,7 @@ Decisões sobre a implementação de produção na AWS — separadas para preser
 |-----|---------|--------|------|
 | [ADR-008](ADR-008-cloud-provider.md) | Provedor de Nuvem: AWS `sa-east-1` | Aceito | 2026-05-08 |
 | [ADR-009](ADR-009-api-gateway-producao.md) | API Gateway de Produção: HTTP API + CloudFront | Aceito | 2026-05-08 |
-| [ADR-010](ADR-010-seguranca.md) | Segurança em Profundidade: WAF, mTLS, KMS, GuardDuty, SIEM | Aceito | 2026-05-08 |
+| [ADR-010](ADR-010-seguranca.md) | Segurança Multicamada (Defense in Depth): WAF, mTLS, KMS, GuardDuty, SIEM | Aceito | 2026-05-08 |
 | [ADR-011](ADR-011-excelencia-operacional.md) | Excelência Operacional: RDS Proxy, Karpenter, Backup, FinOps | Aceito | 2026-05-08 |
 
 ---
