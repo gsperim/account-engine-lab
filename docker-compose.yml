@@ -238,6 +238,9 @@ services:
     volumes:
       - ./observability/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager-data:/alertmanager
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-configure-in-.env}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-0}
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
       - --storage.path=/alertmanager
@@ -287,6 +290,7 @@ services:
       - "9090:9090"
     networks:
       - observability
+      - gateway-services   # scrape keycloak:9000 e traefik:8082
     restart: unless-stopped
 
   promtail:
@@ -381,7 +385,7 @@ services:
     networks:
       - gateway-services
     healthcheck:
-      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8080/health/ready | grep -q UP"]
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /health/ready HTTP/1.0\r\n\r\n' >&3 && grep -q UP <&3"]
       interval: 15s
       timeout: 5s
       retries: 8
