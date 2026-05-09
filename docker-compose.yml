@@ -5,6 +5,7 @@ services:
   # Descoberta de serviços via labels — sem arquivo de config de rotas separado
   # ADR-007: traefik sobre nginx
   traefik:
+    container_name: gw-traefik
     image: traefik:v3.0
     entrypoint: ["/usr/local/bin/traefik"]  # bypass entrypoint.sh (shell script musl incompatível com kernel 6.17)
     command: --configfile=/etc/traefik/traefik.yml
@@ -24,6 +25,7 @@ services:
   # ── Serviço de Lançamentos ─────────────────────────────────────────────────
   # build implementado na Etapa 7 — sobe com: docker compose --profile app up
   lancamentos:
+    container_name: app-lancamentos
     profiles: [app]
     build: ./services/lancamentos
     labels:
@@ -59,6 +61,7 @@ services:
   # Polling na tabela outbox do Lançamentos e publicação no RabbitMQ
   # Mesmo Dockerfile do lancamentos, entry point diferente (multi-stage)
   outbox-relay:
+    container_name: app-outbox-relay
     profiles: [app]
     build:
       context: ./services/lancamentos
@@ -82,6 +85,7 @@ services:
   # Escalonável horizontalmente: docker-compose --profile app up --scale consolidado=3
   # build implementado na Etapa 7
   consolidado:
+    container_name: app-consolidado
     profiles: [app]
     build: ./services/consolidado
     labels:
@@ -119,6 +123,7 @@ services:
 
   # ── PostgreSQL — Lançamentos ───────────────────────────────────────────────
   postgres-lancamentos:
+    container_name: data-postgres-lancamentos
     image: postgres:16
     environment:
       POSTGRES_DB: "${POSTGRES_LANCAMENTOS_DB:-lancamentos}"
@@ -137,6 +142,7 @@ services:
 
   # ── PostgreSQL — Consolidação ──────────────────────────────────────────────
   postgres-consolidado:
+    container_name: data-postgres-consolidado
     image: postgres:16
     environment:
       POSTGRES_DB: "${POSTGRES_CONSOLIDADO_DB:-consolidado}"
@@ -157,6 +163,7 @@ services:
   # AOF: cache sobrevive a reinicializações
   # LRU: quando memória esgota, evicta as chaves menos recentes
   redis:
+    container_name: data-redis
     image: redis:7-alpine
     command: >
       redis-server
@@ -177,6 +184,7 @@ services:
   # ── RabbitMQ — Message Broker ──────────────────────────────────────────────
   # definitions.json pré-configura exchange, filas e DLQ
   rabbitmq:
+    container_name: data-rabbitmq
     image: rabbitmq:3.13-management
     environment:
       RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER:-guest}"
@@ -207,6 +215,7 @@ services:
   # OTEL Collector: localhost:4317 (gRPC) / 4318 (HTTP)
 
   postgres-exporter-lancamentos:
+    container_name: obs-pg-exporter-lancamentos
     image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
     environment:
       DATA_SOURCE_NAME: "postgresql://${POSTGRES_LANCAMENTOS_USER:-lancamentos}:${POSTGRES_LANCAMENTOS_PASSWORD}@postgres-lancamentos:5432/${POSTGRES_LANCAMENTOS_DB:-lancamentos}?sslmode=disable"
@@ -216,6 +225,7 @@ services:
     restart: unless-stopped
 
   postgres-exporter-consolidado:
+    container_name: obs-pg-exporter-consolidado
     image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
     environment:
       DATA_SOURCE_NAME: "postgresql://${POSTGRES_CONSOLIDADO_USER:-consolidado}:${POSTGRES_CONSOLIDADO_PASSWORD}@postgres-consolidado:5432/${POSTGRES_CONSOLIDADO_DB:-consolidado}?sslmode=disable"
@@ -225,6 +235,7 @@ services:
     restart: unless-stopped
 
   redis-exporter:
+    container_name: obs-redis-exporter
     image: oliver006/redis_exporter:v1.62.0
     environment:
       REDIS_ADDR: redis://redis:6379
@@ -234,10 +245,14 @@ services:
     restart: unless-stopped
 
   alertmanager:
+    container_name: obs-alertmanager
     image: prom/alertmanager:v0.27.0
     volumes:
       - ./observability/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager-data:/alertmanager
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-configure-in-.env}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-0}
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
       - --storage.path=/alertmanager
@@ -248,6 +263,7 @@ services:
     restart: unless-stopped
 
   blackbox:
+    container_name: obs-blackbox
     image: prom/blackbox-exporter:v0.25.0
     volumes:
       - ./observability/blackbox.yml:/etc/blackbox/config.yml:ro
@@ -260,6 +276,7 @@ services:
     restart: unless-stopped
 
   otel-collector:
+    container_name: obs-otel-collector
     image: otel/opentelemetry-collector-contrib:0.113.0
     volumes:
       - ./observability/otel-collector.yml:/etc/otel/config.yml:ro
@@ -274,6 +291,7 @@ services:
     restart: unless-stopped
 
   prometheus:
+    container_name: obs-prometheus
     image: prom/prometheus:v3.1.0
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -287,9 +305,11 @@ services:
       - "9090:9090"
     networks:
       - observability
+      - gateway-services   # scrape keycloak:9000 e traefik:8082
     restart: unless-stopped
 
   promtail:
+    container_name: obs-promtail
     image: grafana/promtail:3.3.0
     volumes:
       - ./observability/promtail.yml:/etc/promtail/config.yml:ro
@@ -302,6 +322,7 @@ services:
     restart: unless-stopped
 
   loki:
+    container_name: obs-loki
     image: grafana/loki:3.3.0
     volumes:
       - ./observability/loki.yml:/etc/loki/config.yml:ro
@@ -314,6 +335,7 @@ services:
     restart: unless-stopped
 
   tempo:
+    container_name: obs-tempo
     image: grafana/tempo:2.6.0
     volumes:
       - ./observability/tempo.yml:/etc/tempo/config.yml:ro
@@ -326,6 +348,7 @@ services:
     restart: unless-stopped
 
   pyroscope:
+    container_name: obs-pyroscope
     image: grafana/pyroscope:1.7.0
     volumes:
       - ./observability/pyroscope.yml:/etc/pyroscope/config.yml:ro
@@ -338,6 +361,7 @@ services:
     restart: unless-stopped
 
   grafana:
+    container_name: obs-grafana
     image: grafana/grafana:11.4.0
     environment:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
@@ -364,6 +388,7 @@ services:
   # Disponível em: http://localhost:8180  (admin: admin/admin em dev)
   # JWKS: http://localhost:8180/realms/fluxocaixa/protocol/openid-connect/certs
   keycloak:
+    container_name: gw-keycloak
     image: quay.io/keycloak/keycloak:26.6.1
     environment:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
@@ -381,15 +406,26 @@ services:
     networks:
       - gateway-services
     healthcheck:
-      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8080/health/ready | grep -q UP"]
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /health/ready HTTP/1.0\r\n\r\n' >&3 && grep -q UP <&3"]
       interval: 15s
       timeout: 5s
       retries: 8
       start_period: 60s
     restart: unless-stopped
 
+  portainer:
+    container_name: dev-portainer
+    image: portainer/portainer-ce:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer-data:/data
+    ports:
+      - "9001:9000"   # UI web (9000 ocupado pelo Keycloak management no host ficaria conflitando)
+    restart: unless-stopped
+
   # ── Ferramentas de Desenvolvimento ─────────────────────────────────────────
   docs:
+    container_name: dev-docs
     build:
       context: .
       dockerfile: Dockerfile.docs
@@ -400,6 +436,7 @@ services:
     command: serve --dev-addr=0.0.0.0:8000 --watch docs --watch mkdocs.yml --livereload
 
   structurizr:
+    container_name: dev-structurizr
     image: structurizr/structurizr
     user: "0"
     ports:
@@ -442,3 +479,4 @@ volumes:
   grafana-data:
   pyroscope-data:
   alertmanager-data:
+  portainer-data:

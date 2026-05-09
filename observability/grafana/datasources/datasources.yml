@@ -8,6 +8,8 @@ datasources:
     isDefault: true
     jsonData:
       timeInterval: 15s
+      manageAlerts: true
+      alertmanagerUid: alertmanager
       exemplarTraceIdDestinations:
         - name: trace_id
           datasourceUid: tempo
@@ -55,3 +57,11 @@ datasources:
     url: http://pyroscope:4040
     jsonData:
       minStep: 15s
+
+  - name: Alertmanager
+    type: alertmanager
+    uid: alertmanager
+    url: http://alertmanager:9093
+    jsonData:
+      implementation: prometheus
+      handleGrafanaManagedAlerts: false

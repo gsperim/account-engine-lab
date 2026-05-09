@@ -147,6 +147,15 @@ Os serviços de Lançamentos e Consolidação Diária são implementados contra 
 
 > Base para o `openapi.yaml` e `asyncapi.yaml`: [Contratos de Integração](engenharia/contratos.md)
 
+**Pendência de Observabilidade:** com os serviços enviando OTLP ao Collector, revisitar os dashboards do Grafana que ficaram sem dados durante a Fase 6:
+
+| Dashboard | O que validar |
+|-----------|--------------|
+| Infraestrutura — Fluxo de Caixa | Latência p50/p95/p99 e throughput dos endpoints |
+| Negócio — Fluxo de Caixa | Lançamentos/hora, valor acumulado em BRL, DLQ, cache hit rate |
+| SLOs — Fluxo de Caixa | Burn rate por SLO, error budget consumido |
+| Grafana Explore | Correlação trace → log → metric → profile (drill-down até linha de código) |
+
 ---
 
 ### Fase 8 — Pipeline e Entrega

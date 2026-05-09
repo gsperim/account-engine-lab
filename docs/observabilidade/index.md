@@ -14,44 +14,102 @@ tags:
 
 ---
 
-## Stack
+## Arquitetura do Pipeline — Componentes por Papel
 
 ```mermaid
 flowchart LR
-    subgraph Servicos["Serviços de Aplicação"]
-        LA["Lançamentos\n(OTEL SDK + Pyroscope SDK)"]
-        CO["Consolidação\n(OTEL SDK + Pyroscope SDK)"]
+    subgraph FONTES["Fontes"]
+        direction TB
+        SVC["Serviços\nlancamentos · consolidado\n· outbox-relay"]
+        INFRA["Infraestrutura\nPostgreSQL · Redis · RabbitMQ\nTraefik · Keycloak"]
     end
 
-    COL["OTEL Collector\n:4317 / :4318"]
-
-    subgraph Backends["Backends"]
-        TM["Tempo :3200\ntraces"]
-        PR["Prometheus :9090\nmétricas"]
-        LK["Loki :3100\nlogs"]
-        PY["Pyroscope :4040\nprofiles"]
+    subgraph INSTRUMENTACAO["Instrumentação\n(embutida nos serviços)"]
+        direction TB
+        OTEL_SDK["OTEL SDK\ntraces · métricas · logs"]
+        PYRO_SDK["Pyroscope SDK\nCPU · heap · goroutines"]
     end
 
-    GF["Grafana :3000\nUI unificada"]
+    subgraph AGENTES["Agentes\n(coletores externos)"]
+        direction TB
+        PROMTAIL["Promtail\nDocker socket\nstdout de todos containers"]
+        EXPORTERS["Exporters\npostgres-exporter ×2\nredis-exporter\nblackbox-exporter"]
+        SELF["Self-expose\n/metrics nativos\nrabbitmq · traefik · keycloak"]
+    end
 
-    LA -->|"OTLP"| COL
-    CO -->|"OTLP"| COL
-    LA -->|"profiles"| PY
-    CO -->|"profiles"| PY
-    COL -->|"OTLP"| TM
-    COL -->|"remote write"| PR
-    COL -->|"push"| LK
-    GF -->|"query"| TM & PR & LK & PY
+    subgraph PIPELINE["Pipeline — Processamento · Enriquecimento · Roteamento"]
+        direction TB
+        OTELCOL["OTEL Collector  :4317/:4318\n────────────────────────────\nrecv   OTLP gRPC + HTTP\nproc   batch · resource attrs · redaction PII\nexport Tempo · Prom · Loki"]
+        PROMTAIL_PROC["Promtail pipeline stages\nJSON parse · label extract\nredaction PII  CPF · CNPJ · e-mail · cartão"]
+    end
+
+    subgraph BACKENDS["Backends — Armazenamento por Sinal"]
+        direction TB
+        TEMPO["Tempo :3200\ntraces  15 dias"]
+        PROM["Prometheus :9090\nmétricas  15 dias\n+ regras de alerta"]
+        LOKI["Loki :3100\nlogs  31 dias"]
+        PYRO["Pyroscope :4040\nprofiles"]
+    end
+
+    subgraph ALERTAS["Alertas"]
+        AM["Alertmanager :9093\nburn rate · DLQ · SLOs\nrotas · inibições · silences"]
+    end
+
+    subgraph VISUALIZACAO["Visualização"]
+        GRAFANA["Grafana :3000\nDashboards · Explore\ncorrelação trace → log → metric → profile"]
+    end
+
+    SVC --> OTEL_SDK & PYRO_SDK
+    INFRA --> EXPORTERS
+    INFRA -. "scrape pull" .-> SELF
+
+    OTEL_SDK -->|"OTLP\ntraces+metrics+logs"| OTELCOL
+    SVC -->|"stdout"| PROMTAIL
+    INFRA -->|"stdout"| PROMTAIL
+
+    PROMTAIL --> PROMTAIL_PROC
+    PROMTAIL_PROC -->|"push logs"| LOKI
+
+    OTELCOL -->|"OTLP"| TEMPO
+    OTELCOL -->|"remote write"| PROM
+    OTELCOL -->|"push logs"| LOKI
+
+    PYRO_SDK -->|"profiles"| PYRO
+
+    EXPORTERS -->|"scrape pull"| PROM
+    SELF -->|"scrape pull"| PROM
+
+    PROM -->|"alertas disparados"| AM
+    AM -->|"notificações"| GRAFANA
+
+    GRAFANA -->|"query"| TEMPO & PROM & LOKI & PYRO
 ```
 
-| Porta local | Componente | Pilar |
-|-------------|-----------|-------|
-| `:3000` | Grafana | UI unificada — correlação entre todos os pilares |
-| `:4317 / :4318` | OTEL Collector | Pipeline de traces, métricas e logs |
-| `:9090` | Prometheus | Métricas |
-| `:3100` | Loki | Logs |
-| `:3200` | Tempo | Traces |
-| `:4040` | Pyroscope | Profiles (drill-down até linha de código) |
+| Papel | Componentes | Responsabilidade |
+|-------|-------------|-----------------|
+| **Fontes** | Serviços de aplicação, infraestrutura | Geram os dados — não sabem para onde vão |
+| **Instrumentação** | OTEL SDK, Pyroscope SDK | Captura embutida no processo — zero impacto no domínio |
+| **Agentes** | Promtail, exporters, self-expose | Coletam de fora do processo — sem mudança de código |
+| **Pipeline** | OTEL Collector, Promtail stages | Processa, enriquece, redacta PII e roteia por sinal |
+| **Backends** | Prometheus, Loki, Tempo, Pyroscope | Armazenam por tipo de dado — cada um otimizado para seu sinal |
+| **Alertas** | Alertmanager | Agrega, deduplica e roteia notificações |
+| **Visualização** | Grafana | Correlação entre todos os sinais numa única UI |
+
+> **Ponto de design:** o OTEL Collector é o único componente que vê todos os três sinais de aplicação (traces, métricas, logs). É ali que a redação de PII e o enriquecimento com atributos de ambiente acontecem de forma centralizada — sem tocar o código dos serviços.
+
+## Stack
+
+| Porta local | Container | Papel | Pilar |
+|-------------|-----------|-------|-------|
+| `:3000` | `obs-grafana` | UI unificada — dashboards, Explore, correlação | Visualização |
+| `:9090` | `obs-prometheus` | Métricas + avaliação de regras de alerta | Métricas |
+| `:9093` | `obs-alertmanager` | Roteamento de alertas → Telegram / Slack / PagerDuty | Alertas |
+| `:3100` | `obs-loki` | Logs | Logs |
+| `:3200` | `obs-tempo` | Traces distribuídos | Traces |
+| `:4040` | `obs-pyroscope` | Continuous profiling (drill-down até linha de código) | Profiles |
+| `:4317 / :4318` | `obs-otel-collector` | Pipeline OTLP — recebe, processa, roteia | Pipeline |
+| `:9115` | `obs-blackbox` | Probes sintéticos de uptime (7 endpoints monitorados) | Uptime |
+| `:9001` | `dev-portainer` | Gestão visual dos containers | Dev |
 
 ---
 
@@ -265,8 +323,17 @@ OTEL SDK (profiling) → OTEL Collector → Pyroscope
 | **Warning** | Burn rate > 1× (consumindo budget acima do normal) | Telegram ⚠️ | Slack `#alertas-infra` | Investigar no turno |
 | **Info** | Anomalia sem impacto em SLO ainda | Telegram ℹ️ | Slack `#alertas-info` | Monitorar |
 
-> **Dev:** Telegram configurado no `alertmanager.yml` — setup em 3 minutos via `@BotFather`. Credenciais em `TELEGRAM_BOT_TOKEN` e `TELEGRAM_CHAT_ID` no `.env`.  
-> **Produção:** descomentar receivers Slack + PagerDuty no `alertmanager.yml` e definir `SLACK_WEBHOOK_URL` e `PAGERDUTY_INTEGRATION_KEY`.
+> **Dev:** Telegram ativo — bot `@PerimArchChalenger_bot` configurado em `observability/alertmanager.yml` (arquivo fora do git por conter token). Receivers: `telegram-warning` (padrão), `telegram-critical`, `telegram-info`.  
+> **Produção:** adicionar receivers Slack + PagerDuty no `alertmanager.yml` com `SLACK_WEBHOOK_URL` e `PAGERDUTY_INTEGRATION_KEY`.
+
+**Verificar alertas disparados:**
+
+| Onde | Como |
+|------|------|
+| Grafana | Alerting → Alert rules → filtrar por `Mimir / Prometheus` |
+| Grafana | Alerting → Active notifications |
+| Alertmanager UI | `http://localhost:9093` → aba Alerts |
+| Métricas | `alertmanager_notifications_total{integration="telegram"}` no Prometheus |
 
 **Regras críticas (PromQL):**
 
@@ -336,42 +403,88 @@ HTTP 503 — não pronto (kubernetes não roteia tráfego)
 
 ## Logs de Eventos de Segurança
 
-O Keycloak emite eventos de segurança (logins com falha, emissão de tokens, brute force detectado) nos logs do container — capturados pelo Promtail e enviados ao Loki automaticamente.
+O Keycloak emite eventos de segurança nos logs do container — capturados pelo Promtail e enviados ao Loki automaticamente. **Configuração já aplicada via [`keycloak/realm-fluxocaixa.json`](../../keycloak/realm-fluxocaixa.json) — nenhuma ação manual no Admin Console necessária.**
 
-Para correlacionar eventos de autenticação com traces de requisição, configure o Keycloak para incluir o `session_id` nos logs de eventos:
+| Campo configurado | Valor | Efeito |
+|-------------------|-------|--------|
+| `eventsEnabled` | `true` | Captura eventos de usuário |
+| `adminEventsEnabled` | `true` | Captura ações administrativas |
+| `adminEventsDetailsEnabled` | `true` | Inclui payload das mudanças |
+| `eventsListeners` | `["jboss-logging"]` | Redireciona para stdout → Promtail → Loki |
+| `eventsExpiration` | `604800` (7 dias) | Retenção interna no Keycloak |
+
+**Eventos capturados:** `LOGIN`, `LOGIN_ERROR`, `LOGOUT`, `CODE_TO_TOKEN`, `CLIENT_LOGIN`, `REFRESH_TOKEN`, `INTROSPECT_TOKEN`, `REGISTER`, `RESET_PASSWORD`, `TOKEN_EXCHANGE` — e variantes `_ERROR` de cada um.
+
+O formato de saída do `jboss-logging` inclui `sessionId` automaticamente:
 
 ```
-Admin Console → fluxocaixa → Events → Config
-  ✅ Save Events: ON
-  ✅ Save Admin Events: ON
-  Event Types: LOGIN_ERROR, BRUTE_FORCE, TOKEN_ISSUE, LOGOUT
+WARN [org.keycloak.events] type=LOGIN_ERROR, realmId=fluxocaixa,
+  clientId=frontend-app, userId=null, ipAddress=192.168.1.1,
+  sessionId=a3f8..., error=invalid_user_credentials, username=caixa.demo
 ```
 
-No Grafana, consulte os eventos de segurança diretamente:
+!!! warning "Re-import do realm"
+    O Keycloak usa estratégia `IGNORE_EXISTING` no import — se o realm já existia antes desta configuração, ela não será aplicada automaticamente. Para forçar o re-import, recrie o volume:
+    ```bash
+    docker compose stop gw-keycloak
+    docker volume rm desafio-carrefour_keycloak-data
+    docker compose up -d gw-keycloak
+    ```
+
+No Grafana, consulte os eventos de segurança:
 
 ```logql
-{service="keycloak"} |= "LOGIN_ERROR" | json
+# Todos os eventos de segurança do Keycloak
+{service="keycloak"} |= "org.keycloak.events"
+
+# Apenas falhas de login
+{service="keycloak"} |= "LOGIN_ERROR"
+
+# Falhas por IP (detectar força bruta)
+{service="keycloak"} |= "LOGIN_ERROR" | regexp `ipAddress=(?P<ip>[0-9.]+)` | line_format "{{.ip}}"
+
+# Ações administrativas
+{service="keycloak"} |= "ADMIN" |= "operationType"
 ```
+
+---
+
+## Dashboards disponíveis
+
+| Dashboard | Tags | O que mostra | Dados disponíveis |
+|-----------|------|-------------|------------------|
+| [Plataforma](http://localhost:3000/d/plataforma-fluxo-de-caixa) | `plataforma` | Uptime (7 probes), PostgreSQL, Redis, RabbitMQ, Traefik | ✅ Agora |
+| [Logs Centralizados](http://localhost:3000/d/logs-fluxo-de-caixa) | `logs` | Volume por serviço, erros, stream filtrado, correlação por trace_id | ✅ Agora |
+| [Infraestrutura](http://localhost:3000/d/infraestrutura-e28094-fluxo-de-caixa) | `infra` | Throughput, taxa de erro, latência p50/p95/p99 por serviço | ⏳ Etapa 7 |
+| [Negócio](http://localhost:3000/d/negocio-e28094-fluxo-de-caixa) | `negocio` | Lançamentos/hora, BRL acumulado, DLQ, cache hit rate | ⏳ Etapa 7 |
+| [SLOs](http://localhost:3000/d/slos-e28094-fluxo-de-caixa) | `slo` | Burn rate, error budget consumido por SLO | ⏳ Etapa 7 |
+
+> ⏳ = aguarda os serviços de Lançamentos e Consolidação enviarem OTLP (Etapa 7)
 
 ---
 
 ## Como usar localmente
 
 ```bash
-# Subir o stack completo de observabilidade
-docker compose up otel-collector prometheus loki promtail tempo grafana \
-                  pyroscope alertmanager blackbox -d
+# Subir o stack completo
+docker compose up -d
 
-# Verificar saúde dos componentes
-docker compose ps otel-collector prometheus loki promtail tempo grafana \
-                  pyroscope alertmanager blackbox
+# Ver status de todos os containers
+docker ps --format "table {{.Names}}\t{{.Status}}"
+
+# Verificar targets do Prometheus (deve mostrar 14 UP)
+curl -s http://localhost:9090/api/v1/targets | \
+  python3 -c "import sys,json; [print(t['health'], t['labels']['job']) \
+  for t in json.load(sys.stdin)['data']['activeTargets']]"
 ```
 
 Após subir, acesse:
 
-- **Grafana:** `http://localhost:3000` — datasources já provisionados (Prometheus, Loki, Tempo, Pyroscope)
-- **Prometheus:** `http://localhost:9090` — 13 targets ativos
-- **Alertmanager:** `http://localhost:9093`
+- **Grafana:** `http://localhost:3000` — 5 dashboards provisionados, datasources: Prometheus, Loki, Tempo, Pyroscope, Alertmanager
+- **Prometheus:** `http://localhost:9090` — 14 targets ativos
+- **Alertmanager:** `http://localhost:9093` — receivers Telegram configurados
+- **Portainer:** `http://localhost:9001` — gestão visual dos 21 containers
+- **RabbitMQ:** `http://localhost:15672` — usuário `fluxocaixa` / senha no `.env`
 
 **Logs já disponíveis no Loki** (via Promtail) assim que os containers sobem:
 

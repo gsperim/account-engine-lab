@@ -17,6 +17,35 @@
   "waitIncrementSeconds": 60,
   "maxFailureWaitSeconds": 900,
 
+  "eventsEnabled": true,
+  "eventsExpiration": 604800,
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": true,
+  "eventsListeners": ["jboss-logging"],
+  "enabledEventTypes": [
+    "LOGIN",
+    "LOGIN_ERROR",
+    "LOGOUT",
+    "LOGOUT_ERROR",
+    "CODE_TO_TOKEN",
+    "CODE_TO_TOKEN_ERROR",
+    "CLIENT_LOGIN",
+    "CLIENT_LOGIN_ERROR",
+    "REFRESH_TOKEN",
+    "REFRESH_TOKEN_ERROR",
+    "INTROSPECT_TOKEN",
+    "INTROSPECT_TOKEN_ERROR",
+    "REGISTER",
+    "REGISTER_ERROR",
+    "SEND_RESET_PASSWORD",
+    "RESET_PASSWORD",
+    "RESET_PASSWORD_ERROR",
+    "EXECUTE_ACTIONS",
+    "EXECUTE_ACTIONS_ERROR",
+    "TOKEN_EXCHANGE",
+    "TOKEN_EXCHANGE_ERROR"
+  ],
+
   "roles": {
     "realm": [
       { "name": "caixa",  "description": "Operador de PDV — registra lançamentos e estornos" },
