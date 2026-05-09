@@ -14,7 +14,7 @@ Escolhas de ferramentas para documentação, modelagem e operação do projeto, 
 
 ## Infraestrutura de Plataforma
 
-### Keycloak 24 — Identity Provider (OAuth2/OIDC)
+### Keycloak 26 — Identity Provider (OAuth2/OIDC)
 
 Servidor de identidade escolhido como auth service do sistema. Decisão completa em [ADR-014](adr/ADR-014-identity-provider.md).
 

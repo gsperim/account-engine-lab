@@ -14,7 +14,7 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
 
             keycloak = container "Keycloak" {
                 description "Servidor de identidade OAuth2/OIDC. Emite JWTs assinados com RS256, expõe endpoint JWKS para validação local sem roundtrip. Suporta Authorization Code + PKCE (Caixa/Gestor) e Client Credentials (PDV). Decisão: ADR-014."
-                technology "Keycloak 24 · OAuth2 · OIDC"
+                technology "Keycloak 26 · OAuth2 · OIDC"
                 tags "Identity"
             }
 

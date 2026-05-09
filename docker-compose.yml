@@ -185,10 +185,13 @@ services:
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
       - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
     networks:
       - messaging
+      - observability
     ports:
       - "15672:15672"  # Management UI — apenas desenvolvimento local
+      - "15692:15692"  # Prometheus metrics
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
@@ -197,28 +200,188 @@ services:
       start_period: 20s
     restart: unless-stopped
 
+  # ── Observabilidade ────────────────────────────────────────────────────────
+  # Stack PLT + OpenTelemetry (ADR-015)
+  # Grafana:        http://localhost:3000
+  # Prometheus:     http://localhost:9090
+  # OTEL Collector: localhost:4317 (gRPC) / 4318 (HTTP)
+
+  postgres-exporter-lancamentos:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_LANCAMENTOS_USER:-lancamentos}:${POSTGRES_LANCAMENTOS_PASSWORD}@postgres-lancamentos:5432/${POSTGRES_LANCAMENTOS_DB:-lancamentos}?sslmode=disable"
+    networks:
+      - lancamentos-data
+      - observability
+    restart: unless-stopped
+
+  postgres-exporter-consolidado:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_CONSOLIDADO_USER:-consolidado}:${POSTGRES_CONSOLIDADO_PASSWORD}@postgres-consolidado:5432/${POSTGRES_CONSOLIDADO_DB:-consolidado}?sslmode=disable"
+    networks:
+      - consolidacao-data
+      - observability
+    restart: unless-stopped
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.62.0
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    networks:
+      - consolidacao-data
+      - observability
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    volumes:
+      - ./observability/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    ports:
+      - "9093:9093"
+    networks:
+      - observability
+    restart: unless-stopped
+
+  blackbox:
+    image: prom/blackbox-exporter:v0.25.0
+    volumes:
+      - ./observability/blackbox.yml:/etc/blackbox/config.yml:ro
+    command: --config.file=/etc/blackbox/config.yml
+    ports:
+      - "9115:9115"
+    networks:
+      - gateway-services
+      - observability
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.113.0
+    volumes:
+      - ./observability/otel-collector.yml:/etc/otel/config.yml:ro
+    command: ["--config=/etc/otel/config.yml"]
+    ports:
+      - "4317:4317"   # OTLP gRPC — serviços enviam traces/métricas/logs aqui
+      - "4318:4318"   # OTLP HTTP
+      - "8888:8888"   # métricas do próprio collector (scrapeadas pelo Prometheus)
+    networks:
+      - gateway-services
+      - observability
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus-rules.yml:/etc/prometheus/rules/rules.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-remote-write-receiver
+    ports:
+      - "9090:9090"
+    networks:
+      - observability
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:3.3.0
+    volumes:
+      - ./observability/promtail.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - observability
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.3.0
+    volumes:
+      - ./observability/loki.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+    command: -config.file=/etc/loki/config.yml
+    ports:
+      - "3100:3100"
+    networks:
+      - observability
+    restart: unless-stopped
+
+  tempo:
+    image: grafana/tempo:2.6.0
+    volumes:
+      - ./observability/tempo.yml:/etc/tempo/config.yml:ro
+      - tempo-data:/var/tempo
+    command: -config.file=/etc/tempo/config.yml
+    ports:
+      - "3200:3200"   # Tempo HTTP API
+    networks:
+      - observability
+    restart: unless-stopped
+
+  pyroscope:
+    image: grafana/pyroscope:1.7.0
+    volumes:
+      - ./observability/pyroscope.yml:/etc/pyroscope/config.yml:ro
+      - pyroscope-data:/var/lib/pyroscope
+    command: ["--config.file=/etc/pyroscope/config.yml"]
+    ports:
+      - "4040:4040"
+    networks:
+      - observability
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_FEATURE_TOGGLES_ENABLE: traceqlEditor traceToProfiles
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./observability/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./observability/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - observability
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+      - pyroscope
+    restart: unless-stopped
+
   # ── Identidade ─────────────────────────────────────────────────────────────
   # Keycloak — servidor OAuth2/OIDC (ADR-014)
   # Disponível em: http://localhost:8180  (admin: admin/admin em dev)
   # JWKS: http://localhost:8180/realms/fluxocaixa/protocol/openid-connect/certs
   keycloak:
-    image: quay.io/keycloak/keycloak:24
+    image: quay.io/keycloak/keycloak:26.6.1
     environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_DB: dev-file            # banco embutido para dev — substituir por postgres em prod
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD obrigatório}
+      KC_DB: dev-file
       KC_HEALTH_ENABLED: "true"
-    command: start-dev
+      KC_METRICS_ENABLED: "true"
+      KC_LOG_LEVEL: INFO
+    command: start-dev --import-realm
     ports:
       - "8180:8080"
     volumes:
       - keycloak-data:/opt/keycloak/data
-      # Etapa 7: descomente para importar o realm automaticamente
-      # - ./keycloak/realm-fluxocaixa.json:/opt/keycloak/data/import/realm-fluxocaixa.json
+      - ./keycloak/realm-fluxocaixa.json:/opt/keycloak/data/import/realm-fluxocaixa.json:ro
     networks:
       - gateway-services
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health/ready || exit 1"]
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8080/health/ready | grep -q UP"]
       interval: 15s
       timeout: 5s
       retries: 8
@@ -251,6 +414,9 @@ networks:
   gateway-services:
     driver: bridge
 
+  observability:
+    driver: bridge
+
   lancamentos-data:
     driver: bridge
     internal: true  # sem saída para internet
@@ -270,3 +436,9 @@ volumes:
   redis-data:
   rabbitmq-data:
   keycloak-data:
+  prometheus-data:
+  loki-data:
+  tempo-data:
+  grafana-data:
+  pyroscope-data:
+  alertmanager-data:

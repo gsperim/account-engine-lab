@@ -1,0 +1,13 @@
+target: all
+
+server:
+  http_listen_port: 4040
+  log_level: warn
+
+storage:
+  backend: filesystem
+  filesystem:
+    dir: /var/lib/pyroscope
+
+self-profiling:
+  disable-push: true

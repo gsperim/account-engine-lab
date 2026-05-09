@@ -1,0 +1,78 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 1000
+
+  resource:
+    attributes:
+      - key: environment
+        value: local
+        action: upsert
+
+  # Redação de PII antes de persistir no Loki (ADR-016)
+  # Regex compatível com re2 (Go) — sem lookahead/lookbehind
+  redaction:
+    allow_all_keys: true
+    blocked_values:
+      - "\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}"                         # CPF formatado
+      - "\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}"                  # CNPJ
+      - "[\\w.+-]+@[\\w-]+\\.[\\w.-]+"                             # e-mail
+      - "\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}"          # cartão
+      - "(\\+55[\\s-]?)?\\(?\\d{2}\\)?[\\s-]?\\d{4,5}[\\s-]?\\d{4}"  # telefone BR
+    summary: debug
+
+exporters:
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+  prometheusremotewrite:
+    endpoint: http://prometheus:9090/api/v1/write
+    tls:
+      insecure: true
+
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+    default_labels_enabled:
+      exporter: false
+      job: true
+
+  # Produção: descomentar para exportar para AWS simultaneamente
+  # awsxray:
+  #   region: sa-east-1
+  # awscloudwatchmetrics:
+  #   namespace: FluxoCaixa
+  #   region: sa-east-1
+
+  debug:
+    verbosity: basic
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [otlp/tempo]
+
+    metrics:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [prometheusremotewrite]
+
+    logs:
+      receivers: [otlp]
+      processors: [redaction, batch, resource]   # redaction antes de batch
+      exporters: [loki]
+
+  telemetry:
+    metrics:
+      address: 0.0.0.0:8888

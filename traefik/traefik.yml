@@ -10,6 +10,8 @@ entryPoints:
     address: ":80"
   websecure:
     address: ":443"
+  metrics:
+    address: ":8082"
 
 providers:
   # Descobre serviços e rotas via labels no docker-compose
@@ -20,6 +22,13 @@ providers:
   file:
     directory: /etc/traefik/dynamic
     watch: true
+
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addServicesLabels: true
+    addRoutersLabels: true
+    entryPoint: metrics
 
 log:
   level: INFO
