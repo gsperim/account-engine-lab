@@ -392,6 +392,15 @@ services:
       start_period: 60s
     restart: unless-stopped
 
+  portainer:
+    image: portainer/portainer-ce:2.21.5
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer-data:/data
+    ports:
+      - "9001:9000"   # UI web (9000 ocupado pelo Keycloak management no host ficaria conflitando)
+    restart: unless-stopped
+
   # ── Ferramentas de Desenvolvimento ─────────────────────────────────────────
   docs:
     build:
@@ -446,3 +455,4 @@ volumes:
   grafana-data:
   pyroscope-data:
   alertmanager-data:
+  portainer-data:
