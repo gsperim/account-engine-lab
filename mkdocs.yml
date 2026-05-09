@@ -15,7 +15,6 @@ theme:
     - navigation.top
     - navigation.indexes
     - navigation.path
-    - navigation.prune
     - search.highlight
     - search.suggest
     - content.code.copy
@@ -81,19 +80,7 @@ nav:
     - Contratos de Integração: engenharia/contratos.md
     - Dados e Persistência: arquitetura/dados.md
     - Stack e Ferramentas: stack.md
-    - Decisões Arquiteturais:
-      - Índice: adr/index.md
-      - ADR-001 — Padrão Arquitetural: adr/ADR-001-padrao-arquitetural.md
-      - ADR-002 — Message Broker: adr/ADR-002-message-broker.md
-      - ADR-003 — Outbox Pattern: adr/ADR-003-outbox-pattern.md
-      - ADR-004 — JWT e JWKS: adr/ADR-004-jwt-validacao-local.md
-      - ADR-005 — Protocolo Interno: adr/ADR-005-protocolo-comunicacao-interna.md
-      - ADR-006 — Container Runtime: adr/ADR-006-container-runtime.md
-      - ADR-007 — API Gateway Traefik: adr/ADR-007-api-gateway.md
-      - ADR-008 — Cloud Provider AWS: adr/ADR-008-cloud-provider.md
-      - ADR-009 — API Gateway Produção: adr/ADR-009-api-gateway-producao.md
-      - ADR-010 — Segurança Multicamada: adr/ADR-010-seguranca.md
-      - ADR-011 — Excelência Operacional: adr/ADR-011-excelencia-operacional.md
+    - Decisões Arquiteturais: adr/index.md
 
   - Segurança: seguranca/index.md
 
