@@ -74,11 +74,19 @@ scrape_configs:
       module: [http_2xx]
     static_configs:
       - targets:
-          - http://keycloak:8080/health/ready
-          - http://traefik:8082/ping
-          # Etapa 7: adicionar endpoints dos serviços de aplicação
-          # - http://lancamentos:8080/health
-          # - http://consolidado:8080/health
+          # Gateway
+          - http://traefik:8080/ping
+          - http://keycloak:9000/health/ready
+          # Observabilidade
+          - http://grafana:3000/api/health
+          - http://prometheus:9090/-/healthy
+          - http://loki:3100/ready
+          - http://tempo:3200/ready
+          # Dados (15692 = metrics plugin, sem auth)
+          - http://rabbitmq:15692/metrics
+          # Etapa 7 — serviços de aplicação
+          # - http://lancamentos:8080/health/live
+          # - http://consolidado:8080/health/live
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

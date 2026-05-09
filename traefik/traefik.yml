@@ -5,6 +5,8 @@ api:
   dashboard: true
   insecure: true  # dashboard sem auth — apenas ambiente local
 
+ping: {}  # /ping no entrypoint interno :8080 — usado pelo Blackbox Exporter
+
 entryPoints:
   web:
     address: ":80"
