@@ -38,9 +38,20 @@ datasources:
         datasourceUid: prometheus
         spanStartTimeShift: '-1m'
         spanEndTimeShift: '1m'
+      tracesToProfiles:
+        datasourceUid: pyroscope
+        profileTypeId: process_cpu:cpu:nanoseconds:cpu:nanoseconds
+        customQuery: false
       serviceMap:
         datasourceUid: prometheus
       nodeGraph:
         enabled: true
       search:
         hide: false
+
+  - name: Pyroscope
+    type: grafana-pyroscope-datasource
+    uid: pyroscope
+    url: http://pyroscope:4040
+    jsonData:
+      minStep: 15s

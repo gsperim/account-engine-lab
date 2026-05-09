@@ -19,38 +19,39 @@ tags:
 ```mermaid
 flowchart LR
     subgraph Servicos["Serviços de Aplicação"]
-        LA["Lançamentos\n(OTEL SDK)"]
-        CO["Consolidação\n(OTEL SDK)"]
+        LA["Lançamentos\n(OTEL SDK + Pyroscope SDK)"]
+        CO["Consolidação\n(OTEL SDK + Pyroscope SDK)"]
     end
 
-    COL["OTEL Collector\n:4317 gRPC / :4318 HTTP"]
+    COL["OTEL Collector\n:4317 / :4318"]
 
-    subgraph PLT["PLT — backends"]
-        TM["Tempo\ntraces"]
-        PR["Prometheus\nmétricas"]
-        LK["Loki\nlogs"]
+    subgraph Backends["Backends"]
+        TM["Tempo :3200\ntraces"]
+        PR["Prometheus :9090\nmétricas"]
+        LK["Loki :3100\nlogs"]
+        PY["Pyroscope :4040\nprofiles"]
     end
 
-    GF["Grafana\n:3000"]
+    GF["Grafana :3000\nUI unificada"]
 
     LA -->|"OTLP"| COL
     CO -->|"OTLP"| COL
+    LA -->|"profiles"| PY
+    CO -->|"profiles"| PY
     COL -->|"OTLP"| TM
     COL -->|"remote write"| PR
     COL -->|"push"| LK
-    GF -->|"query"| TM
-    GF -->|"query"| PR
-    GF -->|"query"| LK
+    GF -->|"query"| TM & PR & LK & PY
 ```
 
-| Porta local | Componente | Função |
-|-------------|-----------|--------|
-| `:3000` | Grafana | UI unificada — traces, métricas, logs, alertas |
-| `:4317` | OTEL Collector (gRPC) | Recebe telemetria dos serviços |
-| `:4318` | OTEL Collector (HTTP) | Recebe telemetria (alternativa gRPC) |
-| `:9090` | Prometheus | Query de métricas (e remote write receiver) |
-| `:3100` | Loki | Ingestão e query de logs |
-| `:3200` | Tempo | Ingestão e query de traces |
+| Porta local | Componente | Pilar |
+|-------------|-----------|-------|
+| `:3000` | Grafana | UI unificada — correlação entre todos os pilares |
+| `:4317 / :4318` | OTEL Collector | Pipeline de traces, métricas e logs |
+| `:9090` | Prometheus | Métricas |
+| `:3100` | Loki | Logs |
+| `:3200` | Tempo | Traces |
+| `:4040` | Pyroscope | Profiles (drill-down até linha de código) |
 
 ---
 
@@ -155,6 +156,72 @@ sequenceDiagram
 ```
 
 O mesmo `trace_id` percorre toda a cadeia — do HTTP request ao evento assíncrono — permitindo reconstruir o caminho completo no Tempo e correlacionar com os logs do Loki.
+
+---
+
+## Pilar 4 — Continuous Profiling
+
+Logs, métricas e traces identificam *que* está lento e *onde*. Profiles respondem *por quê*: qual função, qual linha de código, quanto de CPU ou memória.
+
+**Componente:** Pyroscope (`:4040`) — backend de continuous profiling da Grafana, integrado nativamente ao Grafana como datasource.
+
+### Fluxo de drill-down: trace → linha de código
+
+```mermaid
+flowchart TD
+    A["Alerta: p99 latência > 500ms\n(Prometheus → Grafana)"]
+    B["Trace no Tempo\nspan: POST /lancamentos 780ms"]
+    C["Span: db.query 650ms\n(PostgreSQL)"]
+    D["Profile para este span\n(Pyroscope)"]
+    E["Flamegraph\nLancamentoRepository.save() 89% CPU"]
+    F["Stack trace\nController → Service → Repository\n→ HikariCP → JDBC Driver:543"]
+
+    A --> B --> C --> D --> E --> F
+```
+
+Ao clicar em **"Profile for this span"** no Tempo, o Grafana abre o Pyroscope filtrado pelo mesmo intervalo de tempo do span — mostrando o flamegraph de exatamente o que a aplicação estava executando durante aquela requisição lenta.
+
+### Integração com o OTEL SDK
+
+O Pyroscope usa um SDK separado por linguagem que envia profiles continuamente — sem aguardar uma requisição específica:
+
+| Linguagem | SDK | O que coleta |
+|-----------|-----|-------------|
+| Java | `io.pyroscope:agent` | CPU (async-profiler), heap, wall-clock |
+| Python | `pyroscope-io` | CPU, memory |
+| Go | `github.com/grafana/pyroscope-go` | CPU (pprof), goroutines, mutex |
+| Node.js | `@pyroscope/nodejs` | CPU, heap |
+
+O SDK injeta o `profile_id` correlacionado com o `trace_id` do OTEL — isso é o que permite a navegação direta de um span para o flamegraph correspondente.
+
+**Configuração mínima (exemplo Java):**
+
+```java
+// Na inicialização do serviço
+PyroscopeAgent.start(
+    new Config.Builder()
+        .setApplicationName("lancamentos")
+        .setProfilingEvent(EventType.ITIMER)
+        .setServerAddress("http://pyroscope:4040")
+        .setLabels(Map.of(
+            "environment", System.getenv("ENVIRONMENT"),
+            "version",     System.getenv("APP_VERSION")
+        ))
+        .build()
+);
+```
+
+A decisão da linguagem de implementação (Etapa 7) determina qual SDK será usado — a configuração do Pyroscope e do Grafana já estão prontas.
+
+### Futuro: OTEL Profiling Signal
+
+O OpenTelemetry está padronizando um sinal nativo de profiling (especificação em beta). Quando estabilizar, o pipeline será:
+
+```
+OTEL SDK (profiling) → OTEL Collector → Pyroscope
+```
+
+…eliminando o SDK separado do Pyroscope e unificando toda a telemetria no mesmo pipeline.
 
 ---
 
