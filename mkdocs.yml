@@ -69,7 +69,8 @@ plugins:
       height: auto
       zoomable: true
       draggable: true
-  - panzoom
+  - panzoom:
+      full_screen: true
   - minify:
       minify_html: true
 
