@@ -29,6 +29,14 @@ Decisões sobre a implementação de produção na AWS — separadas para preser
 | [ADR-010](ADR-010-seguranca.md) | Segurança Multicamada (Defense in Depth): WAF, mTLS, KMS, GuardDuty, SIEM | Aceito | 2026-05-08 |
 | [ADR-011](ADR-011-excelencia-operacional.md) | Excelência Operacional: RDS Proxy, Karpenter, Backup, FinOps | Aceito | 2026-05-08 |
 
+## Decisões de Dados
+
+Decisões sobre modelagem, persistência e consistência de dados — separadas para documentar escolhas de nível de schema e mecanismo de armazenamento.
+
+| ADR | Decisão | Status | Data |
+|-----|---------|--------|------|
+| [ADR-012](ADR-012-persistencia.md) | Modelagem de Dados e Mecanismos de Persistência: NUMERIC, UUID, Outbox Polling, Read Model | Aceito | 2026-05-09 |
+
 ---
 
 ## Convenção
