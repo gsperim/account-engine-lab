@@ -1,4 +1,22 @@
 {
+  "users": [
+    {
+      "name": "fluxocaixa",
+      "password_hash": "wav8j+SxNZLQ7ar/KuQkB6oqT4il/kXhO1TCfdeDnucTlt9P",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": ["administrator"],
+      "limits": {}
+    }
+  ],
+  "permissions": [
+    {
+      "user": "fluxocaixa",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
   "vhosts": [
     { "name": "/" }
   ],
