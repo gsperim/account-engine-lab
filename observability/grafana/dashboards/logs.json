@@ -64,13 +64,13 @@
     },
     {
       "id": 2,
-      "title": "Erros por serviço (últimos 30m)",
+      "title": "Erros por serviço (período selecionado)",
       "type": "bargauge",
       "gridPos": { "x": 16, "y": 0, "w": 8, "h": 7 },
       "datasource": { "type": "loki", "uid": "loki" },
       "targets": [
         {
-          "expr": "sum by (service) (count_over_time({service=~\".+\"} |~ \"(?i)(error|exception|fatal|critical)\" [30m]))",
+          "expr": "sum by (service) (count_over_time({service=~\".+\"} |~ \"(?i)(error|exception|fatal|critical)\" [$__range]))",
           "legendFormat": "{{service}}",
           "queryType": "instant"
         }
