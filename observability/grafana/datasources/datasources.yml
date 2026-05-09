@@ -55,3 +55,10 @@ datasources:
     url: http://pyroscope:4040
     jsonData:
       minStep: 15s
+
+  - name: Alertmanager
+    type: alertmanager
+    uid: alertmanager
+    url: http://alertmanager:9093
+    jsonData:
+      implementation: prometheus
