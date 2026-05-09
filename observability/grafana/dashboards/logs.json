@@ -1,0 +1,151 @@
+{
+  "title": "Logs Centralizados — Fluxo de Caixa",
+  "tags": ["fluxocaixa", "logs"],
+  "uid": "logs-fluxo-de-caixa",
+  "schemaVersion": 38,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "label": "Serviço",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "loki" },
+        "query": "label_values(service)",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": { "selected": true, "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "level",
+        "label": "Nível",
+        "type": "custom",
+        "query": ".*,DEBUG,INFO,WARN,ERROR",
+        "options": [
+          { "text": "Todos", "value": ".*" },
+          { "text": "DEBUG",  "value": "DEBUG" },
+          { "text": "INFO",   "value": "INFO" },
+          { "text": "WARN",   "value": "WARN" },
+          { "text": "ERROR",  "value": "ERROR" }
+        ],
+        "current": { "text": "Todos", "value": ".*" }
+      },
+      {
+        "name": "search",
+        "label": "Busca",
+        "type": "textbox",
+        "query": ""
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Volume de logs por serviço",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 16, "h": 7 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "expr": "sum by (service) (count_over_time({service=~\"$service\"}[$__interval]))",
+          "legendFormat": "{{service}}",
+          "queryType": "range"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "fillOpacity": 15, "lineWidth": 1, "stacking": { "mode": "normal" } }
+        }
+      },
+      "options": { "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 2,
+      "title": "Erros por serviço (últimos 30m)",
+      "type": "bargauge",
+      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 7 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "expr": "sum by (service) (count_over_time({service=~\".+\"} |~ \"(?i)(error|exception|fatal|critical)\" [30m]))",
+          "legendFormat": "{{service}}",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 10 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Stream de logs — $service",
+      "type": "logs",
+      "gridPos": { "x": 0, "y": 7, "w": 24, "h": 18 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "expr": "{service=~\"$service\"} | level =~ \"$level\" |~ \"$search\"",
+          "queryType": "range"
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false,
+        "enableLogDetails": true,
+        "prettifyLogMessage": false
+      }
+    },
+    {
+      "id": 4,
+      "title": "Correlação por trace_id",
+      "type": "logs",
+      "gridPos": { "x": 0, "y": 25, "w": 24, "h": 10 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "description": "Cole um trace_id para ver todos os logs daquela requisição em todos os serviços. Disponível após Etapa 7 (serviços com OTEL SDK).",
+      "targets": [
+        {
+          "expr": "{service=~\".+\"} | trace_id = \"${trace_id:raw}\"",
+          "queryType": "range"
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Ascending",
+        "enableLogDetails": true
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "trace_id",
+            "label": "trace_id",
+            "type": "textbox",
+            "query": ""
+          }
+        ]
+      }
+    }
+  ]
+}
