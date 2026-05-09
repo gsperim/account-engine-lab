@@ -41,10 +41,27 @@ scrape_configs:
             trace_id: trace_id
             span_id:  span_id
             message:  message
+
+      # Redação de PII antes de enviar ao Loki (ADR-016)
+      # Cobre stdout de containers sem OTEL SDK (Keycloak, RabbitMQ, etc.)
+      - replace:
+          expression: '\d{3}\.\d{3}\.\d{3}-\d{2}'
+          replace: '[CPF REDACTED]'
+      - replace:
+          expression: '\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}'
+          replace: '[CNPJ REDACTED]'
+      - replace:
+          expression: '[\w.+-]+@[\w-]+\.[\w.]+'
+          replace: '[EMAIL REDACTED]'
+      - replace:
+          expression: '\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}'
+          replace: '[CARD REDACTED]'
+
       # Promove campos encontrados como labels do Loki
       - labels:
           level:
           trace_id:
+
       # Usa o campo message como linha de log se disponível
       - output:
           source: message

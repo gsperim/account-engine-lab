@@ -49,6 +49,7 @@ Decisões sobre modelagem, persistência e consistência de dados — separadas 
 | ADR | Decisão | Status | Data |
 |-----|---------|--------|------|
 | [ADR-015](ADR-015-observabilidade.md) | Stack de Observabilidade: PLT + OpenTelemetry (Prometheus, Loki, Tempo, Grafana) | Aceito | 2026-05-09 |
+| [ADR-016](ADR-016-redacao-pii-logs.md) | Redação de PII no Pipeline de Observabilidade: OTEL Collector + Promtail (LGPD) | Aceito | 2026-05-09 |
 
 ---
 

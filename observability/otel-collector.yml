@@ -10,11 +10,24 @@ processors:
   batch:
     timeout: 5s
     send_batch_size: 1000
+
   resource:
     attributes:
       - key: environment
         value: local
         action: upsert
+
+  # Redação de PII antes de persistir no Loki (ADR-016)
+  redaction:
+    allow_all_keys: true
+    blocked_values:
+      - "\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}"          # CPF formatado
+      - "(?<!\\d)\\d{11}(?!\\d)"                    # CPF só dígitos
+      - "\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}"   # CNPJ
+      - "[\\w.+-]+@[\\w-]+\\.[\\w.-]+"              # e-mail
+      - "\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}"  # cartão
+      - "(?:\\+55\\s?)?\\(?\\d{2}\\)?\\s?\\d{4,5}[\\s-]?\\d{4}"  # telefone BR
+    summary: debug
 
 exporters:
   otlp/tempo:
@@ -57,7 +70,7 @@ service:
 
     logs:
       receivers: [otlp]
-      processors: [batch, resource]
+      processors: [redaction, batch, resource]   # redaction antes de batch
       exporters: [loki]
 
   telemetry:
