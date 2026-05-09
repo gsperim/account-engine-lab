@@ -69,11 +69,9 @@ plugins:
       height: auto
       zoomable: true
       draggable: true
+  - panzoom
   - minify:
       minify_html: true
-
-extra_javascript:
-  - javascripts/mermaid-zoom.js
 
 nav:
   - Início: index.md
