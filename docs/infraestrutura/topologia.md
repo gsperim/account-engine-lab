@@ -191,16 +191,37 @@ docker-compose down -v   # remove containers E volumes
 
 O docker-compose garante a ordem via `depends_on` com `condition: service_healthy`:
 
-```
-postgres-lancamentos → lancamentos → api-gateway
-postgres-lancamentos → outbox-relay
-rabbitmq ────────────┘
-postgres-consolidado → consolidado → api-gateway
-redis ───────────────┘
-rabbitmq ────────────┘
+```mermaid
+flowchart LR
+    subgraph infra["Camada 1 — Infraestrutura"]
+        PL[("postgres\nlancamentos")]
+        PC[("postgres\nconsolidado")]
+        RB[["rabbitmq"]]
+        RD[("redis")]
+    end
+
+    subgraph svc["Camada 2 — Servicos"]
+        LA["lancamentos"]
+        OR["outbox-relay"]
+        CO["consolidado"]
+    end
+
+    subgraph gw["Camada 3 — API Gateway"]
+        TR["traefik"]
+    end
+
+    PL --> LA
+    PL --> OR
+    RB --> LA
+    RB --> OR
+    RB --> CO
+    PC --> CO
+    RD --> CO
+    LA --> TR
+    CO --> TR
 ```
 
-O API Gateway só sobe quando `lancamentos` e `consolidado` estão `healthy` — evitando que o gateway sirva tráfego para serviços ainda inicializando.
+O Traefik só recebe tráfego quando `lancamentos` e `consolidado` estão `healthy` — evitando que o gateway sirva tráfego para serviços ainda inicializando. A Camada 1 não tem dependências externas; a Camada 2 aguarda a Camada 1; a Camada 3 aguarda toda a Camada 2.
 
 ---
 

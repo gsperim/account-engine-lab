@@ -298,21 +298,18 @@ A Consolidação é um **read model** — uma projeção dos eventos do Serviço
 ### Janela de inconsistência
 
 ```mermaid
-gantt
+timeline
     title Janela de inconsistência após um lançamento
-    dateFormat  ss
-    axisFormat  +%Ss
-
-    section Lançamentos
-    Persistência confirmada     : 0, 1s
-    Outbox relay (polling 500ms): 1, 1s
-    Publicação no broker        : 2, 1s
-
-    section Consolidação
-    Consumer recebe evento      : 3, 1s
-    Upsert + recálculo          : 4, 1s
-    Invalidação do cache Redis  : 5, 1s
-    Saldo disponível atualizado : 6, 1s
+    t+0s : Persistência confirmada
+         : Serviço de Lançamentos
+    t+1s : Outbox Relay
+         : polling 500ms
+    t+2s : Publicação no RabbitMQ
+    t+3s : Consumer recebe evento
+         : Serviço de Consolidação
+    t+4s : Upsert + recálculo do saldo
+    t+5s : Invalidação do cache Redis
+    t+6s : Saldo disponível atualizado
 ```
 
 Em condições normais, o saldo consolidado fica disponível atualizado dentro de ~2–6 segundos após o registro do lançamento. Em degradação (broker sobrecarregado, consumer lento), a janela se estende mas os dados nunca se perdem — o broker retém os eventos até o consumer processar.
