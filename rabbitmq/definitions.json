@@ -1,0 +1,63 @@
+{
+  "vhosts": [
+    { "name": "/" }
+  ],
+  "exchanges": [
+    {
+      "name": "lancamentos.events",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "dlx",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "consolidacao.lancamentos",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "dlx",
+        "x-dead-letter-routing-key": "consolidacao.lancamentos.dlq",
+        "x-message-ttl": 86400000
+      }
+    },
+    {
+      "name": "consolidacao.lancamentos.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "lancamentos.events",
+      "vhost": "/",
+      "destination": "consolidacao.lancamentos",
+      "destination_type": "queue",
+      "routing_key": "lancamento.#",
+      "arguments": {}
+    },
+    {
+      "source": "dlx",
+      "vhost": "/",
+      "destination": "consolidacao.lancamentos.dlq",
+      "destination_type": "queue",
+      "routing_key": "consolidacao.lancamentos.dlq",
+      "arguments": {}
+    }
+  ]
+}

@@ -1,7 +1,10 @@
-site_name: Fluxo de Caixa Diário — Banco Carrefour
+site_name: Fluxo de Caixa Diário
 site_description: Desafio técnico para a vaga de Arquiteto de Soluções
-docs_dir: .
+docs_dir: docs
 site_dir: site
+dev_addr: 127.0.0.1:8000
+watch:
+  - docs
 
 theme:
   name: material
@@ -9,8 +12,8 @@ theme:
   features:
     - navigation.tabs
     - navigation.sections
-    - navigation.expand
     - navigation.top
+    - navigation.path
     - search.highlight
     - search.suggest
     - content.code.copy
@@ -39,7 +42,12 @@ markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
-  - pymdownx.snippets
+  - abbr
+  - pymdownx.snippets:
+      base_path:
+        - docs
+      auto_append:
+        - includes/abbreviations.md
   - admonition
   - pymdownx.details
   - attr_list
@@ -51,22 +59,55 @@ markdown_extensions:
 plugins:
   - search:
       lang: pt
+  - tags:
+      tags_file: tags.md
+  - glightbox:
+      touchNavigation: true
+      loop: false
+      effect: zoom
+      width: 100%
+      height: auto
+      zoomable: true
+      draggable: true
+  - panzoom:
+      full_screen: true
   - minify:
       minify_html: true
 
-exclude_docs: |
-  CLAUDE.md
-  .venv/
-  site/
-  __pycache__/
-
 nav:
-  - Início: docs/index.md
-  - Base de Conhecimento:
-    - Desafio: base-de-conhecimento/desafio-arquiteto-solucoes.md
-    - Roteiro: base-de-conhecimento/roteiro.md
-  - Decisões Arquiteturais:
-    - Índice: docs/adr/index.md
-    - ADR-001 — Ferramentas de Documentação: docs/adr/ADR-001-ferramentas-documentacao-arquitetural.md
-    - ADR-002 — MkDocs Material: docs/adr/ADR-002-mkdocs-portal-documentacao.md
-    - ADR-003 — ArchiMate 3.x: docs/adr/ADR-003-archimate-notacao-arquitetural.md
+  - Início: index.md
+  - Visão Executiva: visao-executiva.md
+
+  - Negócio:
+    - Drivers e Stakeholders: negocio/drivers.md
+    - Principles Catalog: negocio/principios.md
+    - Domínios e Value Stream: negocio/dominios.md
+    - Requisitos: negocio/requisitos.md
+
+  - Arquitetura:
+    - Diagramas C4: arquitetura/diagramas-c4.md
+    - Contratos de Integração: engenharia/contratos.md
+    - Dados e Persistência: arquitetura/dados.md
+    - Stack e Ferramentas: stack.md
+    - Decisões Arquiteturais: adr/index.md
+
+  - Segurança: seguranca/index.md
+
+  - Observabilidade: observabilidade/index.md
+
+  - Implementação: implementacao/index.md
+
+  - Infraestrutura:
+    - Local — docker-compose: infraestrutura/topologia.md
+    - Cloud AWS:
+      - Visão Geral: cloud/index.md
+      - Custos: cloud/custos.md
+    - Pipeline CI/CD: infraestrutura/pipeline.md
+
+  - Planejamento:
+    - Visão do Projeto: planejamento.md
+    - Plano de Entrega: engenharia/plano-entregas.md
+    - Arquitetura de Transição: engenharia/transicao.md
+
+  - Glossário: glossario.md
+  - Tags: tags.md
