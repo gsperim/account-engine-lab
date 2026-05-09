@@ -11,6 +11,7 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
 
         # ── Plataforma de Observabilidade ─────────────────────────────────────
         observabilidade = softwareSystem "Plataforma de Observabilidade" "Stack PLT + OpenTelemetry. Coleta, processa e armazena traces, métricas, logs e profiles. ADR-015." {
+            tags "Observability"
 
             otelCollector = container "OTEL Collector" {
                 description "Pipeline central. Recebe OTLP gRPC/HTTP, redacta PII (CPF, CNPJ, e-mail, cartão) e exporta por sinal para os backends. ADR-015, ADR-016."
@@ -264,6 +265,11 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
                 background "#438dd5"
                 color "#ffffff"
                 shape "WebBrowser"
+            }
+            element "Observability" {
+                background "#2d6a4f"
+                color "#ffffff"
+                shape "RoundedBox"
             }
             element "ObsUI" {
                 background "#2d6a4f"
