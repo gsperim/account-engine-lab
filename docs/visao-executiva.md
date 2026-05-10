@@ -248,13 +248,25 @@ Com a arquitetura definida, a Fase 3 respondeu a uma pergunta prática: **como o
 
 ### Um ambiente que sobe completo com um comando
 
-Todo o sistema — banco de dados, fila de mensagens, cache, gateway e serviços de aplicação — é definido em um único arquivo de configuração. Qualquer desenvolvedor ou auditor pode rodar o sistema localmente sem instalar dependências além do Docker:
+Todo o sistema está definido em um único arquivo de configuração. Qualquer desenvolvedor ou auditor pode rodar o ambiente completo localmente sem instalar dependências além do Docker:
 
 ```bash
-docker-compose up
+docker compose up --profile app
 ```
 
-Isso levanta dez containers em ordem correta, com verificações de saúde entre eles, volumes persistentes e redes isoladas. Nenhum dado sai da máquina local.
+O ambiente é composto por **24 containers** organizados em quatro grupos com responsabilidades distintas:
+
+| Grupo | Containers | O que fazem |
+|-------|-----------|-------------|
+| **Sistema de negócio** | 3 | Os serviços que implementam o domínio — Lançamentos, Outbox Relay e Consolidação |
+| **Dados e mensageria** | 4 | PostgreSQL (×2), Redis e RabbitMQ — cada um isolado na sua rede interna |
+| **Gateway e identidade** | 2 | API Gateway (Traefik) e Identity Provider (Keycloak) |
+| **Observabilidade** | 12 | Stack completo de monitoramento — logs, métricas, traces e alertas |
+| **Ferramentas de desenvolvimento** | 3 | Portainer (gestão visual), documentação e diagramas |
+
+Os 3 containers do sistema de negócio sobem sob demanda (`--profile app`). Os demais 21 — dados, gateway, identidade e observabilidade — sobem sempre, pois representam a plataforma sobre a qual o sistema opera.
+
+Todos os containers sobem em ordem correta, com verificações de saúde entre eles, volumes persistentes e redes isoladas. Nenhum dado sai da máquina local.
 
 ---
 
