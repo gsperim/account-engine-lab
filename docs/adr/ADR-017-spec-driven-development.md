@@ -94,6 +94,54 @@ Os YAMLs em `contracts/` são a especificação. O código em `services/` é a i
 
 ---
 
+### Desenvolvimento paralelo de times independentes
+
+Este é o benefício organizacional central do SDD: **times diferentes trabalham simultaneamente sem nenhuma linha de código pronta**, usando a spec como interface compartilhada.
+
+```
+contracts/openapi/lancamentos.yaml  ← acordado entre os times no dia 1
+         │
+         ├── Time A — Backend
+         │   Implementa o serviço real contra a interface gerada
+         │   Não precisa esperar ninguém
+         │
+         ├── Time B — Frontend / PDV
+         │   Sobe um servidor mock da spec e desenvolve a integração
+         │   Não precisa esperar o backend estar pronto
+         │
+         └── Time C — QA / Automação
+             Escreve testes de contrato contra a spec
+             Não precisa esperar nenhum dos dois
+```
+
+**Servidor mock a partir da spec — sem código:**
+
+```bash
+# Prism (Stoplight) — mock server com um comando
+npx @stoplight/prism-cli mock contracts/openapi/lancamentos.yaml --port 8080
+
+# Resultado: servidor HTTP rodando em localhost:8080
+# POST /lancamentos → 201 com payload de exemplo do YAML
+# GET  /lancamentos → 200 com array de exemplo do YAML
+# Erros de validação → 422 se body não bater com o schema
+```
+
+O mock responde com os exemplos definidos no YAML e valida os requests contra o schema — sem uma linha de Java. O time de frontend pode desenvolver e testar a integração completa enquanto o backend está sendo implementado.
+
+**Testes de contrato no CI — validação bidirecional:**
+
+Quando ambos os lados estão prontos, o CI executa testes de contrato que verificam se:
+- O servidor real responde igual ao mock (produtor honra o contrato)
+- O cliente real envia requests válidos segundo o schema (consumidor honra o contrato)
+
+Ferramentas: Spring Cloud Contract (produtor), Pact (consumidor), ou validação direta via Prism no pipeline.
+
+**O contrato como artefato de comunicação:**
+
+Em um projeto real com múltiplas squads, o `contracts/` pode ser publicado em um portal de APIs (Apicurio, SwaggerHub, AWS API Gateway) antes de qualquer deploy. Squads de parceiros integram contra a spec publicada — não contra o ambiente de desenvolvimento, que pode estar instável.
+
+---
+
 ## Alternativas Consideradas
 
 | Alternativa | Por que descartada |
