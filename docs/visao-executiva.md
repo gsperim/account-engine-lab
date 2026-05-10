@@ -329,7 +329,7 @@ A mesma arquitetura de containers é mapeada para Kubernetes em produção — a
 
 | O que | Decisão |
 |-------|---------|
-| **Execução local** | docker-compose com 10 containers, healthchecks e volumes persistentes |
+| **Execução local** | 24 containers (21 de plataforma + 3 de negócio sob demanda), healthchecks e volumes persistentes |
 | **Isolamento** | 4 redes Docker — dados e mensageria sem saída para internet |
 | **Escalabilidade** | Consolidação escala horizontalmente sem reconfiguração |
 | **Rate limiting** | API Gateway bloqueia abuso por origem — sistema suporta 50+ req/s em agregado independentemente |
