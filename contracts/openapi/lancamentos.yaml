@@ -1,0 +1,343 @@
+openapi: 3.0.3
+info:
+  title: Serviço de Lançamentos
+  description: |
+    API de registro e consulta de lançamentos financeiros (débitos e créditos).
+    Requisito crítico: disponível independentemente do Serviço de Consolidação (NFR-01).
+  version: 1.0.0
+  contact:
+    name: Time de Arquitetura — Banco Carrefour
+
+servers:
+  - url: http://localhost:8090/lancamentos
+    description: Ambiente local (via Traefik)
+
+tags:
+  - name: lancamentos
+    description: Registro e consulta de movimentações financeiras
+
+paths:
+  /lancamentos:
+    post:
+      tags: [lancamentos]
+      operationId: registrarLancamento
+      summary: Registrar um lançamento financeiro
+      description: |
+        Registra um débito ou crédito. O lançamento é gravado localmente
+        e confirmado antes de qualquer notificação assíncrona (Outbox Pattern).
+        Idempotente por `idempotency-key`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: UUID v4 gerado pelo cliente — garante exatamente-uma-vez por par chave+operação
+          schema:
+            type: string
+            format: uuid
+            example: "7f3b9a10-1c2d-4e5f-8a9b-0c1d2e3f4a5b"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LancamentoRequest'
+            examples:
+              credito:
+                summary: Registro de crédito
+                value:
+                  tipo: CREDITO
+                  valor: 150.00
+                  descricao: "Venda balcão"
+                  data_competencia: "2026-05-09"
+              debito:
+                summary: Registro de débito
+                value:
+                  tipo: DEBITO
+                  valor: 45.50
+                  descricao: "Pagamento fornecedor"
+                  data_competencia: "2026-05-09"
+      responses:
+        '201':
+          description: Lançamento registrado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LancamentoResponse'
+        '400':
+          description: Dados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroValidacao'
+        '409':
+          description: Lançamento já registrado (Idempotency-Key duplicada)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/NaoAutorizado'
+
+    get:
+      tags: [lancamentos]
+      operationId: listarLancamentos
+      summary: Listar lançamentos por data de competência
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: data
+          in: query
+          required: true
+          description: Data de competência no formato ISO 8601 (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+            example: "2026-05-09"
+        - name: tipo
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/TipoLancamento'
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Lista de lançamentos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageLancamentoResponse'
+        '400':
+          description: Parâmetros inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroValidacao'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/NaoAutorizado'
+
+  /lancamentos/{id}:
+    get:
+      tags: [lancamentos]
+      operationId: buscarLancamento
+      summary: Buscar lançamento por ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lançamento encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LancamentoResponse'
+        '404':
+          description: Lançamento não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+
+  /health/live:
+    get:
+      tags: [health]
+      operationId: liveness
+      summary: Liveness probe — processo está vivo
+      security: []
+      responses:
+        '200':
+          description: Serviço vivo
+          content:
+            application/json:
+              example: { "status": "UP" }
+
+  /health/ready:
+    get:
+      tags: [health]
+      operationId: readiness
+      summary: Readiness probe — serviço pronto para tráfego
+      security: []
+      responses:
+        '200':
+          description: Serviço pronto
+          content:
+            application/json:
+              example:
+                status: UP
+                checks:
+                  database: UP
+                  broker: UP
+        '503':
+          description: Serviço não pronto
+          content:
+            application/json:
+              example:
+                status: DOWN
+                checks:
+                  database: DOWN
+                  broker: UP
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    NaoAutenticado:
+      description: Token ausente ou inválido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+    NaoAutorizado:
+      description: Token válido mas sem permissão para esta operação
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+
+  schemas:
+    TipoLancamento:
+      type: string
+      enum: [DEBITO, CREDITO]
+      description: Tipo de movimentação financeira
+
+    LancamentoRequest:
+      type: object
+      required: [tipo, valor, data_competencia]
+      properties:
+        tipo:
+          $ref: '#/components/schemas/TipoLancamento'
+        valor:
+          type: number
+          format: double
+          minimum: 0.01
+          multipleOf: 0.01
+          description: Valor em BRL — mínimo R$ 0,01, máximo 2 casas decimais
+          example: 150.00
+        descricao:
+          type: string
+          maxLength: 255
+          description: Descrição opcional — não armazenar dados pessoais (CPF, nome)
+          example: "Venda balcão"
+        data_competencia:
+          type: string
+          format: date
+          description: Data de competência do lançamento (YYYY-MM-DD)
+          example: "2026-05-09"
+
+    LancamentoResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador único do lançamento
+        tipo:
+          $ref: '#/components/schemas/TipoLancamento'
+        valor:
+          type: number
+          format: double
+          example: 150.00
+        descricao:
+          type: string
+          example: "Venda balcão"
+        data_competencia:
+          type: string
+          format: date
+          example: "2026-05-09"
+        criado_em:
+          type: string
+          format: date-time
+          description: Timestamp UTC de criação
+          example: "2026-05-09T14:30:00.123Z"
+        operador_id:
+          type: string
+          description: ID do operador que registrou (extraído do JWT)
+          example: "usr_7f3b9a10"
+
+    PageLancamentoResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/LancamentoResponse'
+        page:
+          type: integer
+          example: 0
+        size:
+          type: integer
+          example: 20
+        total_elements:
+          type: integer
+          example: 42
+        total_pages:
+          type: integer
+          example: 3
+
+    Erro:
+      type: object
+      properties:
+        codigo:
+          type: string
+          example: "LANCAMENTO_NAO_ENCONTRADO"
+        mensagem:
+          type: string
+          example: "Lançamento não encontrado para o ID informado"
+        trace_id:
+          type: string
+          description: ID de rastreamento para correlação com logs
+          example: "4bf92f3577b34da6a3ce929d0e0e4736"
+
+    ErroValidacao:
+      type: object
+      properties:
+        codigo:
+          type: string
+          example: "DADOS_INVALIDOS"
+        mensagem:
+          type: string
+          example: "Um ou mais campos inválidos"
+        trace_id:
+          type: string
+        campos:
+          type: array
+          items:
+            type: object
+            properties:
+              campo:
+                type: string
+                example: "valor"
+              erro:
+                type: string
+                example: "deve ser maior que 0"

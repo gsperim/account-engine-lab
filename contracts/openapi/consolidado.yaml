@@ -1,0 +1,213 @@
+openapi: 3.0.3
+info:
+  title: Serviço de Consolidação Diária
+  description: |
+    API de consulta de saldos consolidados por data.
+    Saldo pré-calculado com cache-aside Redis — leitura em O(1).
+    Dimensionado para 50 req/s com até 5% de perda em pico (NFR-02).
+  version: 1.0.0
+  contact:
+    name: Time de Arquitetura — Banco Carrefour
+
+servers:
+  - url: http://localhost:8090/consolidacao
+    description: Ambiente local (via Traefik)
+
+tags:
+  - name: consolidacao
+    description: Consulta de saldos consolidados por data
+
+paths:
+  /consolidacao/{data}:
+    get:
+      tags: [consolidacao]
+      operationId: consultarSaldoDiario
+      summary: Consultar saldo consolidado de uma data
+      description: |
+        Retorna o saldo consolidado de uma data específica.
+        Serve do cache Redis quando disponível (latência < 10ms).
+        Consistência eventual — saldo pode estar até ~30s desatualizado (SLO-07).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: data
+          in: path
+          required: true
+          description: Data no formato ISO 8601 (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+            example: "2026-05-09"
+      responses:
+        '200':
+          description: Saldo consolidado da data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaldoConsolidadoResponse'
+              example:
+                data: "2026-05-09"
+                total_creditos: 3250.00
+                total_debitos: 1180.50
+                saldo: 2069.50
+                total_lancamentos: 14
+                ultima_atualizacao: "2026-05-09T17:45:12.000Z"
+        '404':
+          description: Nenhum lançamento para a data informada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+        '400':
+          description: Data inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/NaoAutorizado'
+
+  /consolidacao:
+    get:
+      tags: [consolidacao]
+      operationId: listarSaldosPorPeriodo
+      summary: Listar saldos consolidados por período
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: data_inicio
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2026-05-01"
+        - name: data_fim
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2026-05-09"
+      responses:
+        '200':
+          description: Lista de saldos consolidados no período
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SaldoConsolidadoResponse'
+        '400':
+          description: Período inválido (data_fim anterior a data_inicio, ou período > 90 dias)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/NaoAutorizado'
+
+  /health/live:
+    get:
+      tags: [health]
+      operationId: liveness
+      summary: Liveness probe
+      security: []
+      responses:
+        '200':
+          description: Serviço vivo
+          content:
+            application/json:
+              example: { "status": "UP" }
+
+  /health/ready:
+    get:
+      tags: [health]
+      operationId: readiness
+      summary: Readiness probe — verifica banco e cache
+      security: []
+      responses:
+        '200':
+          description: Serviço pronto
+          content:
+            application/json:
+              example:
+                status: UP
+                checks:
+                  database: UP
+                  cache: UP
+                  broker: UP
+        '503':
+          description: Serviço não pronto
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    NaoAutenticado:
+      description: Token ausente ou inválido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+    NaoAutorizado:
+      description: Token válido mas sem permissão
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+
+  schemas:
+    SaldoConsolidadoResponse:
+      type: object
+      properties:
+        data:
+          type: string
+          format: date
+          description: Data de competência do saldo
+          example: "2026-05-09"
+        total_creditos:
+          type: number
+          format: double
+          description: Soma de todos os créditos do dia em BRL
+          example: 3250.00
+        total_debitos:
+          type: number
+          format: double
+          description: Soma de todos os débitos do dia em BRL
+          example: 1180.50
+        saldo:
+          type: number
+          format: double
+          description: Saldo líquido do dia (créditos - débitos)
+          example: 2069.50
+        total_lancamentos:
+          type: integer
+          description: Número total de lançamentos processados no dia
+          example: 14
+        ultima_atualizacao:
+          type: string
+          format: date-time
+          description: Timestamp UTC do último lançamento processado
+          example: "2026-05-09T17:45:12.000Z"
+
+    Erro:
+      type: object
+      properties:
+        codigo:
+          type: string
+          example: "DATA_SEM_LANCAMENTOS"
+        mensagem:
+          type: string
+          example: "Nenhum lançamento encontrado para a data 2026-05-09"
+        trace_id:
+          type: string
+          example: "4bf92f3577b34da6a3ce929d0e0e4736"
