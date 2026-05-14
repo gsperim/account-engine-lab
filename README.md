@@ -15,8 +15,8 @@ Sistema de controle financeiro para comerciantes com dois serviços independente
 
 ```bash
 # 1. Clonar
-git clone https://github.com/gsperim/desafio-carrefour.git
-cd desafio-carrefour
+git clone https://github.com/gsperim/account-engine-lab.git
+cd account-engine-lab
 
 # 2. Subir infraestrutura (banco, cache, mensageria, observabilidade)
 docker compose up -d
