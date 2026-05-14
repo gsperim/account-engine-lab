@@ -20,6 +20,9 @@ Thumbs.db
 .vscode/
 *.swp
 
+# Claude Code — configuração local com caminhos de máquina
+.mcp.json
+
 base-de-conhecimento/
 CLAUDE.md
 AGENTS.md

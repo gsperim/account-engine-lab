@@ -65,28 +65,55 @@ fi
 
 # ── HTTPS Local (mkcert) ──────────────────────────────────────────────────────
 #
-# mkcert gera certificados assinados por uma CA local instalada no sistema.
-# O script gera os certs automaticamente se mkcert estiver disponível,
-# mas NÃO roda `mkcert -install` — isso modifica o trust store do sistema
-# e deve ser feito explicitamente pelo desenvolvedor.
+# mkcert gera certificados assinados por uma CA local.
+# `mkcert -install` adiciona a CA ao trust store do sistema, Chrome e Firefox.
+# Para Chrome/Firefox no Linux, é necessário `certutil` (pacote libnss3-tools).
 
 CERT_GENERATED=false
+CA_INSTALLED=false
 HTTPS_NOTE="auto-assinado — use: curl -k"
 
 if command -v mkcert &>/dev/null; then
+
+  # Garante que certutil está disponível para instalar no Chrome/Firefox
+  if ! command -v certutil &>/dev/null; then
+    info "Instalando libnss3-tools (necessário para Chrome/Firefox)..."
+    if sudo apt install -y libnss3-tools &>/dev/null 2>&1; then
+      success "libnss3-tools instalado."
+    else
+      warn "Não foi possível instalar libnss3-tools — CA não será adicionada ao Chrome/Firefox."
+      warn "Rode manualmente: sudo apt install libnss3-tools && mkcert -install"
+    fi
+  fi
+
+  # Instala a CA local no sistema e nos browsers
+  info "Instalando CA do mkcert no sistema e browsers..."
+  if mkcert -install &>/dev/null 2>&1; then
+    success "CA do mkcert instalada — Chrome e Firefox confiarão no certificado."
+    CA_INSTALLED=true
+  else
+    warn "mkcert -install falhou — verifique permissões."
+  fi
+
+  # Gera o certificado para localhost (se ainda não existe)
   if [ -f "traefik/certs/local.pem" ]; then
     success "Certificado mkcert já existe — HTTPS com CA local."
-    HTTPS_NOTE="CA local — browser confia"
   else
-    info "mkcert detectado — gerando certificado para localhost..."
+    info "Gerando certificado para localhost..."
     mkcert \
       -cert-file traefik/certs/local.pem \
       -key-file  traefik/certs/local-key.pem \
       localhost 127.0.0.1
     success "Certificado gerado em traefik/certs/"
-    HTTPS_NOTE="CA local — browser confia"
     CERT_GENERATED=true
   fi
+
+  if [ "$CA_INSTALLED" = "true" ]; then
+    HTTPS_NOTE="CA local instalada — browser confia"
+  else
+    HTTPS_NOTE="CA local — rode: mkcert -install"
+  fi
+
 else
   warn "mkcert não encontrado — Traefik usará certificado auto-assinado."
 fi
@@ -141,8 +168,11 @@ echo ""
 if ! command -v mkcert &>/dev/null; then
   echo -e "${YELLOW}Dica — HTTPS confiável no browser:${RESET}"
   echo "  1. Instale mkcert → https://github.com/FiloSottile/mkcert#installation"
-  echo "  2. Execute:          mkcert -install"
-  echo "  3. Execute:          bash setup.sh"
+  echo "  2. Execute:          bash setup.sh  (instala a CA automaticamente)"
+  echo ""
+elif [ "$CA_INSTALLED" = "true" ] && [ "$CERT_GENERATED" = "true" ]; then
+  echo -e "${YELLOW}Dica — CA instalada agora pela primeira vez:${RESET}"
+  echo "  Reinicie o Chrome/Firefox para que reconheça o certificado."
   echo ""
 fi
 

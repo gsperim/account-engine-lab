@@ -1,0 +1,26 @@
+# Exclui o que não é necessário para o build dos serviços Java
+.git
+.github
+node_modules
+
+# Artefatos de build
+services/*/build/
+services/*/.gradle/
+services/*/target/
+
+# Infraestrutura e observabilidade (não entram no container)
+terraform/
+observability/
+traefik/
+structurizr/
+
+# Testes e documentação
+tests/
+docs/
+base-de-conhecimento/
+
+# Arquivos sensíveis
+.env
+.env.*
+*.pem
+*.key

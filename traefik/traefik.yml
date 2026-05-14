@@ -42,6 +42,7 @@ accessLog:
     headers:
       defaultMode: drop
       names:
+        X-Correlation-ID: keep  # elo entre gateway e serviços nos logs
         User-Agent: keep
         X-Real-IP: keep
-        Authorization: redact  # nunca loga tokens em claro
+        Authorization: redact   # nunca loga tokens em claro

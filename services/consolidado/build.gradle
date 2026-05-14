@@ -9,9 +9,8 @@ group = 'br.com.carrefour'
 version = '0.0.1-SNAPSHOT'
 
 java {
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
-	}
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
 }
 
 repositories {
@@ -28,6 +27,13 @@ dependencies {
 	implementation 'org.flywaydb:flyway-core'
 	implementation 'org.flywaydb:flyway-database-postgresql'
 
+	// Resilience4j — Circuit Breaker, métricas via Micrometer
+	implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.2.0'
+	implementation 'org.springframework.boot:spring-boot-starter-aop'
+
+	// Métricas Prometheus — expõe /actuator/prometheus para scraping
+	implementation 'io.micrometer:micrometer-registry-prometheus'
+
 	// OpenTelemetry — versões gerenciadas pelo Boot BOM via io.micrometer
 	implementation 'io.micrometer:micrometer-tracing-bridge-otel'
 	implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
@@ -43,6 +49,7 @@ dependencies {
 	testImplementation 'org.springframework.amqp:spring-rabbit-test'
 	testCompileOnly 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testRuntimeOnly 'com.h2database:h2'
 	testAnnotationProcessor 'org.projectlombok:lombok'
 }
 
@@ -65,7 +72,7 @@ openApiGenerate {
 }
 
 sourceSets.main.java.srcDir "$buildDir/generated/src/main/java"
-compileJava.dependsOn openApiGenerate
+compileJava.dependsOn 'openApiGenerate'
 
 tasks.named('test') {
 	useJUnitPlatform()

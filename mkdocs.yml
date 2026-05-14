@@ -95,7 +95,9 @@ nav:
 
   - Observabilidade: observabilidade/index.md
 
-  - Implementação: implementacao/index.md
+  - Implementação:
+    - Visão Geral: implementacao/index.md
+    - Chaos Engineering: implementacao/caos.md
 
   - Infraestrutura:
     - Local — docker-compose: infraestrutura/topologia.md

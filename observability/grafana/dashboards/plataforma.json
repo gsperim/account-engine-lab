@@ -276,13 +276,25 @@
         },
         {
           "expr": "redis_memory_max_bytes",
-          "legendFormat": "max"
+          "legendFormat": "max (limite)"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "bytes"
-        }
+          "unit": "bytes",
+          "custom": { "lineWidth": 2 }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "max (limite)" },
+            "properties": [
+              { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [8, 8] } },
+              { "id": "custom.lineWidth", "value": 1 },
+              { "id": "color", "value": { "fixedColor": "rgba(200,200,200,0.4)", "mode": "fixed" } },
+              { "id": "custom.axisPlacement", "value": "right" }
+            ]
+          }
+        ]
       }
     },
     {
@@ -301,8 +313,9 @@
       },
       "targets": [
         {
-          "expr": "100 * rate(redis_keyspace_hits_total[5m]) / (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m]) + 0.001)",
-          "legendFormat": "hit rate"
+          "expr": "100 * increase(redis_keyspace_hits_total[1h]) / (increase(redis_keyspace_hits_total[1h]) + increase(redis_keyspace_misses_total[1h]) + 0.001)",
+          "legendFormat": "hit rate (1h)",
+          "instant": true
         }
       ],
       "fieldConfig": {
@@ -346,8 +359,8 @@
       },
       "targets": [
         {
-          "expr": "redis_db_keys",
-          "legendFormat": "chaves"
+          "expr": "sum(redis_db_keys)",
+          "legendFormat": "chaves totais"
         },
         {
           "expr": "increase(redis_evicted_keys_total[5m])",

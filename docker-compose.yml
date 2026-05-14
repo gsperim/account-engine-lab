@@ -27,34 +27,41 @@ services:
   lancamentos:
     container_name: app-lancamentos
     profiles: [app]
-    build: ./services/lancamentos
+    build:
+      context: .
+      dockerfile: services/lancamentos/Dockerfile
+      target: runtime
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=desafio-carrefour_gateway-services"
       # Rota HTTP
       - "traefik.http.routers.lancamentos.rule=PathPrefix(`/lancamentos`)"
       - "traefik.http.routers.lancamentos.entrypoints=web,websecure"
-      - "traefik.http.routers.lancamentos.middlewares=rate-limit-lancamentos@file,secure-headers@file"
+      - "traefik.http.routers.lancamentos.middlewares=strip-lancamentos@file,secure-headers@file"
       # TLS
       - "traefik.http.routers.lancamentos.tls=true"
       - "traefik.http.services.lancamentos.loadbalancer.server.port=8080"
     environment:
-      DATABASE_URL: "postgresql://${POSTGRES_LANCAMENTOS_USER:-lancamentos}:${POSTGRES_LANCAMENTOS_PASSWORD:-changeme}@postgres-lancamentos:5432/${POSTGRES_LANCAMENTOS_DB:-lancamentos}"
-      RABBITMQ_URL: "amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/"
-      LOG_LEVEL: "${LOG_LEVEL:-info}"
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://data-postgres-lancamentos:5432/${POSTGRES_LANCAMENTOS_DB:-lancamentos_dev}"
+      SPRING_DATASOURCE_USERNAME: "${POSTGRES_LANCAMENTOS_USER:-lancamentos}"
+      SPRING_DATASOURCE_PASSWORD: "${POSTGRES_LANCAMENTOS_PASSWORD:-lancamentos_dev}"
+      SPRING_RABBITMQ_HOST: "data-rabbitmq"
+      SPRING_RABBITMQ_USERNAME: "${RABBITMQ_USER:-fluxocaixa}"
+      SPRING_RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD:-fluxocaixa_dev}"
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: "http://obs-otel-collector:4318/v1/traces"
     networks:
       - gateway-services
       - lancamentos-data
+      - messaging
     depends_on:
       postgres-lancamentos:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
+      # distroless não tem shell/curl — health é gerido por HTTP probe no Kubernetes
+      # (/actuator/health). Em dev local o Traefik roteia sem depender de health status.
+      disable: true
     restart: unless-stopped
 
   # ── Outbox Relay ───────────────────────────────────────────────────────────
@@ -64,7 +71,8 @@ services:
     container_name: app-outbox-relay
     profiles: [app]
     build:
-      context: ./services/lancamentos
+      context: .
+      dockerfile: services/lancamentos/Dockerfile
       target: outbox-relay
     environment:
       DATABASE_URL: "postgresql://${POSTGRES_LANCAMENTOS_USER:-lancamentos}:${POSTGRES_LANCAMENTOS_PASSWORD:-changeme}@postgres-lancamentos:5432/${POSTGRES_LANCAMENTOS_DB:-lancamentos}"
@@ -87,21 +95,28 @@ services:
   consolidado:
     container_name: app-consolidado
     profiles: [app]
-    build: ./services/consolidado
+    build:
+      context: .
+      dockerfile: services/consolidado/Dockerfile
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=desafio-carrefour_gateway-services"
       # Rota HTTP + HTTPS
       - "traefik.http.routers.consolidado.rule=PathPrefix(`/consolidacao`)"
       - "traefik.http.routers.consolidado.entrypoints=web,websecure"
-      - "traefik.http.routers.consolidado.middlewares=rate-limit-consolidado@file,secure-headers@file"
+      - "traefik.http.routers.consolidado.middlewares=strip-consolidado@file,secure-headers@file"
       # TLS
       - "traefik.http.routers.consolidado.tls=true"
       - "traefik.http.services.consolidado.loadbalancer.server.port=8080"
     environment:
-      DATABASE_URL: "postgresql://${POSTGRES_CONSOLIDADO_USER:-consolidado}:${POSTGRES_CONSOLIDADO_PASSWORD:-changeme}@postgres-consolidado:5432/${POSTGRES_CONSOLIDADO_DB:-consolidado}"
-      RABBITMQ_URL: "amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/"
-      REDIS_URL: "redis://redis:6379"
-      LOG_LEVEL: "${LOG_LEVEL:-info}"
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://data-postgres-consolidado:5432/${POSTGRES_CONSOLIDADO_DB:-consolidado_dev}"
+      SPRING_DATASOURCE_USERNAME: "${POSTGRES_CONSOLIDADO_USER:-consolidado}"
+      SPRING_DATASOURCE_PASSWORD: "${POSTGRES_CONSOLIDADO_PASSWORD:-consolidado_dev}"
+      SPRING_RABBITMQ_HOST: "data-rabbitmq"
+      SPRING_RABBITMQ_USERNAME: "${RABBITMQ_USER:-fluxocaixa}"
+      SPRING_RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD:-fluxocaixa_dev}"
+      SPRING_DATA_REDIS_HOST: "data-redis"
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: "http://obs-otel-collector:4318/v1/traces"
     networks:
       - gateway-services
       - consolidacao-data
@@ -114,11 +129,7 @@ services:
       rabbitmq:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
+      disable: true
     restart: unless-stopped
 
   # ── PostgreSQL — Lançamentos ───────────────────────────────────────────────
@@ -381,6 +392,24 @@ services:
       - loki
       - tempo
       - pyroscope
+    restart: unless-stopped
+
+  # ── Métricas do host ───────────────────────────────────────────────────────
+  node-exporter:
+    container_name: obs-node-exporter
+    image: prom/node-exporter:v1.8.2
+    pid: host
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/host/root
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|snap|boot)($|/)
+    volumes:
+      - /proc:/host/proc:ro,rslave
+      - /sys:/host/sys:ro,rslave
+      - /:/host/root:ro,rslave
+    networks:
+      - observability
     restart: unless-stopped
 
   # ── Identidade ─────────────────────────────────────────────────────────────

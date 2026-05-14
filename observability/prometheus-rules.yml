@@ -8,29 +8,29 @@ groups:
     rules:
       - record: job:http_requests:success_rate5m
         expr: |
-          sum by (service) (
-            rate(http_server_request_count{http_status_code!~"5.."}[5m])
+          sum by (job) (
+            rate(http_server_requests_seconds_count{outcome!="SERVER_ERROR"}[5m])
           )
           /
-          sum by (service) (
-            rate(http_server_request_count[5m])
-          )
+          clamp_min(sum by (job) (
+            rate(http_server_requests_seconds_count[5m])
+          ), 1e-10)
 
       - record: job:http_requests:success_rate1h
         expr: |
-          sum by (service) (
-            rate(http_server_request_count{http_status_code!~"5.."}[1h])
+          sum by (job) (
+            rate(http_server_requests_seconds_count{outcome!="SERVER_ERROR"}[1h])
           )
           /
-          sum by (service) (
-            rate(http_server_request_count[1h])
-          )
+          clamp_min(sum by (job) (
+            rate(http_server_requests_seconds_count[1h])
+          ), 1e-10)
 
       - record: job:http_requests:p99_latency5m
         expr: |
           histogram_quantile(0.99,
-            sum by (service, le) (
-              rate(http_server_duration_bucket[5m])
+            sum by (job, le) (
+              rate(http_server_requests_seconds_bucket[5m])
             )
           )
 
@@ -149,6 +149,34 @@ groups:
         annotations:
           summary: "Redis descartando chaves por pressão de memória"
           description: "Aumentar maxmemory ou revisar TTLs. Cache hit rate provavelmente cairá."
+
+  - name: resiliencia
+    rules:
+      - alert: CircuitBreakerAberto
+        expr: resilience4j_circuitbreaker_state{state="open"} > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "Circuit breaker {{ $labels.name }} ABERTO em {{ $labels.service }}"
+          description: "Falhas consecutivas ultrapassaram o threshold. Serviço degradando graciosamente."
+
+      - alert: RetryExausto
+        expr: rate(resilience4j_retry_calls_total{kind="failed_with_retry"}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Retries esgotados em {{ $labels.name }} — {{ $labels.service }}"
+          description: "Taxa de falha após retries: {{ $value | humanize }}/s"
+
+      - alert: RedisCacheFallbackAtivo
+        expr: rate(cache_redis_errors_total[2m]) > 1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Fallback Redis→Banco ativo no consolidado"
+          description: "Redis indisponível ou lento. Saldo sendo servido do banco (mesmo dado, maior latência)."
 
   - name: infra.blackbox
     rules:

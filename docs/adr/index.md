@@ -56,6 +56,7 @@ Decisões sobre modelagem, persistência e consistência de dados — separadas 
 | ADR | Decisão | Status | Data |
 |-----|---------|--------|------|
 | [ADR-017](ADR-017-spec-driven-development.md) | Metodologia de Implementação: Spec-Driven Development com OpenAPI Generator (spec-first) | Aceito | 2026-05-09 |
+| [ADR-018](ADR-018-stack-implementacao.md) | Stack de Implementação: Java 21 com Spring Boot 3.5 (frente a Python, Node.js e Quarkus) | Aceito | 2026-05-09 |
 
 ---
 

@@ -17,7 +17,7 @@ tags:
     description: Registro e consulta de movimentações financeiras
 
 paths:
-  /lancamentos:
+  /registros:
     post:
       tags: [lancamentos]
       operationId: registrarLancamento
@@ -135,7 +135,7 @@ paths:
         '403':
           $ref: '#/components/responses/NaoAutorizado'
 
-  /lancamentos/{id}:
+  /registros/{id}:
     get:
       tags: [lancamentos]
       operationId: buscarLancamento

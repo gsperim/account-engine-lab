@@ -25,6 +25,19 @@ http:
           ipStrategy:
             depth: 1
 
+    # ── Strip de prefixo de rota ────────────────────────────────────────────
+    # Remove o segmento de roteamento antes de encaminhar ao backend.
+    # O app Spring Boot opera em context-path "/" — não conhece o prefixo do gateway.
+    strip-lancamentos:
+      stripPrefix:
+        prefixes:
+          - /lancamentos
+
+    strip-consolidado:
+      stripPrefix:
+        prefixes:
+          - /consolidacao
+
     # ── Headers de segurança ─────────────────────────────────────────────────
     secure-headers:
       headers:
