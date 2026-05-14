@@ -13,6 +13,7 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { Counter } from 'k6/metrics';
 import { LANCAMENTOS_URL, HEADERS, randomUUID } from './config.js';
+import { tokenCaixa } from './auth.js';
 
 const violacoesIdempotencia = new Counter('violacoes_idempotencia');
 
@@ -53,7 +54,7 @@ const PAYLOAD_COMPARTILHADO = JSON.stringify({
 
 export function mesmaChaaveConcorrente() {
   const res = http.post(`${LANCAMENTOS_URL}/registros`, PAYLOAD_COMPARTILHADO, {
-    headers: { ...HEADERS, 'Idempotency-Key': CHAVE_COMPARTILHADA },
+    headers: { ...HEADERS, 'Idempotency-Key': CHAVE_COMPARTILHADA, Authorization: `Bearer ${tokenCaixa()}` },
   });
 
   const ok = check(res, {
@@ -76,7 +77,7 @@ export function chaveUnica() {
   });
 
   const res = http.post(`${LANCAMENTOS_URL}/registros`, payload, {
-    headers: { ...HEADERS, 'Idempotency-Key': key },
+    headers: { ...HEADERS, 'Idempotency-Key': key, Authorization: `Bearer ${tokenCaixa()}` },
   });
 
   const ok = check(res, {

@@ -8,6 +8,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.amqp.core.Message;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -28,7 +29,7 @@ class LancamentoEventoConsumerTest {
 
     @Test
     void deveConverterEventoEmCommandEProcessar() {
-        consumer.consumir(umEvento("CREDITO", new BigDecimal("150.00")));
+        consumer.consumir(umEvento("CREDITO", new BigDecimal("150.00")), new Message(new byte[0]));
 
         var captor = ArgumentCaptor.forClass(ProcessarLancamentoUseCase.Command.class);
         verify(processarUseCase).executar(captor.capture());
@@ -42,7 +43,7 @@ class LancamentoEventoConsumerTest {
 
     @Test
     void deveMapearDebitoCorretamente() {
-        consumer.consumir(umEvento("DEBITO", new BigDecimal("50.00")));
+        consumer.consumir(umEvento("DEBITO", new BigDecimal("50.00")), new Message(new byte[0]));
 
         var captor = ArgumentCaptor.forClass(ProcessarLancamentoUseCase.Command.class);
         verify(processarUseCase).executar(captor.capture());

@@ -49,6 +49,7 @@ services:
       SPRING_RABBITMQ_USERNAME: "${RABBITMQ_USER:-fluxocaixa}"
       SPRING_RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD:-fluxocaixa_dev}"
       MANAGEMENT_OTLP_TRACING_ENDPOINT: "http://obs-otel-collector:4318/v1/traces"
+      KEYCLOAK_JWKS_URI: "http://gw-keycloak:8080/realms/fluxocaixa/protocol/openid-connect/certs"
     networks:
       - gateway-services
       - lancamentos-data
@@ -117,6 +118,7 @@ services:
       SPRING_RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD:-fluxocaixa_dev}"
       SPRING_DATA_REDIS_HOST: "data-redis"
       MANAGEMENT_OTLP_TRACING_ENDPOINT: "http://obs-otel-collector:4318/v1/traces"
+      KEYCLOAK_JWKS_URI: "http://gw-keycloak:8080/realms/fluxocaixa/protocol/openid-connect/certs"
     networks:
       - gateway-services
       - consolidacao-data
@@ -427,6 +429,15 @@ services:
       KC_METRICS_ENABLED: "true"
       KC_LOG_LEVEL: INFO
     command: start-dev --import-realm
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=desafio-carrefour_gateway-services"
+      # Expõe apenas /auth/realms/* — admin console fica acessível só pela porta direta 8180.
+      - "traefik.http.routers.keycloak.rule=PathPrefix(`/auth/realms`)"
+      - "traefik.http.routers.keycloak.entrypoints=web,websecure"
+      - "traefik.http.routers.keycloak.middlewares=strip-auth@file"
+      - "traefik.http.routers.keycloak.tls=true"
+      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
     ports:
       - "8180:8080"
     volumes:

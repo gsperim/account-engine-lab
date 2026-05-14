@@ -10,6 +10,10 @@
  *   4–6min  → pico extremo (200 req/s)
  *   6–7min  → recuperação
  *
+ * Tokens JWT:
+ *   Cada VU obtém seu próprio token e renova automaticamente antes do vencimento.
+ *   Duração total = 7min > TTL de 5min → renovação transparente por VU.
+ *
  * Execução:
  *   k6 run tests/k6/stress.js
  *
@@ -25,6 +29,7 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { Rate, Counter } from 'k6/metrics';
 import { CONSOLIDACAO_URL, LANCAMENTOS_URL, HEADERS, randomUUID, dataAleatoria, tipoAleatorio, valorAleatorio } from './config.js';
+import { tokenCaixa, tokenGestor } from './auth.js';
 
 const taxaRateLimit      = new Rate('rate_limit_atingido');
 const lancamentosOk      = new Counter('lancamentos_ok');
@@ -79,7 +84,7 @@ export const options = {
 export function consultarConsolidado() {
   const data = dataAleatoria();
   const res  = http.get(`${CONSOLIDACAO_URL}/saldo/${data}`, {
-    headers: { ...HEADERS, 'X-Forwarded-For': vuIP() },
+    headers: { ...HEADERS, Authorization: `Bearer ${tokenGestor()}`, 'X-Forwarded-For': vuIP() },
     timeout: '5s',
   });
 
@@ -102,7 +107,7 @@ export function registrarLancamento() {
   });
 
   const res = http.post(`${LANCAMENTOS_URL}/registros`, payload, {
-    headers: { ...HEADERS, 'Idempotency-Key': randomUUID() },
+    headers: { ...HEADERS, 'Idempotency-Key': randomUUID(), Authorization: `Bearer ${tokenCaixa()}` },
     timeout: '10s',
   });
 

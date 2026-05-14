@@ -5,6 +5,11 @@ export const BASE_URL         = __ENV.BASE_URL || 'https://localhost:8443';
 export const LANCAMENTOS_URL  = `${BASE_URL}/lancamentos`;
 export const CONSOLIDACAO_URL = `${BASE_URL}/consolidacao`;
 
+// URL do Keycloak via Traefik — usada pelo módulo auth.js
+// Sobrescrever com: k6 run -e AUTH_URL=http://... script.js
+export const AUTH_URL = __ENV.AUTH_URL ||
+  `${BASE_URL}/auth/realms/fluxocaixa/protocol/openid-connect/token`;
+
 export const HEADERS = {
   'Content-Type': 'application/json',
   'Accept':       'application/json',

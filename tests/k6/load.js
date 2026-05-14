@@ -10,6 +10,11 @@
  *   2–7min  → sustentado em 50 req/s (janela de medição)
  *   7–8min  → rampa de descida
  *
+ * Tokens JWT:
+ *   Cada VU obtém seu próprio token na primeira iteração e renova
+ *   automaticamente antes do vencimento (TTL realm = 5min, renovação 30s antes).
+ *   Duração total do teste = 8min > TTL → renovação acontece uma vez por VU.
+ *
  * Execução:
  *   k6 run tests/k6/load.js
  *   k6 run --out json=results/load.json tests/k6/load.js
@@ -18,11 +23,11 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { Trend, Counter } from 'k6/metrics';
 import { LANCAMENTOS_URL, CONSOLIDACAO_URL, HEADERS, randomUUID, dataAleatoria, tipoAleatorio, valorAleatorio } from './config.js';
+import { tokenCaixa, tokenGestor } from './auth.js';
 
 // Métricas customizadas para rastrear separadamente por serviço
 const consolidadoLatencia = new Trend('consolidado_latencia', true);
 const lancamentosLatencia  = new Trend('lancamentos_latencia',  true);
-const errosIdempotencia    = new Counter('erros_idempotencia');
 
 export const options = {
   insecureSkipTLSVerify: true,
@@ -71,7 +76,9 @@ export const options = {
 // ── Cenário: consulta de consolidado ──────────────────────────────────────────
 export function consultarConsolidado() {
   const data = dataAleatoria();
-  const res  = http.get(`${CONSOLIDACAO_URL}/saldo/${data}`, { headers: HEADERS });
+  const res  = http.get(`${CONSOLIDACAO_URL}/saldo/${data}`, {
+    headers: { ...HEADERS, Authorization: `Bearer ${tokenGestor()}` },
+  });
 
   consolidadoLatencia.add(res.timings.duration);
 
@@ -93,7 +100,7 @@ export function registrarLancamento() {
   });
 
   const res = http.post(`${LANCAMENTOS_URL}/registros`, payload, {
-    headers: { ...HEADERS, 'Idempotency-Key': idempotencyKey },
+    headers: { ...HEADERS, 'Idempotency-Key': idempotencyKey, Authorization: `Bearer ${tokenCaixa()}` },
   });
 
   lancamentosLatencia.add(res.timings.duration);

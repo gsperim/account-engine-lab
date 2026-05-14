@@ -11,6 +11,7 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { LANCAMENTOS_URL, CONSOLIDACAO_URL, HEADERS, randomUUID, dataAleatoria, tipoAleatorio, valorAleatorio } from './config.js';
+import { tokenCaixa, tokenGestor } from './auth.js';
 
 export const options = {
   vus:                    2,
@@ -36,19 +37,21 @@ export default function () {
   });
 
   const resPost = http.post(`${LANCAMENTOS_URL}/registros`, payload, {
-    headers: { ...HEADERS, 'Idempotency-Key': idempotencyKey },
+    headers: { ...HEADERS, 'Idempotency-Key': idempotencyKey, Authorization: `Bearer ${tokenCaixa()}` },
   });
 
   check(resPost, {
     'POST /lancamentos/registros → 201': (r) => r.status === 201,
-    'POST tem campo id':                 (r) => JSON.parse(r.body).id !== undefined,
+    'POST tem campo id':                 (r) => r.status === 201 && JSON.parse(r.body).id !== undefined,
   });
 
   if (resPost.status === 201) {
     const lancamentoId = JSON.parse(resPost.body).id;
 
     // ── GET /lancamentos/registros/{id} ───────────────────────────────────────
-    const resGet = http.get(`${LANCAMENTOS_URL}/registros/${lancamentoId}`, { headers: HEADERS });
+    const resGet = http.get(`${LANCAMENTOS_URL}/registros/${lancamentoId}`, {
+      headers: { ...HEADERS, Authorization: `Bearer ${tokenCaixa()}` },
+    });
     check(resGet, {
       'GET /lancamentos/registros/{id} → 200': (r) => r.status === 200,
     });
@@ -57,7 +60,7 @@ export default function () {
   // ── GET /consolidacao/saldo/{data} ────────────────────────────────────────
   // 404 é resposta válida para datas sem lançamentos — não deve inflar http_req_failed
   const resConsolidado = http.get(`${CONSOLIDACAO_URL}/saldo/${data}`, {
-    headers: HEADERS,
+    headers: { ...HEADERS, Authorization: `Bearer ${tokenGestor()}` },
     responseCallback: http.expectedStatuses(200, 404),
   });
   check(resConsolidado, {
@@ -67,7 +70,7 @@ export default function () {
   // ── Idempotência: mesma chave → 409 ──────────────────────────────────────────
   // responseCallback marca 409 como esperado para não inflar http_req_failed
   const resIdem = http.post(`${LANCAMENTOS_URL}/registros`, payload, {
-    headers: { ...HEADERS, 'Idempotency-Key': idempotencyKey },
+    headers: { ...HEADERS, 'Idempotency-Key': idempotencyKey, Authorization: `Bearer ${tokenCaixa()}` },
     responseCallback: http.expectedStatuses(201, 409),
   });
   check(resIdem, {

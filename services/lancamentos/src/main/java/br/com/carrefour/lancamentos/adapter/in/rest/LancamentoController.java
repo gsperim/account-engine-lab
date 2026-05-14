@@ -10,14 +10,14 @@ import br.com.carrefour.lancamentos.domain.model.Valor;
 import br.com.carrefour.lancamentos.domain.port.in.BuscarLancamentoUseCase;
 import br.com.carrefour.lancamentos.domain.port.in.ListarLancamentosUseCase;
 import br.com.carrefour.lancamentos.domain.port.in.RegistrarLancamentoUseCase;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -27,27 +27,31 @@ public class LancamentoController implements LancamentosApi {
     private final BuscarLancamentoUseCase buscarUseCase;
     private final ListarLancamentosUseCase listarUseCase;
     private final LancamentoMapper mapper;
-    private final HttpServletRequest httpRequest;
 
     public LancamentoController(
             RegistrarLancamentoUseCase registrarUseCase,
             BuscarLancamentoUseCase buscarUseCase,
             ListarLancamentosUseCase listarUseCase,
-            LancamentoMapper mapper,
-            HttpServletRequest httpRequest) {
+            LancamentoMapper mapper) {
         this.registrarUseCase = registrarUseCase;
         this.buscarUseCase    = buscarUseCase;
         this.listarUseCase    = listarUseCase;
         this.mapper           = mapper;
-        this.httpRequest      = httpRequest;
     }
 
     @Override
     public ResponseEntity<LancamentoResponse> registrarLancamento(UUID idempotencyKey, LancamentoRequest req) {
-        // operadorId virá do subject do JWT quando Spring Security for integrado
-        var operadorId = Optional.ofNullable(httpRequest.getHeader("X-Operator-Id"))
-                .filter(s -> !s.isBlank())
-                .orElse("anonymous");
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        var operadorId = "anonymous";
+        if (auth != null && auth.getPrincipal() instanceof Jwt jwt) {
+            var sub = jwt.getSubject();
+            if (sub != null && !sub.isBlank()) {
+                operadorId = sub;
+            } else {
+                var username = jwt.getClaimAsString("preferred_username");
+                if (username != null && !username.isBlank()) operadorId = username;
+            }
+        }
 
         var command = new RegistrarLancamentoUseCase.Command(
                 mapper.toDomain(req.getTipo()),

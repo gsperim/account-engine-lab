@@ -23,27 +23,15 @@
   "adminEventsDetailsEnabled": true,
   "eventsListeners": ["jboss-logging"],
   "enabledEventTypes": [
-    "LOGIN",
-    "LOGIN_ERROR",
-    "LOGOUT",
-    "LOGOUT_ERROR",
-    "CODE_TO_TOKEN",
-    "CODE_TO_TOKEN_ERROR",
-    "CLIENT_LOGIN",
-    "CLIENT_LOGIN_ERROR",
-    "REFRESH_TOKEN",
-    "REFRESH_TOKEN_ERROR",
-    "INTROSPECT_TOKEN",
-    "INTROSPECT_TOKEN_ERROR",
-    "REGISTER",
-    "REGISTER_ERROR",
-    "SEND_RESET_PASSWORD",
-    "RESET_PASSWORD",
-    "RESET_PASSWORD_ERROR",
-    "EXECUTE_ACTIONS",
-    "EXECUTE_ACTIONS_ERROR",
-    "TOKEN_EXCHANGE",
-    "TOKEN_EXCHANGE_ERROR"
+    "LOGIN", "LOGIN_ERROR", "LOGOUT", "LOGOUT_ERROR",
+    "CODE_TO_TOKEN", "CODE_TO_TOKEN_ERROR",
+    "CLIENT_LOGIN", "CLIENT_LOGIN_ERROR",
+    "REFRESH_TOKEN", "REFRESH_TOKEN_ERROR",
+    "INTROSPECT_TOKEN", "INTROSPECT_TOKEN_ERROR",
+    "REGISTER", "REGISTER_ERROR",
+    "SEND_RESET_PASSWORD", "RESET_PASSWORD", "RESET_PASSWORD_ERROR",
+    "EXECUTE_ACTIONS", "EXECUTE_ACTIONS_ERROR",
+    "TOKEN_EXCHANGE", "TOKEN_EXCHANGE_ERROR"
   ],
 
   "roles": {
@@ -56,6 +44,41 @@
   },
 
   "clientScopes": [
+    {
+      "name": "basic",
+      "description": "Claims básicos exigidos pelo Keycloak 25+ — sub e auth_time",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "sub",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "preferred_username",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "claim.name": "preferred_username",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
     {
       "name": "lancamentos:write",
       "description": "Registrar lançamentos e estornos",
@@ -91,7 +114,7 @@
       "publicClient": true,
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
+      "directAccessGrantsEnabled": true,
       "attributes": {
         "pkce.code.challenge.method": "S256",
         "access.token.lifespan": "300"
@@ -104,7 +127,7 @@
         "http://localhost:3000",
         "http://localhost:8443"
       ],
-      "defaultClientScopes": ["openid", "profile", "email"],
+      "defaultClientScopes": ["basic", "openid", "profile", "email"],
       "optionalClientScopes": [
         "lancamentos:write",
         "lancamentos:read",
@@ -122,6 +145,7 @@
             "access.token.claim": "true",
             "id.token.claim": "false",
             "userinfo.token.claim": "false",
+            "introspection.token.claim": "true",
             "claim.name": "role",
             "jsonType.label": "String"
           }
@@ -140,7 +164,7 @@
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": true,
       "secret": "${PDV_CLIENT_SECRET}",
-      "defaultClientScopes": ["openid"],
+      "defaultClientScopes": ["basic", "openid"],
       "optionalClientScopes": ["lancamentos:write", "lancamentos:read"],
       "protocolMappers": [
         {
@@ -153,6 +177,7 @@
             "access.token.claim": "true",
             "id.token.claim": "false",
             "userinfo.token.claim": "false",
+            "introspection.token.claim": "true",
             "claim.name": "role",
             "jsonType.label": "String"
           }

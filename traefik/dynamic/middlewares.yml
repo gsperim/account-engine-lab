@@ -38,6 +38,14 @@ http:
         prefixes:
           - /consolidacao
 
+    # ── Strip do prefixo /auth — Keycloak via Traefik ──────────────────────
+    # Clientes chamam /auth/realms/...; Traefik remove /auth antes de encaminhar ao Keycloak.
+    # /auth/admin não tem rota mapeada → Traefik retorna 404 por design.
+    strip-auth:
+      stripPrefix:
+        prefixes:
+          - /auth
+
     # ── Headers de segurança ─────────────────────────────────────────────────
     secure-headers:
       headers:
