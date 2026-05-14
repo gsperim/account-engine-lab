@@ -1,0 +1,78 @@
+package br.com.carrefour.lancamentos.adapter.in.rest;
+
+import br.com.carrefour.lancamentos.adapter.in.rest.dto.generated.LancamentoRequest;
+import br.com.carrefour.lancamentos.adapter.in.rest.dto.generated.LancamentoResponse;
+import br.com.carrefour.lancamentos.adapter.in.rest.dto.generated.PageLancamentoResponse;
+import br.com.carrefour.lancamentos.adapter.in.rest.dto.generated.TipoLancamento;
+import br.com.carrefour.lancamentos.adapter.in.rest.generated.LancamentosApi;
+import br.com.carrefour.lancamentos.domain.model.LancamentoId;
+import br.com.carrefour.lancamentos.domain.model.Valor;
+import br.com.carrefour.lancamentos.domain.port.in.BuscarLancamentoUseCase;
+import br.com.carrefour.lancamentos.domain.port.in.ListarLancamentosUseCase;
+import br.com.carrefour.lancamentos.domain.port.in.RegistrarLancamentoUseCase;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Optional;
+import java.util.UUID;
+
+@RestController
+public class LancamentoController implements LancamentosApi {
+
+    private final RegistrarLancamentoUseCase registrarUseCase;
+    private final BuscarLancamentoUseCase buscarUseCase;
+    private final ListarLancamentosUseCase listarUseCase;
+    private final LancamentoMapper mapper;
+    private final HttpServletRequest httpRequest;
+
+    public LancamentoController(
+            RegistrarLancamentoUseCase registrarUseCase,
+            BuscarLancamentoUseCase buscarUseCase,
+            ListarLancamentosUseCase listarUseCase,
+            LancamentoMapper mapper,
+            HttpServletRequest httpRequest) {
+        this.registrarUseCase = registrarUseCase;
+        this.buscarUseCase    = buscarUseCase;
+        this.listarUseCase    = listarUseCase;
+        this.mapper           = mapper;
+        this.httpRequest      = httpRequest;
+    }
+
+    @Override
+    public ResponseEntity<LancamentoResponse> registrarLancamento(UUID idempotencyKey, LancamentoRequest req) {
+        // operadorId virá do subject do JWT quando Spring Security for integrado
+        var operadorId = Optional.ofNullable(httpRequest.getHeader("X-Operator-Id"))
+                .filter(s -> !s.isBlank())
+                .orElse("anonymous");
+
+        var command = new RegistrarLancamentoUseCase.Command(
+                mapper.toDomain(req.getTipo()),
+                Valor.de(BigDecimal.valueOf(req.getValor())),
+                req.getDescricao(),
+                req.getDataCompetencia(),
+                operadorId,
+                idempotencyKey.toString()
+        );
+        var lancamento = registrarUseCase.executar(command);
+        return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toResponse(lancamento));
+    }
+
+    @Override
+    public ResponseEntity<LancamentoResponse> buscarLancamento(UUID id) {
+        return buscarUseCase.executar(LancamentoId.de(id))
+                .map(mapper::toResponse)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @Override
+    public ResponseEntity<PageLancamentoResponse> listarLancamentos(
+            LocalDate data, TipoLancamento tipo, Integer page, Integer size) {
+        var query = new ListarLancamentosUseCase.Query(data, mapper.toDomain(tipo), page, size);
+        return ResponseEntity.ok(mapper.toPageResponse(listarUseCase.executar(query)));
+    }
+}

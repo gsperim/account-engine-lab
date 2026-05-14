@@ -34,16 +34,20 @@ scrape_configs:
         action: drop
 
     pipeline_stages:
-      # Tenta parsear como JSON estruturado (serviços com OTEL SDK)
+      # Parseia JSON estruturado — formato Logstash emitido pelo Spring Boot 3.4+
+      # Campos: level, message, traceId, spanId, logger_name, thread_name, @timestamp
+      # Containers sem JSON (Keycloak, RabbitMQ, Postgres) passam adiante sem erro
       - json:
           expressions:
-            level:    level
-            trace_id: trace_id
-            span_id:  span_id
-            message:  message
+            level:          level
+            trace_id:       traceId
+            span_id:        spanId
+            correlation_id: correlation_id
+            message:        message
+            logger_name:    logger_name
 
       # Redação de PII antes de enviar ao Loki (ADR-016)
-      # Cobre stdout de containers sem OTEL SDK (Keycloak, RabbitMQ, etc.)
+      # Aplicada no texto bruto — cobre tanto JSON quanto logs de terceiros
       - replace:
           expression: '\d{3}\.\d{3}\.\d{3}-\d{2}'
           replace: '[CPF REDACTED]'
@@ -57,11 +61,19 @@ scrape_configs:
           expression: '\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}'
           replace: '[CARD REDACTED]'
 
-      # Promove campos encontrados como labels do Loki
+      # Promove como labels do Loki — mantém cardinalidade baixa (sem trace_id como label)
+      # trace_id fica como campo pesquisável via LogQL, não como label indexado
       - labels:
           level:
-          trace_id:
 
-      # Usa o campo message como linha de log se disponível
+      # Adiciona como structured_metadata — alta cardinalidade, não devem ser labels
+      # trace_id/span_id: correlação com Tempo | correlation_id: jornada de negócio
+      - structured_metadata:
+          trace_id:
+          span_id:
+          correlation_id:
+
+      # Usa o campo message como linha de log quando disponível (JSON dos serviços)
+      # Containers sem JSON mantêm a linha original
       - output:
           source: message

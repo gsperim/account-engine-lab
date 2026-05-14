@@ -1,0 +1,114 @@
+asyncapi: 2.6.0
+info:
+  title: Eventos de Domínio — Fluxo de Caixa
+  version: 1.0.0
+  description: |
+    Contratos de eventos assíncronos trafegados via RabbitMQ.
+    Exchange: `lancamentos.events` (topic)
+    DLQ: `consolidacao.lancamentos.dlq`
+
+servers:
+  local:
+    url: amqp://localhost:5672
+    protocol: amqp
+    description: RabbitMQ local
+
+channels:
+  lancamentos.events:
+    description: |
+      Exchange do tipo topic. O Outbox Relay publica aqui após confirmar
+      o lançamento no banco. O Serviço de Consolidação consome via
+      fila `consolidacao.lancamentos` com routing key `lancamento.#`.
+    publish:
+      operationId: publicarLancamentoRegistrado
+      summary: Outbox Relay publica evento de lançamento confirmado
+      message:
+        $ref: '#/components/messages/LancamentoRegistrado'
+    subscribe:
+      operationId: consumirLancamentoRegistrado
+      summary: Serviço de Consolidação consome e atualiza saldo
+      message:
+        $ref: '#/components/messages/LancamentoRegistrado'
+
+components:
+  messages:
+    LancamentoRegistrado:
+      name: LancamentoRegistrado
+      title: Lançamento Registrado
+      summary: Emitido pelo Outbox Relay após confirmação no banco de dados
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          traceparent:
+            type: string
+            description: W3C Trace Context — propaga o trace_id do HTTP request original
+            example: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+          content-type:
+            type: string
+            example: "application/json"
+          x-retry-count:
+            type: integer
+            description: Número de tentativas (incrementado pelo broker em reentregas)
+            default: 0
+      payload:
+        $ref: '#/components/schemas/EnvelopeEvento'
+
+  schemas:
+    EnvelopeEvento:
+      type: object
+      required: [id, tipo, versao, criado_em, payload]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID único do evento — usado para idempotência no consumidor
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        tipo:
+          type: string
+          enum: [LancamentoRegistrado]
+          example: "LancamentoRegistrado"
+        versao:
+          type: string
+          description: Versão do schema do payload — permite evolução sem quebrar consumidores
+          example: "1.0"
+        criado_em:
+          type: string
+          format: date-time
+          description: Timestamp UTC de criação do evento
+          example: "2026-05-09T14:30:00.123Z"
+        payload:
+          $ref: '#/components/schemas/PayloadLancamentoRegistrado'
+
+    PayloadLancamentoRegistrado:
+      type: object
+      required: [lancamento_id, tipo, valor, data_competencia, operador_id]
+      properties:
+        lancamento_id:
+          type: string
+          format: uuid
+          description: ID do lançamento criado
+          example: "7f3b9a10-1c2d-4e5f-8a9b-0c1d2e3f4a5b"
+        tipo:
+          type: string
+          enum: [DEBITO, CREDITO]
+          example: "CREDITO"
+        valor:
+          type: number
+          format: double
+          description: Valor em BRL com precisão de 2 casas decimais
+          example: 150.00
+        data_competencia:
+          type: string
+          format: date
+          description: Data de competência do lançamento
+          example: "2026-05-09"
+        operador_id:
+          type: string
+          description: ID do operador que registrou o lançamento
+          example: "usr_7f3b9a10"
+        criado_em:
+          type: string
+          format: date-time
+          description: Timestamp UTC de criação do lançamento no banco
+          example: "2026-05-09T14:30:00.123Z"

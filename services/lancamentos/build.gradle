@@ -1,0 +1,78 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.5.14'
+	id 'io.spring.dependency-management' version '1.1.7'
+	id 'org.openapi.generator' version '7.6.0'
+}
+
+group = 'br.com.carrefour'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-amqp'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.flywaydb:flyway-core'
+	implementation 'org.flywaydb:flyway-database-postgresql'
+
+	// Resilience4j — Circuit Breaker, Retry, métricas via Micrometer
+	implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.2.0'
+	implementation 'org.springframework.boot:spring-boot-starter-aop'
+
+	// Métricas Prometheus — expõe /actuator/prometheus para scraping
+	implementation 'io.micrometer:micrometer-registry-prometheus'
+
+	// OpenTelemetry — versões gerenciadas pelo Boot BOM via io.micrometer
+	implementation 'io.micrometer:micrometer-tracing-bridge-otel'
+	implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
+
+	// Runtime do código gerado pelo OpenAPI Generator — fora do Boot BOM
+	implementation 'io.swagger.core.v3:swagger-annotations-jakarta:2.2.22'
+	implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
+
+	compileOnly 'org.projectlombok:lombok'
+	runtimeOnly 'org.postgresql:postgresql'
+	annotationProcessor 'org.projectlombok:lombok'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.amqp:spring-rabbit-test'
+	testCompileOnly 'org.projectlombok:lombok'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testRuntimeOnly 'com.h2database:h2'
+	testAnnotationProcessor 'org.projectlombok:lombok'
+}
+
+// ── OpenAPI Generator ──────────────────────────────────────────────────────
+openApiGenerate {
+	generatorName = 'spring'
+	inputSpec     = "$rootDir/../../contracts/openapi/lancamentos.yaml"
+	outputDir     = "$buildDir/generated"
+	apiPackage    = 'br.com.carrefour.lancamentos.adapter.in.rest.generated'
+	modelPackage  = 'br.com.carrefour.lancamentos.adapter.in.rest.dto.generated'
+	configOptions = [
+		interfaceOnly        : 'true',
+		useSpringBoot3       : 'true',
+		useJakartaEe         : 'true',
+		useTags              : 'true',
+		documentationProvider: 'none',
+		openApiNullable      : 'false',
+		skipDefaultInterface : 'true'
+	]
+}
+
+sourceSets.main.java.srcDir "$buildDir/generated/src/main/java"
+compileJava.dependsOn 'openApiGenerate'
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
