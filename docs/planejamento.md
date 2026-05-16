@@ -1,3 +1,8 @@
+---
+tags:
+  - planejamento
+---
+
 # Planejamento e Racional do Projeto
 
 **Papéis:** 🧩 Arquiteto de Soluções · 💼 Arquiteto de Negócios · 🏛️ Arquiteto Corporativo
@@ -26,6 +31,34 @@ O TOGAF foi usado como referência metodológica parcial. As fases A a D e F do 
 
 ---
 
+## Cronograma — 9 Etapas em 7 Dias
+
+```mermaid
+gantt
+    title Cronograma do Desafio — 9 Etapas em 7 Dias
+    dateFormat  YYYY-MM-DD
+    axisFormat  D%d
+
+    section Negócio e Arquitetura
+    Etapa 1 — Domínio de Negócio          :done,   2026-01-01, 1d
+    Etapa 2 — Arquitetura da Solução       :done,   2026-01-02, 1d
+    Etapa 3 — Infraestrutura e Plataforma  :done,   2026-01-02, 2d
+
+    section Dados e Transversais
+    Etapa 4 — Dados e Persistência         :done,   2026-01-03, 1d
+    Etapa 5 — Segurança                    :done,   2026-01-04, 1d
+    Etapa 6 — Observabilidade              :done,   2026-01-04, 1d
+
+    section Entrega
+    Etapa 7 — Implementação                :active, 2026-01-05, 2d
+    Etapa 8 — Pipeline e Entrega           :        2026-01-06, 1d
+    Etapa 9 — Documentação Final           :        2026-01-07, 1d
+```
+
+> As Etapas 2 e 3 se sobrepõem intencionalmente: as decisões arquiteturais (ADRs) e a topologia de infraestrutura evoluem em paralelo. As Etapas 5 e 6 também são paralelas — segurança e observabilidade são preocupações transversais que podem ser trabalhadas no mesmo dia. A Etapa 7 (Implementação) recebe dois dias por ser o maior volume de código.
+
+---
+
 ## As fases do projeto
 
 ### Fase 1 — Domínio de Negócio ✓
@@ -40,27 +73,53 @@ Essa classificação teve consequência direta: toda a profundidade de modelagem
 
 Os requisitos funcionais foram detalhados com campos de entrada e saída, regras de negócio, casos de borda e critérios de aceite. Os NFRs foram elevados à mesma importância — particularmente o NFR crítico que diz que o registro de lançamentos não pode ser afetado pela queda do serviço de consolidação. Essa restrição de resiliência moldou toda a arquitetura subsequente.
 
-**Artefatos produzidos:** [Visão Executiva](negocio/visao-executiva.md) · [Drivers e Stakeholders](negocio/drivers.md) · [Principles Catalog](negocio/principios.md) · [Domínios, Value Stream e Capacidades](negocio/dominios.md) · [Glossário](negocio/glossario.md) · [Requisitos](negocio/requisitos.md)
+**Artefatos produzidos:** [Visão Executiva](visao-executiva.md) · [Drivers e Stakeholders](negocio/drivers.md) · [Principles Catalog](negocio/principios.md) · [Domínios, Value Stream e Capacidades](negocio/dominios.md) · [Glossário](glossario.md) · [Requisitos](negocio/requisitos.md)
 
 ---
 
-### Fase 2 — Arquitetura da Solução
+### Fase 2 — Arquitetura da Solução ✓
 
-Com o domínio estabelecido, esta fase responde à pergunta central de design: como o sistema é estruturado para atender os requisitos funcionais e, especialmente, os não funcionais?
+Com o domínio estabelecido, esta fase respondeu à pergunta central de design: como o sistema é estruturado para atender os requisitos funcionais e, especialmente, os não funcionais?
 
-A decisão arquitetural mais importante desta fase é o padrão de desacoplamento entre os dois serviços. O NFR-01 exige que o serviço de lançamentos seja independente do serviço de consolidação — e isso determina que a comunicação entre eles precisa ser assíncrona, via broker de mensagens. Essa decisão será formalizada em um ADR.
+A decisão arquitetural mais importante foi o padrão de desacoplamento entre os dois serviços. O [NFR-01](negocio/requisitos.md#nfr-01) exige que o serviço de lançamentos seja independente do serviço de consolidação — o que determina comunicação assíncrona via broker de mensagens, formalizada no [ADR-001](adr/ADR-001-padrao-arquitetural.md). A partir daí, cada decisão subsequente derivou dessa escolha central.
 
-O resultado desta fase são os diagramas C4 L1 e L2, os ADRs das principais decisões e a estratégia de integração com contratos de mensagem definidos.
+O C4 L1 e L2 foram evoluídos iterativamente à medida que as decisões amadureciam: dois atores distintos (Caixa e Gestor) refletem jornadas diferentes; API Gateway centraliza autenticação, rate limiting e roteamento; PDV aparece como sistema externo alternativo ao frontend; dois bancos isolados e Redis de cache completam a topologia de containers.
+
+Os contratos de integração foram documentados antes do código — espírito do **Spec-Driven Development** — com schemas JSON dos eventos de domínio e tabela de endpoints REST. Na Etapa 7, esses contratos Markdown serão convertidos em `openapi.yaml` e `asyncapi.yaml` para dirigir a implementação.
+
+**Artefatos produzidos:**
+
+| Artefato | Link |
+|----------|------|
+| Diagrama C4 L1 e L2 | [structurizr/workspace.dsl](https://github.com) · visualizar via `docker-compose up structurizr` |
+| ADR-001 — Padrão Arquitetural: Microserviços Orientados a Eventos | [adr/ADR-001](adr/ADR-001-padrao-arquitetural.md) |
+| ADR-002 — Message Broker: RabbitMQ | [adr/ADR-002](adr/ADR-002-message-broker.md) |
+| ADR-003 — Garantia de Entrega: Transactional Outbox Pattern | [adr/ADR-003](adr/ADR-003-outbox-pattern.md) |
+| ADR-004 — Validação de Tokens: JWT com Validação Local via JWKS | [adr/ADR-004](adr/ADR-004-jwt-validacao-local.md) |
+| ADR-005 — Protocolo de Comunicação Interna: REST sobre gRPC | [adr/ADR-005](adr/ADR-005-protocolo-comunicacao-interna.md) |
+| Contratos de Integração (eventos e APIs REST) | [engenharia/contratos](engenharia/contratos.md) |
+| Plano de Entrega Incremental | [engenharia/plano-entregas](engenharia/plano-entregas.md) |
+| Arquitetura de Transição *(diferencial)* | [engenharia/transicao](engenharia/transicao.md) |
 
 ---
 
-### Fase 3 — Infraestrutura e Plataforma
+### Fase 3 — Infraestrutura e Plataforma ✓
 
-Define como o sistema é executado: ambiente de containers, estratégia de escalabilidade horizontal para absorver os picos exigidos pelo NFR-02, topologia de rede e isolamento de componentes. A execução local via `docker-compose` é um requisito obrigatório do desafio e será atendida aqui.
+Define como o sistema é executado: ambiente de containers, estratégia de escalabilidade horizontal para absorver os picos exigidos pelo NFR-02, topologia de rede e isolamento de componentes. A execução local via `docker-compose` é um requisito obrigatório do desafio e foi atendida aqui.
+
+**Artefatos produzidos:**
+
+| Artefato | Link |
+|----------|------|
+| Topologia e Plataforma | [infraestrutura/topologia](infraestrutura/topologia.md) |
+| docker-compose.yml | [docker-compose.yml](https://github.com) |
+| nginx/gateway.conf | [nginx/gateway.conf](https://github.com) |
+| rabbitmq/definitions.json | [rabbitmq/definitions.json](https://github.com) |
+| ADR-006 — Container Runtime | [adr/ADR-006](adr/ADR-006-container-runtime.md) |
 
 ---
 
-### Fase 4 — Dados e Persistência
+### Fase 4 — Dados e Persistência ✓
 
 Cada serviço possui e controla exclusivamente seus próprios dados — esse princípio (*database per service*) foi decidido na Fase 1. Esta fase o implementa: define os modelos de dados por serviço, escolhe os mecanismos de persistência com justificativa e formaliza os contratos dos eventos de domínio.
 
@@ -68,13 +127,13 @@ A estratégia de consistência eventual entre os serviços, que foi aceita como 
 
 ---
 
-### Fase 5 — Segurança
+### Fase 5 — Segurança ✓
 
 Define o modelo de autenticação e autorização, a estratégia de proteção de dados em trânsito e em repouso, e o mapeamento da superfície de ataque. O princípio *segurança por design* estabelecido na Fase 1 é operacionalizado.
 
 ---
 
-### Fase 6 — Observabilidade e Monitoramento
+### Fase 6 — Observabilidade e Monitoramento ✓
 
 Logs estruturados, métricas e rastreamento distribuído são requisitos do sistema, não opcionais — isso foi decidido na Fase 1 como NFR-04. Esta fase define os três pilares, os SLOs, as ferramentas e a estratégia de alertas.
 
@@ -82,9 +141,20 @@ Logs estruturados, métricas e rastreamento distribuído são requisitos do sist
 
 ### Fase 7 — Implementação
 
-Com toda a arquitetura documentada e as decisões formalizadas em ADRs, a implementação começa com contexto completo. Os serviços de Lançamentos e Consolidação Diária são implementados, os contratos de API formalizados em OpenAPI e os testes escritos.
+Com toda a arquitetura documentada e as decisões formalizadas em ADRs, a implementação começa com contexto completo seguindo o fluxo **Spec-Driven Development**: os contratos Markdown definidos na Fase 2 são convertidos em `openapi.yaml` (REST) e `asyncapi.yaml` (eventos), gerando stubs de servidor, mocks e validação de contrato automatizada no CI.
 
-É também nesta fase que o DDD Tático entra: aggregates, entities, value objects e domain events são modelados dentro de cada bounded context.
+Os serviços de Lançamentos e Consolidação Diária são implementados contra esses contratos. É também nesta fase que o DDD Tático entra: aggregates, entities, value objects e domain events são modelados dentro de cada bounded context.
+
+> Base para o `openapi.yaml` e `asyncapi.yaml`: [Contratos de Integração](engenharia/contratos.md)
+
+**Pendência de Observabilidade:** com os serviços enviando OTLP ao Collector, revisitar os dashboards do Grafana que ficaram sem dados durante a Fase 6:
+
+| Dashboard | O que validar |
+|-----------|--------------|
+| Infraestrutura — Fluxo de Caixa | Latência p50/p95/p99 e throughput dos endpoints |
+| Negócio — Fluxo de Caixa | Lançamentos/hora, valor acumulado em BRL, DLQ, cache hit rate |
+| SLOs — Fluxo de Caixa | Burn rate por SLO, error budget consumido |
+| Grafana Explore | Correlação trace → log → metric → profile (drill-down até linha de código) |
 
 ---
 

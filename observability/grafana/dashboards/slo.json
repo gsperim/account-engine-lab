@@ -1,0 +1,65 @@
+{
+  "title": "SLOs — Fluxo de Caixa",
+  "uid": "slo",
+  "tags": ["slo", "fluxocaixa"],
+  "timezone": "browser",
+  "refresh": "1m",
+  "time": { "from": "now-7d", "to": "now" },
+  "schemaVersion": 38,
+  "panels": [
+    {
+      "id": 1, "type": "gauge", "title": "SLO-01 · Lançamentos: taxa de sucesso (meta 99,5%)",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 6 },
+      "targets": [{ "datasource": "Prometheus", "expr": "job:http_requests:success_rate1h{service=\"lancamentos\"} * 100", "legendFormat": "%" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "minVizWidth": 75 },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 98, "max": 100, "thresholds": { "steps": [{ "color": "red", "value": 98 }, { "color": "yellow", "value": 99.3 }, { "color": "green", "value": 99.5 }] } } }
+    },
+    {
+      "id": 2, "type": "gauge", "title": "SLO-02 · Lançamentos: latência p99 (meta < 500ms)",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 6 },
+      "targets": [{ "datasource": "Prometheus", "expr": "job:http_requests:p99_latency5m{service=\"lancamentos\"} * 1000", "legendFormat": "ms" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "minVizWidth": 75 },
+      "fieldConfig": { "defaults": { "unit": "ms", "min": 0, "max": 1000, "thresholds": { "steps": [{ "color": "green", "value": 0 }, { "color": "yellow", "value": 500 }, { "color": "red", "value": 750 }] } } }
+    },
+    {
+      "id": 3, "type": "gauge", "title": "SLO-04 · Consolidação: taxa de sucesso (meta 99,0%)",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 6 },
+      "targets": [{ "datasource": "Prometheus", "expr": "job:http_requests:success_rate1h{service=\"consolidado\"} * 100", "legendFormat": "%" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "minVizWidth": 75 },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 97, "max": 100, "thresholds": { "steps": [{ "color": "red", "value": 97 }, { "color": "yellow", "value": 98.5 }, { "color": "green", "value": 99.0 }] } } }
+    },
+    {
+      "id": 4, "type": "gauge", "title": "SLO-05 · Consolidação: latência p99 (meta < 100ms)",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 6 },
+      "targets": [{ "datasource": "Prometheus", "expr": "job:http_requests:p99_latency5m{service=\"consolidado\"} * 1000", "legendFormat": "ms" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "minVizWidth": 75 },
+      "fieldConfig": { "defaults": { "unit": "ms", "min": 0, "max": 500, "thresholds": { "steps": [{ "color": "green", "value": 0 }, { "color": "yellow", "value": 100 }, { "color": "red", "value": 200 }] } } }
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Burn Rate — Lançamentos (SLO-01, meta 99,5%)",
+      "description": "Burn rate > 14,4× = critical (budget consumido em < 1h). Burn rate > 1× = consumindo budget.",
+      "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 },
+      "targets": [
+        { "datasource": "Prometheus", "expr": "(1 - job:http_requests:success_rate1h{service=\"lancamentos\"}) / (1 - 0.995)", "legendFormat": "burn rate 1h" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2 }, "thresholds": { "steps": [{ "color": "green", "value": 0 }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 14.4 }] } } },
+      "options": { "tooltip": { "mode": "single" } }
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "Burn Rate — Consolidação (SLO-04, meta 99,0%)",
+      "description": "Burn rate > 14,4× = critical. Burn rate > 1× = consumindo budget.",
+      "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 },
+      "targets": [
+        { "datasource": "Prometheus", "expr": "(1 - job:http_requests:success_rate1h{service=\"consolidado\"}) / (1 - 0.990)", "legendFormat": "burn rate 1h" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2 }, "thresholds": { "steps": [{ "color": "green", "value": 0 }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 14.4 }] } } }
+    },
+    {
+      "id": 7, "type": "stat", "title": "SLO-08 · DLQ",
+      "gridPos": { "x": 0, "y": 14, "w": 8, "h": 4 },
+      "targets": [{ "datasource": "Prometheus", "expr": "sum(rabbitmq_queue_messages{queue=~\".*\\\\.dlq\"})", "legendFormat": "mensagens" }],
+      "options": { "colorMode": "background", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "color": "green", "value": 0 }, { "color": "red", "value": 1 }] } } }
+    }
+  ]
+}

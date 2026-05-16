@@ -1,0 +1,24 @@
+# Python
+.venv/
+
+# MkDocs — site gerado (derivado de docs/)
+site/
+
+# Gradle — output e cache
+services/*/build/
+services/*/.gradle/
+services/*/bin/
+
+# Structurizr — cache e runtime
+structurizr/.structurizr/
+
+# Git internals
+.git/
+
+# Certificados TLS locais
+traefik/certs/
+
+# Terraform — providers baixados e estado
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup

@@ -1,0 +1,57 @@
+http:
+  middlewares:
+
+    # ── Rate limiting por IP — proteção contra abuso (NFR-07) ────────────────
+    #
+    # Estes limites são POR ORIGEM (IP), não tetos do sistema.
+    # A capacidade total (NFR-02: ≥ 50 req/s em agregado) é garantida por
+    # escalabilidade horizontal do Consolidado + Redis cache.
+
+    rate-limit-lancamentos:
+      rateLimit:
+        average: 30     # req/s por IP — PDV pode ter rajadas legítimas
+        burst: 50
+        period: 1s
+        sourceCriterion:
+          ipStrategy:
+            depth: 1    # usa X-Forwarded-For[0] quando há proxy à frente
+
+    rate-limit-consolidado:
+      rateLimit:
+        average: 10     # req/s por IP — polling a cada 100ms já é uso extremo
+        burst: 20
+        period: 1s
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    # ── Strip de prefixo de rota ────────────────────────────────────────────
+    # Remove o segmento de roteamento antes de encaminhar ao backend.
+    # O app Spring Boot opera em context-path "/" — não conhece o prefixo do gateway.
+    strip-lancamentos:
+      stripPrefix:
+        prefixes:
+          - /lancamentos
+
+    strip-consolidado:
+      stripPrefix:
+        prefixes:
+          - /consolidacao
+
+    # ── Strip do prefixo /auth — Keycloak via Traefik ──────────────────────
+    # Clientes chamam /auth/realms/...; Traefik remove /auth antes de encaminhar ao Keycloak.
+    # /auth/admin não tem rota mapeada → Traefik retorna 404 por design.
+    strip-auth:
+      stripPrefix:
+        prefixes:
+          - /auth
+
+    # ── Headers de segurança ─────────────────────────────────────────────────
+    secure-headers:
+      headers:
+        customResponseHeaders:
+          X-Content-Type-Options: "nosniff"
+          X-Frame-Options: "DENY"
+          X-XSS-Protection: "1; mode=block"
+          Referrer-Policy: "strict-origin-when-cross-origin"
+          Strict-Transport-Security: "max-age=31536000; includeSubDomains"

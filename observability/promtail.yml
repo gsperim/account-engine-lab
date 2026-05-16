@@ -1,0 +1,79 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: warn
+
+positions:
+  filename: /tmp/promtail-positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: status
+            values: [running]
+    relabel_configs:
+      # Nome do container sem o prefixo /
+      - source_labels: [__meta_docker_container_name]
+        regex: '/(.+)'
+        target_label: container
+      # Service name do docker-compose
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        target_label: service
+      # stdout vs stderr
+      - source_labels: [__meta_docker_container_log_stream]
+        target_label: stream
+      # Ignora o próprio Promtail para evitar loop
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        regex: promtail
+        action: drop
+
+    pipeline_stages:
+      # Parseia JSON estruturado — formato Logstash emitido pelo Spring Boot 3.4+
+      # Campos: level, message, traceId, spanId, logger_name, thread_name, @timestamp
+      # Containers sem JSON (Keycloak, RabbitMQ, Postgres) passam adiante sem erro
+      - json:
+          expressions:
+            level:          level
+            trace_id:       traceId
+            span_id:        spanId
+            correlation_id: correlation_id
+            message:        message
+            logger_name:    logger_name
+
+      # Redação de PII antes de enviar ao Loki (ADR-016)
+      # Aplicada no texto bruto — cobre tanto JSON quanto logs de terceiros
+      - replace:
+          expression: '\d{3}\.\d{3}\.\d{3}-\d{2}'
+          replace: '[CPF REDACTED]'
+      - replace:
+          expression: '\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}'
+          replace: '[CNPJ REDACTED]'
+      - replace:
+          expression: '[\w.+-]+@[\w-]+\.[\w.]+'
+          replace: '[EMAIL REDACTED]'
+      - replace:
+          expression: '\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}'
+          replace: '[CARD REDACTED]'
+
+      # Promove como labels do Loki — mantém cardinalidade baixa (sem trace_id como label)
+      # trace_id fica como campo pesquisável via LogQL, não como label indexado
+      - labels:
+          level:
+
+      # Adiciona como structured_metadata — alta cardinalidade, não devem ser labels
+      # trace_id/span_id: correlação com Tempo | correlation_id: jornada de negócio
+      - structured_metadata:
+          trace_id:
+          span_id:
+          correlation_id:
+
+      # Usa o campo message como linha de log quando disponível (JSON dos serviços)
+      # Containers sem JSON mantêm a linha original
+      - output:
+          source: message

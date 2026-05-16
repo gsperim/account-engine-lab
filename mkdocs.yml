@@ -12,8 +12,8 @@ theme:
   features:
     - navigation.tabs
     - navigation.sections
-    - navigation.expand
     - navigation.top
+    - navigation.path
     - search.highlight
     - search.suggest
     - content.code.copy
@@ -42,7 +42,12 @@ markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
-  - pymdownx.snippets
+  - abbr
+  - pymdownx.snippets:
+      base_path:
+        - docs
+      auto_append:
+        - includes/abbreviations.md
   - admonition
   - pymdownx.details
   - attr_list
@@ -54,18 +59,57 @@ markdown_extensions:
 plugins:
   - search:
       lang: pt
+  - tags:
+      tags_file: tags.md
+  - glightbox:
+      touchNavigation: true
+      loop: false
+      effect: zoom
+      width: 100%
+      height: auto
+      zoomable: true
+      draggable: true
+  - panzoom:
+      full_screen: true
   - minify:
       minify_html: true
 
 nav:
   - Início: index.md
-  - Planejamento do Projeto: planejamento.md
+  - Visão Executiva: visao-executiva.md
+
   - Negócio:
-    - Visão Executiva: negocio/visao-executiva.md
     - Drivers e Stakeholders: negocio/drivers.md
     - Principles Catalog: negocio/principios.md
-    - Domínios, Value Stream e Capacidades: negocio/dominios.md
-    - Glossário: negocio/glossario.md
+    - Domínios e Value Stream: negocio/dominios.md
     - Requisitos: negocio/requisitos.md
-  - Ferramentas e Stack: stack.md
-  - Decisões Arquiteturais: adr/index.md
+
+  - Arquitetura:
+    - Diagramas C4: arquitetura/diagramas-c4.md
+    - Contratos de Integração: engenharia/contratos.md
+    - Dados e Persistência: arquitetura/dados.md
+    - Stack e Ferramentas: stack.md
+    - Decisões Arquiteturais: adr/index.md
+
+  - Segurança: seguranca/index.md
+
+  - Observabilidade: observabilidade/index.md
+
+  - Implementação:
+    - Visão Geral: implementacao/index.md
+    - Chaos Engineering: implementacao/caos.md
+
+  - Infraestrutura:
+    - Local — docker-compose: infraestrutura/topologia.md
+    - Cloud AWS:
+      - Visão Geral: cloud/index.md
+      - Custos: cloud/custos.md
+    - Pipeline CI/CD: infraestrutura/pipeline.md
+
+  - Planejamento:
+    - Visão do Projeto: planejamento.md
+    - Plano de Entrega: engenharia/plano-entregas.md
+    - Arquitetura de Transição: engenharia/transicao.md
+
+  - Glossário: glossario.md
+  - Tags: tags.md

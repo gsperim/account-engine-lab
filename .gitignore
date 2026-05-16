@@ -20,6 +20,33 @@ Thumbs.db
 .vscode/
 *.swp
 
+# Claude Code — configuração local com caminhos de máquina
+.mcp.json
+
 base-de-conhecimento/
 CLAUDE.md
 AGENTS.md
+.claude/
+
+# Traefik — certificados locais gerados por mkcert (cada dev gera o seu)
+traefik/certs/*.pem
+traefik/certs/*-key.pem
+
+# Variáveis de ambiente locais
+.env
+
+# Alertmanager — contém token do Telegram quando configurado
+observability/alertmanager.yml
+
+# Terraform — arquivos gerados e dados sensíveis
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfvars
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/infracost-output.*
+
+# Structurizr — arquivos gerados em runtime e links locais
+structurizr/.structurizr/
+structurizr/workspace.json
+structurizr/docs

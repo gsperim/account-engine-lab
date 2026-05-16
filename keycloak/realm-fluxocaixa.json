@@ -1,0 +1,234 @@
+{
+  "realm": "fluxocaixa",
+  "displayName": "Fluxo de Caixa Diário",
+  "enabled": true,
+
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 86400,
+  "offlineSessionIdleTimeout": 2592000,
+  "defaultSignatureAlgorithm": "RS256",
+
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+
+  "eventsEnabled": true,
+  "eventsExpiration": 604800,
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": true,
+  "eventsListeners": ["jboss-logging"],
+  "enabledEventTypes": [
+    "LOGIN", "LOGIN_ERROR", "LOGOUT", "LOGOUT_ERROR",
+    "CODE_TO_TOKEN", "CODE_TO_TOKEN_ERROR",
+    "CLIENT_LOGIN", "CLIENT_LOGIN_ERROR",
+    "REFRESH_TOKEN", "REFRESH_TOKEN_ERROR",
+    "INTROSPECT_TOKEN", "INTROSPECT_TOKEN_ERROR",
+    "REGISTER", "REGISTER_ERROR",
+    "SEND_RESET_PASSWORD", "RESET_PASSWORD", "RESET_PASSWORD_ERROR",
+    "EXECUTE_ACTIONS", "EXECUTE_ACTIONS_ERROR",
+    "TOKEN_EXCHANGE", "TOKEN_EXCHANGE_ERROR"
+  ],
+
+  "roles": {
+    "realm": [
+      { "name": "caixa",  "description": "Operador de PDV — registra lançamentos e estornos" },
+      { "name": "gestor", "description": "Proprietário — consulta saldos consolidados" },
+      { "name": "admin",  "description": "Administrador — reconciliação e recálculo assíncrono" },
+      { "name": "pdv",    "description": "Sistema PDV — integração máquina-a-máquina" }
+    ]
+  },
+
+  "clientScopes": [
+    {
+      "name": "basic",
+      "description": "Claims básicos exigidos pelo Keycloak 25+ — sub e auth_time",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "sub",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "preferred_username",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "claim.name": "preferred_username",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lancamentos:write",
+      "description": "Registrar lançamentos e estornos",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" }
+    },
+    {
+      "name": "lancamentos:read",
+      "description": "Consultar lançamentos por período",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" }
+    },
+    {
+      "name": "consolidacao:read",
+      "description": "Consultar saldo consolidado e por período",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" }
+    },
+    {
+      "name": "consolidacao:admin",
+      "description": "Reconciliação periódica e recálculo assíncrono",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" }
+    }
+  ],
+
+  "clients": [
+    {
+      "clientId": "frontend-app",
+      "name": "Aplicação Web",
+      "description": "Frontend — Authorization Code + PKCE (ADR-014)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "access.token.lifespan": "300"
+      },
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "http://localhost:8443/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3000",
+        "http://localhost:8443"
+      ],
+      "defaultClientScopes": ["basic", "openid", "profile", "email"],
+      "optionalClientScopes": [
+        "lancamentos:write",
+        "lancamentos:read",
+        "consolidacao:read",
+        "consolidacao:admin"
+      ],
+      "protocolMappers": [
+        {
+          "name": "role",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "role",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "true",
+            "claim.name": "role",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+
+    {
+      "clientId": "pdv-service",
+      "name": "Sistema PDV",
+      "description": "Integração máquina-a-máquina — Client Credentials (ADR-014)",
+      "enabled": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "secret": "${PDV_CLIENT_SECRET}",
+      "defaultClientScopes": ["basic", "openid"],
+      "optionalClientScopes": ["lancamentos:write", "lancamentos:read"],
+      "protocolMappers": [
+        {
+          "name": "role",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.value": "pdv",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "true",
+            "claim.name": "role",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+
+    {
+      "clientId": "api-gateway",
+      "name": "API Gateway",
+      "description": "Valida tokens — bearer-only, não emite",
+      "enabled": true,
+      "bearerOnly": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false
+    }
+  ],
+
+  "users": [
+    {
+      "username": "caixa.demo",
+      "email": "caixa@demo.local",
+      "firstName": "Caixa",
+      "lastName": "Demo",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "demo123", "temporary": false }],
+      "realmRoles": ["caixa"],
+      "attributes": { "role": ["caixa"] }
+    },
+    {
+      "username": "gestor.demo",
+      "email": "gestor@demo.local",
+      "firstName": "Gestor",
+      "lastName": "Demo",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "demo123", "temporary": false }],
+      "realmRoles": ["gestor"],
+      "attributes": { "role": ["gestor"] }
+    },
+    {
+      "username": "admin.demo",
+      "email": "admin@demo.local",
+      "firstName": "Admin",
+      "lastName": "Demo",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "demo123", "temporary": false }],
+      "realmRoles": ["admin"],
+      "attributes": { "role": ["admin"] }
+    }
+  ]
+}

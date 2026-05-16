@@ -1,0 +1,199 @@
+groups:
+
+  # ── Regras de Gravação (recording rules) ─────────────────────────────────
+  # Pré-computam queries custosas para uso nos dashboards e alertas de burn rate
+
+  - name: slo.recording
+    interval: 30s
+    rules:
+      - record: job:http_requests:success_rate5m
+        expr: |
+          sum by (job) (
+            rate(http_server_requests_seconds_count{outcome!="SERVER_ERROR"}[5m])
+          )
+          /
+          clamp_min(sum by (job) (
+            rate(http_server_requests_seconds_count[5m])
+          ), 1e-10)
+
+      - record: job:http_requests:success_rate1h
+        expr: |
+          sum by (job) (
+            rate(http_server_requests_seconds_count{outcome!="SERVER_ERROR"}[1h])
+          )
+          /
+          clamp_min(sum by (job) (
+            rate(http_server_requests_seconds_count[1h])
+          ), 1e-10)
+
+      - record: job:http_requests:p99_latency5m
+        expr: |
+          histogram_quantile(0.99,
+            sum by (job, le) (
+              rate(http_server_requests_seconds_bucket[5m])
+            )
+          )
+
+  # ── Alertas de SLO — Burn Rate ────────────────────────────────────────────
+
+  - name: slo.lancamentos
+    rules:
+      # SLO-01: 99,5% success rate — burn rate 1h
+      - alert: LancamentosErrorRateCritical
+        expr: |
+          (1 - job:http_requests:success_rate1h{service="lancamentos"}) / (1 - 0.995) > 14.4
+        for: 2m
+        labels:
+          severity: critical
+          slo: SLO-01
+          service: lancamentos
+        annotations:
+          summary: "SLO-01 em risco: error budget consumido em < 1h"
+          description: "Burn rate {{ $value | humanize }}× — taxa de erro muito acima do limite de 0,5%"
+
+      - alert: LancamentosErrorRateWarning
+        expr: |
+          (1 - job:http_requests:success_rate1h{service="lancamentos"}) / (1 - 0.995) > 1
+        for: 15m
+        labels:
+          severity: warning
+          slo: SLO-01
+          service: lancamentos
+        annotations:
+          summary: "SLO-01: consumindo error budget acima do normal"
+          description: "Burn rate {{ $value | humanize }}× por 15 minutos"
+
+      # SLO-02: latência p99 < 500ms
+      - alert: LancamentosLatenciaCritical
+        expr: job:http_requests:p99_latency5m{service="lancamentos"} > 1.0
+        for: 5m
+        labels:
+          severity: critical
+          slo: SLO-02
+          service: lancamentos
+        annotations:
+          summary: "SLO-02: p99 do Lançamentos > 1s"
+          description: "p99 atual: {{ $value | humanizeDuration }}"
+
+      - alert: LancamentosLatenciaWarning
+        expr: job:http_requests:p99_latency5m{service="lancamentos"} > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          slo: SLO-02
+          service: lancamentos
+        annotations:
+          summary: "SLO-02: p99 do Lançamentos > 500ms"
+          description: "p99 atual: {{ $value | humanizeDuration }}"
+
+  - name: slo.consolidacao
+    rules:
+      # SLO-04: 99,0% success rate
+      - alert: ConsolidacaoErrorRateCritical
+        expr: |
+          (1 - job:http_requests:success_rate1h{service="consolidado"}) / (1 - 0.990) > 14.4
+        for: 2m
+        labels:
+          severity: critical
+          slo: SLO-04
+          service: consolidado
+        annotations:
+          summary: "SLO-04 em risco: error budget da Consolidação consumido em < 1h"
+          description: "Burn rate {{ $value | humanize }}×"
+
+      # SLO-05: latência p99 < 100ms (cache hit)
+      - alert: ConsolidacaoLatenciaWarning
+        expr: job:http_requests:p99_latency5m{service="consolidado"} > 0.2
+        for: 10m
+        labels:
+          severity: warning
+          slo: SLO-05
+          service: consolidado
+        annotations:
+          summary: "SLO-05: p99 da Consolidação > 200ms — possível problema de cache"
+          description: "p99 atual: {{ $value | humanizeDuration }}. Verificar hit rate do Redis."
+
+  # ── Alertas de Pipeline de Eventos ───────────────────────────────────────
+
+  - name: pipeline.eventos
+    rules:
+      # SLO-08: DLQ deve ter 0 mensagens
+      - alert: DLQComMensagens
+        expr: rabbitmq_queue_messages{queue=~".*\\.dlq"} > 0
+        for: 1m
+        labels:
+          severity: critical
+          slo: SLO-08
+        annotations:
+          summary: "DLQ com {{ $value }} mensagem(ns) — evento(s) não processado(s)"
+          description: "Fila: {{ $labels.queue }}. Investigar logs da Consolidação."
+
+      - alert: OutboxRelayParado
+        expr: increase(eventos_publicados_total[5m]) == 0 and increase(lancamentos_registrados_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Outbox Relay sem publicar eventos apesar de lançamentos registrados"
+          description: "Possível falha no relay ou no broker RabbitMQ."
+
+  # ── Alertas de Infraestrutura ─────────────────────────────────────────────
+
+  - name: infra.redis
+    rules:
+      - alert: RedisEvictions
+        expr: increase(redis_evicted_keys_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis descartando chaves por pressão de memória"
+          description: "Aumentar maxmemory ou revisar TTLs. Cache hit rate provavelmente cairá."
+
+  - name: resiliencia
+    rules:
+      - alert: CircuitBreakerAberto
+        expr: resilience4j_circuitbreaker_state{state="open"} > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "Circuit breaker {{ $labels.name }} ABERTO em {{ $labels.service }}"
+          description: "Falhas consecutivas ultrapassaram o threshold. Serviço degradando graciosamente."
+
+      - alert: RetryExausto
+        expr: rate(resilience4j_retry_calls_total{kind="failed_with_retry"}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Retries esgotados em {{ $labels.name }} — {{ $labels.service }}"
+          description: "Taxa de falha após retries: {{ $value | humanize }}/s"
+
+      - alert: RedisCacheFallbackAtivo
+        expr: rate(cache_redis_errors_total[2m]) > 1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Fallback Redis→Banco ativo no consolidado"
+          description: "Redis indisponível ou lento. Saldo sendo servido do banco (mesmo dado, maior latência)."
+
+  - name: infra.blackbox
+    rules:
+      - alert: ServicoIndisponivel
+        expr: probe_success == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Endpoint {{ $labels.instance }} não está respondendo"
+          description: "Probe HTTP falhou por mais de 1 minuto."
+
+      - alert: ServicoLento
+        expr: probe_duration_seconds > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Endpoint {{ $labels.instance }} respondendo em > 2s"
+          description: "Tempo de resposta do probe: {{ $value | humanizeDuration }}"
