@@ -472,7 +472,7 @@ sequenceDiagram
 
     <div class="grid cards" markdown>
 
-    - :material-cash-plus: **D-01** — Ausência de registro estruturado
+    - :material-cash-plus: [D-01](drivers.md#d-01) — Ausência de registro estruturado
 
         ---
 
@@ -483,7 +483,7 @@ sequenceDiagram
 
         **Serviço:** Lançamentos
 
-    - :material-chart-bar: **D-02** — Impossibilidade de visualizar saldo
+    - :material-chart-bar: [D-02](drivers.md#d-02) — Impossibilidade de visualizar saldo
 
         ---
 
@@ -493,15 +493,17 @@ sequenceDiagram
 
         **Serviço:** Consolidação
 
-    - :material-shield-check: **D-05** — Lançamentos não podem ser perdidos
+    - :material-shield-check: [D-05](drivers.md#d-05) — Lançamentos não podem ser perdidos
 
         ---
 
+        [RF-04](#rf-04) Atualizar consolidado após lançamento  
         🔹 [RF-06](#rf-06) Reconciliação periódica
 
+        **Mecanismo:** Outbox Pattern ([ADR-003](../adr/ADR-003-outbox-pattern.md)) garante at-least-once delivery  
         **Serviço:** Consolidação
 
-    - :material-history: **D-07** — Recovery sem perda total de estado 🔹
+    - :material-history: [D-07](drivers.md#d-07) — Recovery sem perda total de estado 🔹
 
         ---
 
@@ -515,25 +517,27 @@ sequenceDiagram
 
     <div class="grid cards" markdown>
 
-    - :material-lan-disconnect: **D-03** — Dependência entre serviços
+    - :material-lan-disconnect: [D-03](drivers.md#d-03) — Dependência entre serviços
 
         ---
 
         [NFR-01](#nfr-01) Lançamentos independe da consolidação
 
-        **Decisões:** ADR-001 · ADR-002  
+        **Decisões:** [ADR-001](../adr/ADR-001-padrao-arquitetural.md) · [ADR-002](../adr/ADR-002-message-broker.md)  
         **Componente:** Mensageria
 
-    - :material-speedometer: **D-04** — Picos de carga no consolidado
+    - :material-speedometer: [D-04](drivers.md#d-04) — Picos de carga no consolidado
 
         ---
 
         [NFR-02](#nfr-02) 50 req/s · 5% perda máx  
+        [NFR-04](#nfr-04) Logs estruturados, métricas e traces em 100% das requisições  
         [NFR-07](#nfr-07) Rate limiting na borda da API
 
-        **Componente:** Consolidação + Cache + Rate Limiting
+        **Decisões:** [ADR-007](../adr/ADR-007-api-gateway.md) · [ADR-009](../adr/ADR-009-api-gateway-producao.md) · [ADR-015](../adr/ADR-015-observabilidade.md)  
+        **Componente:** Consolidação + Cache + Rate Limiting + Observabilidade
 
-    - :material-email-fast: **D-05** — Lançamentos não podem ser perdidos
+    - :material-email-fast: [D-05](drivers.md#d-05) — Lançamentos não podem ser perdidos
 
         ---
 
@@ -541,23 +545,26 @@ sequenceDiagram
         [NFR-06](#nfr-06) DLQ para eventos com falha  
         [NFR-08](#nfr-08) Retry com backoff e jitter
 
-        **Decisões:** ADR-002 · ADR-003  
+        **Decisões:** [ADR-002](../adr/ADR-002-message-broker.md) · [ADR-003](../adr/ADR-003-outbox-pattern.md) (Outbox Pattern)  
         **Componente:** Mensageria + Persistência
 
-    - :material-file-document-check: **D-06** — Rastreabilidade de operações 🔹
+    - :material-file-document-check: [D-06](drivers.md#d-06) — Rastreabilidade de operações 🔹
 
         ---
 
-        🔹 [NFR-09](#nfr-09) Trilha de auditoria imutável
+        🔹 [NFR-09](#nfr-09) Trilha de auditoria imutável  
+        [NFR-05](#nfr-05) Comunicação autenticada e autorizada *(requisito transversal)*
 
+        **Decisões:** [ADR-004](../adr/ADR-004-jwt-validacao-local.md) · [ADR-010](../adr/ADR-010-seguranca.md) · [ADR-014](../adr/ADR-014-identity-provider.md) · [ADR-016](../adr/ADR-016-redacao-pii-logs.md)  
         **Componente:** Lançamentos + Consolidação
 
-    - :material-backup-restore: **D-07** — Recovery sem perda total de estado 🔹
+    - :material-backup-restore: [D-07](drivers.md#d-07) — Recovery sem perda total de estado 🔹
 
         ---
 
-        🔹 [NFR-10](#nfr-10) Reconstrução da Consolidação via RF-07
+        🔹 [NFR-10](#nfr-10) Reconstrução da Consolidação via [RF-07](#rf-07)
 
+        **Decisões:** [ADR-003](../adr/ADR-003-outbox-pattern.md) · [ADR-012](../adr/ADR-012-persistencia.md)  
         **Componente:** Serviço de Lançamentos
 
     </div>
