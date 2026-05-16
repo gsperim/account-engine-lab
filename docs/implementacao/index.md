@@ -417,10 +417,6 @@ Job `@Scheduled` no consolidado que consulta o lançamentos e valida os totais p
 
 Mesma `Idempotency-Key` com dados distintos deveria retornar `409` com mensagem clara de conflito, não a resposta do primeiro registro. Requer coluna `payload_hash` na tabela `lancamentos` e comparação no `RegistrarLancamentoService`.
 
-#### `GET /consolidacao/saldo` (período) não testado
-
-O endpoint de período existe no OpenAPI e no controller mas nunca foi exercitado end-to-end. Pode conter bugs de mapeamento de datas.
-
 ---
 
 ### 🔵 Etapa 8 (próxima fase)
