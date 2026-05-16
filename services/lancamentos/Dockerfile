@@ -17,9 +17,6 @@ COPY contracts/openapi/lancamentos.yaml     contracts/openapi/lancamentos.yaml
 
 WORKDIR /workspace/services/lancamentos
 
-# Corrige gradle.properties: substitui o path do host pelo JAVA_HOME do container
-RUN sed -i "s|org.gradle.java.home=.*|org.gradle.java.home=${JAVA_HOME}|" gradle.properties
-
 # Download de dependências em camada isolada (cache Docker entre builds)
 RUN ./gradlew dependencies --no-daemon -q 2>&1 | tail -3
 

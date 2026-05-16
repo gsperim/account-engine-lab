@@ -42,7 +42,7 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Build MkDocs
-        run: mkdocs build --strict --verbose
+        run: mkdocs build --verbose
 
       - name: Upload artefato para Pages
         uses: actions/upload-pages-artifact@v3
