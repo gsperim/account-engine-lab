@@ -3,6 +3,9 @@ package br.com.carrefour.lancamentos.adapter.in.rest;
 import br.com.carrefour.lancamentos.adapter.in.rest.dto.generated.Erro;
 import br.com.carrefour.lancamentos.domain.exception.LancamentoConflitanteException;
 import br.com.carrefour.lancamentos.domain.exception.LancamentoDuplicadoException;
+import br.com.carrefour.lancamentos.domain.exception.LancamentoJaEstornadoException;
+
+import java.util.NoSuchElementException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -32,6 +35,18 @@ public class GlobalExceptionHandler {
                 .reduce((a, b) -> a + "; " + b)
                 .orElse("Dados inválidos");
         return new Erro().codigo("DADOS_INVALIDOS").mensagem(mensagem);
+    }
+
+    @ExceptionHandler(LancamentoJaEstornadoException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public Erro handleJaEstornado(LancamentoJaEstornadoException ex) {
+        return new Erro().codigo("LANCAMENTO_JA_ESTORNADO").mensagem(ex.getMessage());
+    }
+
+    @ExceptionHandler(NoSuchElementException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public Erro handleNaoEncontrado(NoSuchElementException ex) {
+        return new Erro().codigo("NAO_ENCONTRADO").mensagem(ex.getMessage());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

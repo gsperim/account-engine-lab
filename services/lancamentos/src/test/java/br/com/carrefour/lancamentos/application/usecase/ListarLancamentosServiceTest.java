@@ -55,6 +55,6 @@ class ListarLancamentosServiceTest {
     private Lancamento umLancamento() {
         return Lancamento.reconstituir(
                 LancamentoId.de(UUID.randomUUID()), TipoLancamento.CREDITO,
-                Valor.de("100.00"), null, HOJE, "usr_test", LocalDateTime.now(), "test-hash");
+                Valor.de("100.00"), null, HOJE, "usr_test", LocalDateTime.now(), "test-hash", false, null);
     }
 }

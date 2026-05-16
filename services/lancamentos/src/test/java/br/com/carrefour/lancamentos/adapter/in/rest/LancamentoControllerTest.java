@@ -6,6 +6,7 @@ import br.com.carrefour.lancamentos.domain.model.LancamentoId;
 import br.com.carrefour.lancamentos.domain.model.TipoLancamento;
 import br.com.carrefour.lancamentos.domain.model.Valor;
 import br.com.carrefour.lancamentos.domain.port.in.BuscarLancamentoUseCase;
+import br.com.carrefour.lancamentos.domain.port.in.EstornarLancamentoUseCase;
 import br.com.carrefour.lancamentos.domain.port.in.ListarLancamentosUseCase;
 import br.com.carrefour.lancamentos.domain.port.in.RegistrarLancamentoUseCase;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,7 @@ class LancamentoControllerTest {
     @MockitoBean RegistrarLancamentoUseCase registrarUseCase;
     @MockitoBean BuscarLancamentoUseCase buscarUseCase;
     @MockitoBean ListarLancamentosUseCase listarUseCase;
+    @MockitoBean EstornarLancamentoUseCase estornarUseCase;
     // Necessário para que o SecurityConfig carregue sem jwk-set-uri real em testes
     @MockitoBean JwtDecoder jwtDecoder;
 
@@ -156,6 +158,6 @@ class LancamentoControllerTest {
                 LocalDate.of(2026, 5, 9),
                 "usr_abc",
                 LocalDateTime.of(2026, 5, 9, 12, 0),
-                "test-hash");
+                "test-hash", false, null);
     }
 }
