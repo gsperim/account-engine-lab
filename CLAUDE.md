@@ -41,7 +41,7 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 
 ## Estado Atual
 
-**Data:** 2026-05-14 | **Branch:** `main` (entregue) + `arch/etapa-7-implementacao`
+**Data:** 2026-05-16 | **Branch:** `main` (entregue) + `arch/etapa-7-implementacao` + `docs/mkdocs-material-features` (pendente de merge)
 **Repositório:** https://github.com/gsperim/account-engine-lab
 
 ### Etapas concluídas
@@ -56,6 +56,13 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 ### Onde estamos agora — Etapa 7, pendências verificadas no código
 
 Implementação Java completa: 109 arquivos commitados, 71 testes verdes (42 lançamentos + 29 consolidado), k6 smoke/load/stress com auth JWT funcionando (ROPC + Keycloak 26). README reescrito. Repositório publicado.
+
+**Sessão 2026-05-16 — qualidade do portal de documentação (branch `docs/mkdocs-material-features`):**
+- MkDocs Material: `navigation.footer`, `navigation.instant` + prefetch + progress, `navigation.tracking`, `navigation.prune`, `toc.follow`, `header.autohide`, `content.code.annotate`, `content.tabs.link`, `content.tooltips`, `content.action.edit` + `repo_url`
+- Extensões PyMdown: `mark`, `caret`, `tilde`, `keys`, `tasklist`, `emoji`
+- Rastreabilidade em `requisitos.md` reescrita com grid cards + tabs (RF / NFR)
+- Removidas referências a avaliadores e ao desafio como audiência (ADR-017, ADR-018, stack.md)
+- Jargão inventado removido de 7 arquivos (refletividade, escopo diferencial, degradação graciosa, etc.)
 
 #### 🔴 Funcionalidade incompleta (verificado no código)
 
