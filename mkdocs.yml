@@ -1,5 +1,6 @@
 site_name: Fluxo de Caixa Diário
 site_description: Desafio técnico para a vaga de Arquiteto de Soluções
+site_url: https://gsperim.github.io/account-engine-lab/
 docs_dir: docs
 site_dir: site
 dev_addr: 127.0.0.1:8000
