@@ -1,8 +1,9 @@
 name: CD — Release para ECR
 
+# Execução manual apenas — requer AWS_DEPLOY_ROLE_ARN configurado nos secrets.
+# Em produção: adicionar `push: branches: [main]` para deploy automático.
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 env:
   AWS_REGION: sa-east-1
