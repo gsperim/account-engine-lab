@@ -1,7 +1,5 @@
 package br.com.carrefour.consolidado.adapter.in.messaging;
 
-import br.com.carrefour.consolidado.domain.model.TipoMovimento;
-import br.com.carrefour.consolidado.domain.port.in.ProcessarLancamentoUseCase;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
@@ -15,17 +13,17 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+// Futuro: mensagens retidas na DLQ serão tratadas por módulo de backoffice —
+// replay controlado após correção da causa raiz, com audit trail persistido.
 @Component
 public class DlqConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(DlqConsumer.class);
     private static final String CORRELATION_HEADER = "X-Correlation-ID";
 
-    private final ProcessarLancamentoUseCase processarUseCase;
     private final Counter dlqTotal;
 
-    public DlqConsumer(ProcessarLancamentoUseCase processarUseCase, MeterRegistry meterRegistry) {
-        this.processarUseCase = processarUseCase;
+    public DlqConsumer(MeterRegistry meterRegistry) {
         this.dlqTotal = Counter.builder("dlq_mensagens_total")
                 .description("Mensagens que chegaram à DLQ após falha no consumer principal")
                 .register(meterRegistry);
@@ -43,20 +41,8 @@ public class DlqConsumer {
 
         MDC.put("correlation_id", correlationId);
         try {
-            log.error("dlq_mensagem_recebida lancamento_id={} tentativas_anteriores={} tipo={}",
+            log.error("dlq_mensagem_retida lancamento_id={} tentativas_anteriores={} tipo={} — requer intervenção manual",
                     evento.payload().lancamentoId(), tentativas, evento.payload().tipo());
-
-            processarUseCase.executar(new ProcessarLancamentoUseCase.Command(
-                    evento.payload().lancamentoId(),
-                    TipoMovimento.de(evento.payload().tipo()),
-                    evento.payload().valor(),
-                    evento.payload().dataCompetencia()
-            ));
-
-            log.info("dlq_reprocessado lancamento_id={}", evento.payload().lancamentoId());
-        } catch (Exception e) {
-            log.error("dlq_reprocessamento_falhou lancamento_id={} motivo={} — mensagem descartada",
-                    evento.payload().lancamentoId(), e.getMessage());
         } finally {
             MDC.remove("correlation_id");
         }
