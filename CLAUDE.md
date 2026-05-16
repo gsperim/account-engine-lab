@@ -53,34 +53,36 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 - ✅ Etapa 6 — Observabilidade (stack PLG + Tempo + OTEL + 4 dashboards Grafana)
 - 🔄 Etapa 7 — Implementação (JWT ✅; pendentes: Outbox cleanup + DLQ consumer)
 
-### Onde estamos agora — Etapa 7 concluída / Etapa 8 não iniciada
+### Onde estamos agora — Etapa 7 COMPLETA / Etapa 8 não iniciada
 
-**Data:** 2026-05-16 | 71 testes verdes (42 lançamentos + 29 consolidado)
+**Data:** 2026-05-16 | **85 testes verdes** (49 lançamentos + 36 consolidado)
 
-#### ✅ Entregues na sessão 2026-05-16
+#### ✅ Etapa 7 — tudo entregue
 
 | Item | Detalhe |
 |------|---------|
+| JWT / Spring Security | `oauth2-resource-server` + JWKS Keycloak + `sub` como `operadorId` |
 | Outbox cleanup | `OutboxRelay.limparPublicados()` — `@Scheduled(cron="0 0 3 * * *")`, janela 7 dias |
-| DLQ consumer | `DlqConsumer` — `@RabbitListener` na DLQ, incrementa `dlq_mensagens_total`, loga para intervenção manual; sem retry (DLQ é destino final) |
-| Grafana "No data" | `or vector(0)` no painel Taxa de Erro — commitado em sessão anterior |
-| Documentação sincronizada | `stack.md`, `implementacao/index.md`, `dados.md`, `observabilidade/index.md` atualizados |
-| Hook pre-commit | Bloqueia commits diretos em `main` e `develop` |
-| Protocolo de branch no CLAUDE.md | Checklist obrigatório antes de editar |
+| DLQ consumer | `DlqConsumer` — só métrica + log; sem retry (DLQ é destino final); backoffice futuro documentado |
+| Grafana fix | `or vector(0)` no painel Taxa de Erro |
+| Idempotência com payload diferente | `payload_hash` (SHA-256) na tabela `lancamentos`; mesma key + payload diferente → 409 `IDEMPOTENCY_KEY_CONFLITO`; replay idempotente retorna existente |
+| Estorno de lançamento | `POST /registros/{id}/estorno` — `EstornarLancamentoService`, UUID derivado para idempotência, marca original como estornado |
+| `GET /lancamentos/registros/resumo` | Totais de crédito/débito/contagem por data — usado pela reconciliação |
+| Reconciliação diária | `ReconciliacaoDiariaJob` — `@Scheduled(cron="0 0 2 * * *")`, compara com `LancamentosGateway`, métrica `saldo_reconciliado_divergencias_total` |
+| Recuperação catastrófica | `POST /admin/reconstruir` — `ReconstruirConsolidadoService`, reconstrói saldo iterando dia a dia via gateway |
+| `GET /consolidacao/saldo` (período) | Verificado — implementado e coberto em todas as camadas |
+| Documentação sincronizada | `stack.md`, `implementacao/index.md`, `dados.md`, `observabilidade/index.md` |
+| Hook pre-commit + protocolo de branch | Bloqueia commits diretos em `main`/`develop`; checklist no CLAUDE.md |
 
-#### 🟢 Diferenciais — fora dos contratos, não implementados
-
-| Endpoint | Observação |
-|----------|------------|
-| `POST /lancamentos/registros/{id}/estorno` | Ausente no `lancamentos.yaml` e no código |
-| `GET /lancamentos/registros/resumo` | Ausente no `lancamentos.yaml` e no código — necessário para reconciliação |
-| `POST /consolidacao/admin/reconstruir` | Ausente no `consolidado.yaml` e no código |
-| Backoffice de DLQ | Replay controlado com audit trail — mencionado como intenção futura no `DlqConsumer.java` |
-| Reconciliação diária | Job `@Scheduled` no consolidado que valida totais via `/registros/resumo` |
+#### Pendentes para versões futuras
+| Item | Observação |
+|------|-----------|
+| Backoffice de DLQ | Replay controlado com audit trail — mencionado no `DlqConsumer.java` |
+| Idempotência com payload diferente para estorno | Estorno já é idempotente via UUID derivado; conflito de payload não verificado |
 
 #### Próximas etapas
-- Etapa 8 — Pipeline CI (GitHub Actions) + Chaos Engineering
-- Etapa 9 — Documentação Final e publicação
+- **Etapa 8** — Pipeline CI (GitHub Actions) + Chaos Engineering
+- **Etapa 9** — Documentação Final e publicação
 
 ### Stack técnico (referência rápida)
 - **Serviços:** Spring Boot 3.5.14 + Java 21, Arquitetura Hexagonal + DDD Tático

@@ -375,7 +375,7 @@ Essa sequência permite deploy sem downtime — o código novo escreve o campo, 
 
 A tabela `outbox` é append-only por natureza: o relay marca registros como processados (`processado_em IS NOT NULL`) mas nunca os apaga. Sem limpeza, a tabela cresce indefinidamente — degradando o índice partial `WHERE processado_em IS NULL` e consumindo espaço desnecessário.
 
-**Status de implementação:** `OutboxJpaRepository.deletarPublicadosAntes(LocalDateTime)` existe e está correto, mas o `OutboxRelay` **não a invoca**. Falta um segundo `@Scheduled` no relay chamando esse método. Pendente na Etapa 7.
+**Status de implementação:** ✅ `OutboxRelay.limparPublicados()` invoca `deletarPublicadosAntes()` diariamente às 3h com janela de 7 dias.
 
 **Job de arquivamento (executar diariamente):**
 
