@@ -468,67 +468,96 @@ sequenceDiagram
 
 ## Rastreabilidade
 
-### Requisitos Funcionais
+=== "Requisitos Funcionais"
 
-```mermaid
-treeView-beta
-    "D-01 — Ausência de registro estruturado"
-        "RF-01 — Registrar lançamento"
-        "RF-02 — Consultar lançamentos por período"
-        "RF-05 — Validar lançamentos"
-        "🔹 RF-08 — Registrar estorno rastreável"
-            "Serviço de Lançamentos"
-    "D-02 — Impossibilidade de visualizar saldo"
-        "RF-03 — Consultar saldo consolidado"
-        "RF-04 — Atualizar consolidado após lançamento"
-        "🔹 RF-09 — Consultar consolidação por período e granularidade"
-            "Serviço de Consolidação"
-    "D-05 — Lançamentos não podem ser perdidos"
-        "🔹 RF-06 — Reconciliação periódica"
-            "Serviço de Consolidação"
-    "🔹 D-07 — Recovery sem perda total de estado"
-        "🔹 RF-07 — Recálculo assíncrono de totais"
-            "Serviço de Lançamentos"
-```
+    <div class="grid cards" markdown>
 
-### Requisitos Não Funcionais
+    - :material-cash-plus: **D-01** — Ausência de registro estruturado
 
-```mermaid
-treeView-beta
-    "D-03 — Dependência entre serviços"
-        "NFR-01 — Lançamentos independe da consolidação"
-            "P-01 — Desacoplamento por design"
-                "ADR-001 — Microserviços orientados a eventos"
-                "ADR-002 — RabbitMQ como broker"
-                    "Mensageria"
-    "D-04 — Picos de carga no consolidado"
-        "NFR-02 — 50 req/s · 5% perda máx"
-            "P-07 — Escalabilidade horizontal"
-                "ADR-? — Cache e escalabilidade"
-                    "Serviço de Consolidação + Cache"
-        "NFR-07 — Rate limiting na borda da API"
-            "P-02 — Resiliência primeiro"
-                "ADR-? — Rate limiting e proteção de borda"
-                    "Serviço de Consolidação"
-    "D-05 — Lançamentos não podem ser perdidos"
-        "NFR-03 — Zero perda · at-least-once delivery"
-            "P-02 — Resiliência primeiro"
-                "ADR-003 — Transactional Outbox Pattern"
-                    "Mensageria + persistência"
-        "NFR-06 — DLQ para eventos com falha"
-            "P-02 — Resiliência primeiro"
-                "ADR-002 — RabbitMQ Dead Letter Exchange"
-                    "Mensageria"
-        "NFR-08 — Retry com backoff e jitter"
-            "P-02 — Resiliência primeiro"
-                "ADR-002 — RabbitMQ TTL + DLX"
-                    "Serviço de Consolidação"
-    "🔹 D-06 — Rastreabilidade de operações financeiras"
-        "🔹 NFR-09 — Trilha de auditoria imutável"
-            "P-08 — Segurança por design"
-                "Serviço de Lançamentos + Serviço de Consolidação"
-    "🔹 D-07 — Recovery sem perda total de estado"
-        "🔹 NFR-10 — Reconstrução da Consolidação via RF-07"
-            "P-02 — Resiliência primeiro"
-                "Serviço de Lançamentos"
-```
+        ---
+
+        [RF-01](#rf-01) Registrar lançamento  
+        [RF-02](#rf-02) Consultar lançamentos por período  
+        [RF-05](#rf-05) Validar lançamentos  
+        🔹 [RF-08](#rf-08) Registrar estorno rastreável
+
+        **Serviço:** Lançamentos
+
+    - :material-chart-bar: **D-02** — Impossibilidade de visualizar saldo
+
+        ---
+
+        [RF-03](#rf-03) Consultar saldo consolidado  
+        [RF-04](#rf-04) Atualizar consolidado após lançamento  
+        🔹 [RF-09](#rf-09) Consultar por período e granularidade
+
+        **Serviço:** Consolidação
+
+    - :material-shield-check: **D-05** — Lançamentos não podem ser perdidos
+
+        ---
+
+        🔹 [RF-06](#rf-06) Reconciliação periódica
+
+        **Serviço:** Consolidação
+
+    - :material-history: **D-07** — Recovery sem perda total de estado 🔹
+
+        ---
+
+        🔹 [RF-07](#rf-07) Recálculo assíncrono de totais
+
+        **Serviço:** Lançamentos
+
+    </div>
+
+=== "Requisitos Não Funcionais"
+
+    <div class="grid cards" markdown>
+
+    - :material-lan-disconnect: **D-03** — Dependência entre serviços
+
+        ---
+
+        [NFR-01](#nfr-01) Lançamentos independe da consolidação
+
+        **Decisões:** ADR-001 · ADR-002  
+        **Componente:** Mensageria
+
+    - :material-speedometer: **D-04** — Picos de carga no consolidado
+
+        ---
+
+        [NFR-02](#nfr-02) 50 req/s · 5% perda máx  
+        [NFR-07](#nfr-07) Rate limiting na borda da API
+
+        **Componente:** Consolidação + Cache + Rate Limiting
+
+    - :material-email-fast: **D-05** — Lançamentos não podem ser perdidos
+
+        ---
+
+        [NFR-03](#nfr-03) Zero perda · at-least-once delivery  
+        [NFR-06](#nfr-06) DLQ para eventos com falha  
+        [NFR-08](#nfr-08) Retry com backoff e jitter
+
+        **Decisões:** ADR-002 · ADR-003  
+        **Componente:** Mensageria + Persistência
+
+    - :material-file-document-check: **D-06** — Rastreabilidade de operações 🔹
+
+        ---
+
+        🔹 [NFR-09](#nfr-09) Trilha de auditoria imutável
+
+        **Componente:** Lançamentos + Consolidação
+
+    - :material-backup-restore: **D-07** — Recovery sem perda total de estado 🔹
+
+        ---
+
+        🔹 [NFR-10](#nfr-10) Reconstrução da Consolidação via RF-07
+
+        **Componente:** Serviço de Lançamentos
+
+    </div>
