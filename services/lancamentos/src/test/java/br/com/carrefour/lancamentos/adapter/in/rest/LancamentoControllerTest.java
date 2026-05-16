@@ -9,6 +9,7 @@ import br.com.carrefour.lancamentos.domain.port.in.BuscarLancamentoUseCase;
 import br.com.carrefour.lancamentos.domain.port.in.EstornarLancamentoUseCase;
 import br.com.carrefour.lancamentos.domain.port.in.ListarLancamentosUseCase;
 import br.com.carrefour.lancamentos.domain.port.in.RegistrarLancamentoUseCase;
+import br.com.carrefour.lancamentos.domain.port.in.ResumoDiarioUseCase;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -41,6 +42,7 @@ class LancamentoControllerTest {
     @MockitoBean BuscarLancamentoUseCase buscarUseCase;
     @MockitoBean ListarLancamentosUseCase listarUseCase;
     @MockitoBean EstornarLancamentoUseCase estornarUseCase;
+    @MockitoBean ResumoDiarioUseCase resumoDiarioUseCase;
     // Necessário para que o SecurityConfig carregue sem jwk-set-uri real em testes
     @MockitoBean JwtDecoder jwtDecoder;
 

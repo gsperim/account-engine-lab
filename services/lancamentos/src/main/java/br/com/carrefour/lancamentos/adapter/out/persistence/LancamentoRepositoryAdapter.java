@@ -53,6 +53,11 @@ public class LancamentoRepositoryAdapter implements LancamentoRepository {
         return jpaRepo.existsById(id.toUUID());
     }
 
+    @Override
+    public java.math.BigDecimal somarValorPorDataETipo(LocalDate data, TipoLancamento tipo) {
+        return jpaRepo.sumValorByDataCompetenciaAndTipo(data, tipo);
+    }
+
     private LancamentoJpaEntity toEntity(Lancamento l) {
         var e = new LancamentoJpaEntity();
         e.setId(l.getId().toUUID());
