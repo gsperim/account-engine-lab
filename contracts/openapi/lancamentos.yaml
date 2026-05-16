@@ -208,6 +208,48 @@ paths:
         '401':
           $ref: '#/components/responses/NaoAutenticado'
 
+  /registros/resumo:
+    get:
+      tags: [lancamentos]
+      operationId: resumoDiario
+      summary: Resumo de totais por data
+      description: |
+        Retorna a soma de créditos, débitos e contagem de lançamentos para uma data.
+        Utilizado pelo serviço de consolidação para reconciliação diária.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: data
+          in: query
+          required: true
+          description: Data de competência (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+            example: "2026-05-09"
+      responses:
+        '200':
+          description: Resumo da data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumoDiarioResponse'
+              example:
+                data: "2026-05-09"
+                total_creditos: 3250.00
+                total_debitos: 1180.50
+                total_lancamentos: 14
+        '400':
+          description: Data inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/NaoAutorizado'
+
   /health/live:
     get:
       tags: [health]
@@ -347,6 +389,25 @@ components:
         total_pages:
           type: integer
           example: 3
+
+    ResumoDiarioResponse:
+      type: object
+      properties:
+        data:
+          type: string
+          format: date
+          example: "2026-05-09"
+        total_creditos:
+          type: number
+          format: double
+          example: 3250.00
+        total_debitos:
+          type: number
+          format: double
+          example: 1180.50
+        total_lancamentos:
+          type: integer
+          example: 14
 
     Erro:
       type: object

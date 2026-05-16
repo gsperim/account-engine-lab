@@ -3,6 +3,7 @@ package br.com.carrefour.lancamentos.adapter.in.rest;
 import br.com.carrefour.lancamentos.adapter.in.rest.dto.generated.LancamentoRequest;
 import br.com.carrefour.lancamentos.adapter.in.rest.dto.generated.LancamentoResponse;
 import br.com.carrefour.lancamentos.adapter.in.rest.dto.generated.PageLancamentoResponse;
+import br.com.carrefour.lancamentos.adapter.in.rest.dto.generated.ResumoDiarioResponse;
 import br.com.carrefour.lancamentos.adapter.in.rest.dto.generated.TipoLancamento;
 import br.com.carrefour.lancamentos.adapter.in.rest.generated.LancamentosApi;
 import br.com.carrefour.lancamentos.domain.model.LancamentoId;
@@ -11,6 +12,7 @@ import br.com.carrefour.lancamentos.domain.port.in.BuscarLancamentoUseCase;
 import br.com.carrefour.lancamentos.domain.port.in.EstornarLancamentoUseCase;
 import br.com.carrefour.lancamentos.domain.port.in.ListarLancamentosUseCase;
 import br.com.carrefour.lancamentos.domain.port.in.RegistrarLancamentoUseCase;
+import br.com.carrefour.lancamentos.domain.port.in.ResumoDiarioUseCase;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,6 +30,7 @@ public class LancamentoController implements LancamentosApi {
     private final BuscarLancamentoUseCase buscarUseCase;
     private final ListarLancamentosUseCase listarUseCase;
     private final EstornarLancamentoUseCase estornarUseCase;
+    private final ResumoDiarioUseCase resumoDiarioUseCase;
     private final LancamentoMapper mapper;
 
     public LancamentoController(
@@ -35,12 +38,14 @@ public class LancamentoController implements LancamentosApi {
             BuscarLancamentoUseCase buscarUseCase,
             ListarLancamentosUseCase listarUseCase,
             EstornarLancamentoUseCase estornarUseCase,
+            ResumoDiarioUseCase resumoDiarioUseCase,
             LancamentoMapper mapper) {
-        this.registrarUseCase = registrarUseCase;
-        this.buscarUseCase    = buscarUseCase;
-        this.listarUseCase    = listarUseCase;
-        this.estornarUseCase  = estornarUseCase;
-        this.mapper           = mapper;
+        this.registrarUseCase   = registrarUseCase;
+        this.buscarUseCase      = buscarUseCase;
+        this.listarUseCase      = listarUseCase;
+        this.estornarUseCase    = estornarUseCase;
+        this.resumoDiarioUseCase = resumoDiarioUseCase;
+        this.mapper             = mapper;
     }
 
     @Override
@@ -63,6 +68,12 @@ public class LancamentoController implements LancamentosApi {
         var command = new EstornarLancamentoUseCase.Command(LancamentoId.de(id), extrairOperadorId());
         var estorno = estornarUseCase.executar(command);
         return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toResponse(estorno));
+    }
+
+    @Override
+    public ResponseEntity<ResumoDiarioResponse> resumoDiario(java.time.LocalDate data) {
+        var resultado = resumoDiarioUseCase.executar(new ResumoDiarioUseCase.Query(data));
+        return ResponseEntity.ok(mapper.toResumoDiarioResponse(resultado));
     }
 
     @Override

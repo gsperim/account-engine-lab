@@ -2,9 +2,11 @@ package br.com.carrefour.lancamentos.adapter.in.rest;
 
 import br.com.carrefour.lancamentos.adapter.in.rest.dto.generated.LancamentoResponse;
 import br.com.carrefour.lancamentos.adapter.in.rest.dto.generated.PageLancamentoResponse;
+import br.com.carrefour.lancamentos.adapter.in.rest.dto.generated.ResumoDiarioResponse;
 import br.com.carrefour.lancamentos.domain.model.Lancamento;
 import br.com.carrefour.lancamentos.domain.model.TipoLancamento;
 import br.com.carrefour.lancamentos.domain.port.in.ListarLancamentosUseCase;
+import br.com.carrefour.lancamentos.domain.port.in.ResumoDiarioUseCase;
 import org.springframework.stereotype.Component;
 
 import java.time.ZoneOffset;
@@ -33,6 +35,14 @@ public class LancamentoMapper {
                 .dataCompetencia(l.getDataCompetencia())
                 .criadoEm(l.getCriadoEm().atOffset(ZoneOffset.UTC))
                 .operadorId(l.getOperadorId());
+    }
+
+    public ResumoDiarioResponse toResumoDiarioResponse(ResumoDiarioUseCase.Resultado r) {
+        return new ResumoDiarioResponse()
+                .data(r.data())
+                .totalCreditos(r.totalCreditos().doubleValue())
+                .totalDebitos(r.totalDebitos().doubleValue())
+                .totalLancamentos((int) r.totalLancamentos());
     }
 
     public PageLancamentoResponse toPageResponse(ListarLancamentosUseCase.Result result) {
