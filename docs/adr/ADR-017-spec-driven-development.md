@@ -52,7 +52,7 @@ O plugin roda em `generate-sources` — antes da compilação. Se o controller n
 
 ### Padrão escolhido: interface direta (não delegate)
 
-O gerador cria uma interface Java com anotações Spring MVC. O controller implementa essa interface. É o padrão mais legível para o avaliador — uma classe, sem indireção extra.
+O gerador cria uma interface Java com anotações Spring MVC. O controller implementa essa interface — uma classe, sem indireção extra.
 
 ```java
 // Gerado a partir do openapi.yaml — nunca editar

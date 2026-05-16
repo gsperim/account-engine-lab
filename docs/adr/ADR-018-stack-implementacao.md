@@ -54,7 +54,7 @@ Node.js tem adoção crescente em APIs de borda e BFFs, mas apresenta limitaçõ
 - **Event loop single-thread:** o modelo não-bloqueante é eficiente para I/O, mas um erro de código bloqueante (ex.: loop CPU-bound em operação de cálculo de saldo) paralisa todo o processo.
 - **Tipagem opcional:** TypeScript mitiga, mas não elimina o risco — o runtime ainda é JavaScript. A garantia de tipos do Java é verificada pelo compilador, não por uma camada adicional.
 - **Ecossistema financeiro:** ORM (TypeORM, Prisma) e mensageria (amqplib) têm menos história em produção de alta escala financeira do que JPA + Spring AMQP.
-- **O próprio mercado diz:** o time de avaliação do Banco Carrefour espera Spring — divergir aumenta o risco de avaliação negativa sem ganho funcional equivalente.
+- **Padrão consolidado em escala:** a esmagadora maioria das processadoras de pagamento e fintechs que operam com alta disponibilidade no Brasil têm histórico de produção com Spring AMQP e Spring Data — não com amqplib ou TypeORM.
 
 ### Por que Java
 
@@ -96,10 +96,6 @@ Cada componente da stack já tem integração nativa e madura no Spring:
 **3. Coerência com o ADR-017 (SDD)**
 
 O OpenAPI Generator com configuração `spring` gera interfaces com anotações `@RequestMapping`, `@RestController`, `@Valid` — idiomáticas para Spring MVC. Migrar para Quarkus exigiria reescrever o gerador para JAX-RS, quebrando a cadeia spec → interface → controller que já está validada.
-
-**4. Talent pool e avaliação**
-
-A audiência do desafio é o Banco Carrefour — uma instituição financeira com time predominantemente Java/Spring. Entregar Quarkus é uma escolha defensável tecnicamente, mas cria fricção desnecessária na avaliação de quem vai revisar o código.
 
 ---
 

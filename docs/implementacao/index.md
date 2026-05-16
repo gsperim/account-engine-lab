@@ -197,7 +197,7 @@ Se o controller divergir do contrato, **o build falha**. Consulte o [ADR-017](..
 
 ---
 
-## Resiliência e Degradação Graciosa
+## Resiliência e Fallback
 
 **Perspectiva:** ⚙️ Arquiteto de Tecnologia · 🛠️ Engenheiro de Software  
 **Status:** Implementado
@@ -272,7 +272,7 @@ resilience4j.circuitbreaker.instances.rabbit-consumer.wait-duration-in-open-stat
                            └─ Spring executa o método → dado vem do banco (mesmo dado, mais lento)
 ```
 
-**O dado não fica desatualizado** — banco e cache contêm a mesma informação; a diferença é apenas latência (< 10ms no cache vs. ~5–20ms no banco). O `CacheErrorHandler` não expõe nenhum indicador ao caller — a degradação é transparente e observável apenas via métricas.
+**O dado não fica desatualizado** — banco e cache contêm a mesma informação; a diferença é apenas latência (< 10ms no cache vs. ~5–20ms no banco). O `CacheErrorHandler` não expõe nenhum indicador ao caller — o fallback é transparente e observável apenas via métricas.
 
 **TimeLimiter para Redis lento:** além da falha de conexão, Redis lento também degrada o serviço. Um `@TimeLimiter` com timeout de 200ms garante que uma operação de cache nunca bloqueia além disso — expirado o prazo, o fallback para o banco é acionado automaticamente.
 

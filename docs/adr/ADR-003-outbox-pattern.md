@@ -23,7 +23,7 @@ Se o Serviço de Lançamentos escrever no banco e depois publicar no broker em o
 1. **Falha entre o write e o publish** — o lançamento existe no banco mas o evento nunca chega à Consolidação; o saldo fica desatualizado permanentemente
 2. **Publicação sem persistência** — o broker recebe o evento mas o lançamento foi revertido; a Consolidação processa um lançamento fantasma
 
-Nenhuma das abordagens ingênuas resolve isso sem comprometer a disponibilidade:
+Nenhuma das abordagens simples resolve isso sem comprometer a disponibilidade:
 
 - **Two-phase commit (2PC)** distribui a transação entre banco e broker, mas reduz disponibilidade e aumenta latência — viola o espírito de [NFR-01](../negocio/requisitos.md#nfr-01)
 - **Publicar e torcer** não oferece garantia alguma
