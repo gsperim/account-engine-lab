@@ -47,6 +47,6 @@ class BuscarLancamentoServiceTest {
 
     private Lancamento umLancamento() {
         return Lancamento.reconstituir(ID, TipoLancamento.CREDITO, Valor.de("100.00"),
-                null, LocalDate.of(2026, 5, 9), "usr_test", LocalDateTime.now(), "test-hash");
+                null, LocalDate.of(2026, 5, 9), "usr_test", LocalDateTime.now(), "test-hash", false, null);
     }
 }

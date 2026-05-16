@@ -63,6 +63,8 @@ public class LancamentoRepositoryAdapter implements LancamentoRepository {
         e.setOperadorId(l.getOperadorId());
         e.setCriadoEm(l.getCriadoEm());
         e.setPayloadHash(l.getPayloadHash());
+        e.setEstornado(l.isEstornado());
+        e.setEstornadoEm(l.getEstornadoEm());
         return e;
     }
 
@@ -75,6 +77,8 @@ public class LancamentoRepositoryAdapter implements LancamentoRepository {
                 e.getDataCompetencia(),
                 e.getOperadorId(),
                 e.getCriadoEm(),
-                e.getPayloadHash());
+                e.getPayloadHash(),
+                e.isEstornado(),
+                e.getEstornadoEm());
     }
 }

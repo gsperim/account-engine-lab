@@ -135,6 +135,49 @@ paths:
         '403':
           $ref: '#/components/responses/NaoAutorizado'
 
+  /registros/{id}/estorno:
+    post:
+      tags: [lancamentos]
+      operationId: estornarLancamento
+      summary: Estornar lançamento
+      description: |
+        Cria um lançamento compensatório (tipo inverso, mesmo valor e data de competência)
+        e marca o lançamento original como estornado. Operação idempotente — chamadas
+        repetidas retornam o mesmo estorno já criado.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do lançamento a estornar
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: Estorno criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LancamentoResponse'
+        '404':
+          description: Lançamento não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+        '409':
+          description: Lançamento já estornado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/NaoAutorizado'
+
   /registros/{id}:
     get:
       tags: [lancamentos]

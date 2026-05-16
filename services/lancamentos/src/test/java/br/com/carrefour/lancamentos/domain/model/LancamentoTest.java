@@ -81,7 +81,7 @@ class LancamentoTest {
         var id = LancamentoId.novo();
         var original = Lancamento.criar(id, TipoLancamento.CREDITO, VALOR_150, "Venda", HOJE, OPERADOR);
         var reconstituido = Lancamento.reconstituir(
-            id, TipoLancamento.CREDITO, VALOR_150, "Venda", HOJE, OPERADOR, original.getCriadoEm(), original.getPayloadHash()
+            id, TipoLancamento.CREDITO, VALOR_150, "Venda", HOJE, OPERADOR, original.getCriadoEm(), original.getPayloadHash(), false, null
         );
         assertThat(reconstituido.getId()).isEqualTo(id);
         assertThat(reconstituido.getCriadoEm()).isEqualTo(original.getCriadoEm());

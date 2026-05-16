@@ -61,7 +61,7 @@ class RegistrarLancamentoServiceTest {
         var hash = PayloadHash.compute(command.tipo(), command.valor(), command.dataCompetencia(), command.descricao());
         var existente = Lancamento.reconstituir(
                 LancamentoId.de(KEY_DUP), TipoLancamento.CREDITO, Valor.de("150.00"),
-                "Venda balcão", DATA, "usr_abc123", LocalDateTime.now(), hash);
+                "Venda balcão", DATA, "usr_abc123", LocalDateTime.now(), hash, false, null);
         when(repository.buscarPorId(LancamentoId.de(KEY_DUP))).thenReturn(Optional.of(existente));
 
         var resultado = service.executar(command);
@@ -75,7 +75,7 @@ class RegistrarLancamentoServiceTest {
     void deveLancarExcecaoQuandoMesmaKeyComPayloadDiferente() {
         var existente = Lancamento.reconstituir(
                 LancamentoId.de(KEY_DUP), TipoLancamento.DEBITO, Valor.de("999.00"),
-                "Outro payload", DATA, "usr_abc123", LocalDateTime.now(), "hash-diferente");
+                "Outro payload", DATA, "usr_abc123", LocalDateTime.now(), "hash-diferente", false, null);
         when(repository.buscarPorId(LancamentoId.de(KEY_DUP))).thenReturn(Optional.of(existente));
 
         assertThatExceptionOfType(LancamentoConflitanteException.class)
