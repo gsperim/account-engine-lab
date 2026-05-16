@@ -1,0 +1,10 @@
+# CVEs na imagem base gcr.io/distroless/java21-debian12:nonroot
+# Fix disponível nos pacotes Debian mas ainda não incorporado na imagem distroless.
+# Reavaliar na próxima atualização da imagem base.
+
+# liblcms2-2 — Little CMS information disclosure
+CVE-2026-41254
+
+# libpng16-16 — arbitrary code execution / information disclosure
+CVE-2026-33416
+CVE-2026-33636

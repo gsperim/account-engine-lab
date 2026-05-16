@@ -17,6 +17,10 @@ repositories {
 	mavenCentral()
 }
 
+// Sobrescreve versões gerenciadas pelo Spring Boot BOM para corrigir CVEs
+ext['netty.version']       = '4.1.133.Final' // CVE-2026-42583
+ext['postgresql.version']  = '42.7.11'       // CVE-2026-42198
+
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-amqp'
