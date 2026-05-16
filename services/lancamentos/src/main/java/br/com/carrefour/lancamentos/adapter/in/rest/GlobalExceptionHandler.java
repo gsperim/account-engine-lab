@@ -1,6 +1,7 @@
 package br.com.carrefour.lancamentos.adapter.in.rest;
 
 import br.com.carrefour.lancamentos.adapter.in.rest.dto.generated.Erro;
+import br.com.carrefour.lancamentos.domain.exception.LancamentoConflitanteException;
 import br.com.carrefour.lancamentos.domain.exception.LancamentoDuplicadoException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -15,6 +16,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.CONFLICT)
     public Erro handleDuplicado(LancamentoDuplicadoException ex) {
         return new Erro().codigo("LANCAMENTO_DUPLICADO").mensagem(ex.getMessage());
+    }
+
+    @ExceptionHandler(LancamentoConflitanteException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public Erro handleConflitante(LancamentoConflitanteException ex) {
+        return new Erro().codigo("IDEMPOTENCY_KEY_CONFLITO").mensagem(ex.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
