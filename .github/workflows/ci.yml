@@ -1,0 +1,168 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-lancamentos:
+    name: Testes — lancamentos
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/lancamentos
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: gradle
+
+      - name: Testes
+        run: ./gradlew test --no-daemon
+
+      - name: Relatório de testes
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-lancamentos
+          path: services/lancamentos/build/reports/tests/test/
+          retention-days: 7
+
+  test-consolidado:
+    name: Testes — consolidado
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/consolidado
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: gradle
+
+      - name: Testes
+        run: ./gradlew test --no-daemon
+
+      - name: Relatório de testes
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-consolidado
+          path: services/consolidado/build/reports/tests/test/
+          retention-days: 7
+
+  build-image-lancamentos:
+    name: Build image — lancamentos
+    runs-on: ubuntu-latest
+    needs: [test-lancamentos]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build (sem push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/lancamentos/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: lancamentos:${{ github.sha }}
+
+  build-image-consolidado:
+    name: Build image — consolidado
+    runs-on: ubuntu-latest
+    needs: [test-consolidado]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build (sem push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/consolidado/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: consolidado:${{ github.sha }}
+
+  scan-lancamentos:
+    name: Scan Trivy — lancamentos
+    runs-on: ubuntu-latest
+    needs: [build-image-lancamentos]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build para scan
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/lancamentos/Dockerfile
+          push: false
+          load: true
+          tags: lancamentos:scan
+
+      - name: Trivy — vulnerabilidades CRITICAL/HIGH
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: lancamentos:scan
+          format: table
+          exit-code: '1'
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+  scan-consolidado:
+    name: Scan Trivy — consolidado
+    runs-on: ubuntu-latest
+    needs: [build-image-consolidado]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build para scan
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/consolidado/Dockerfile
+          push: false
+          load: true
+          tags: consolidado:scan
+
+      - name: Trivy — vulnerabilidades CRITICAL/HIGH
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: consolidado:scan
+          format: table
+          exit-code: '1'
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
