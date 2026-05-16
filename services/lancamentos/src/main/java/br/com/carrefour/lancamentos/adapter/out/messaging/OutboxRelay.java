@@ -10,6 +10,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Component
 public class OutboxRelay {
 
@@ -46,6 +48,16 @@ public class OutboxRelay {
                 log.warn("outbox_falhou outbox_id={} lancamento_id={} tentativas={} motivo={}",
                         entry.getId(), entry.getLancamentoId(), entry.getTentativas(), e.getMessage());
             }
+        }
+    }
+
+    @Scheduled(cron = "0 0 3 * * *")
+    @Transactional
+    public void limparPublicados() {
+        var limite = LocalDateTime.now().minusDays(7);
+        int removidos = outboxRepo.deletarPublicadosAntes(limite);
+        if (removidos > 0) {
+            log.info("outbox_cleanup removidos={} antes={}", removidos, limite);
         }
     }
 

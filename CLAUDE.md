@@ -53,51 +53,40 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 - ✅ Etapa 6 — Observabilidade (stack PLG + Tempo + OTEL + 4 dashboards Grafana)
 - 🔄 Etapa 7 — Implementação (JWT ✅; pendentes: Outbox cleanup + DLQ consumer)
 
-### Onde estamos agora — Etapa 7, pendências verificadas no código
+### Onde estamos agora — Etapa 7 COMPLETA / Etapa 8 não iniciada
 
-Implementação Java completa: 109 arquivos commitados, 71 testes verdes (42 lançamentos + 29 consolidado), k6 smoke/load/stress com auth JWT funcionando (ROPC + Keycloak 26). README reescrito. Repositório publicado.
+**Data:** 2026-05-16 | **85 testes verdes** (49 lançamentos + 36 consolidado)
 
-**Sessão 2026-05-16 — qualidade do portal de documentação (branch `docs/mkdocs-material-features`):**
-- MkDocs Material: `navigation.footer`, `navigation.instant` + prefetch + progress, `navigation.tracking`, `navigation.prune`, `toc.follow`, `header.autohide`, `content.code.annotate`, `content.tabs.link`, `content.tooltips`, `content.action.edit` + `repo_url`
-- Extensões PyMdown: `mark`, `caret`, `tilde`, `keys`, `tasklist`, `emoji`
-- Rastreabilidade em `requisitos.md` reescrita com grid cards + tabs (RF / NFR)
-- Removidas referências a avaliadores e ao desafio como audiência (ADR-017, ADR-018, stack.md)
-- Jargão inventado removido de 7 arquivos (refletividade, escopo diferencial, degradação graciosa, etc.)
+#### ✅ Etapa 7 — tudo entregue
 
-#### 🔴 Funcionalidade incompleta (verificado no código)
+| Item | Detalhe |
+|------|---------|
+| JWT / Spring Security | `oauth2-resource-server` + JWKS Keycloak + `sub` como `operadorId` |
+| Outbox cleanup | `OutboxRelay.limparPublicados()` — `@Scheduled(cron="0 0 3 * * *")`, janela 7 dias |
+| DLQ consumer | `DlqConsumer` — só métrica + log; sem retry (DLQ é destino final); backoffice futuro documentado |
+| Grafana fix | `or vector(0)` no painel Taxa de Erro |
+| Idempotência com payload diferente | `payload_hash` (SHA-256) na tabela `lancamentos`; mesma key + payload diferente → 409 `IDEMPOTENCY_KEY_CONFLITO`; replay idempotente retorna existente |
+| Estorno de lançamento | `POST /registros/{id}/estorno` — `EstornarLancamentoService`, UUID derivado para idempotência, marca original como estornado |
+| `GET /lancamentos/registros/resumo` | Totais de crédito/débito/contagem por data — usado pela reconciliação |
+| Reconciliação diária | `ReconciliacaoDiariaJob` — `@Scheduled(cron="0 0 2 * * *")`, compara com `LancamentosGateway`, métrica `saldo_reconciliado_divergencias_total` |
+| Recuperação catastrófica | `POST /admin/reconstruir` — `ReconstruirConsolidadoService`, reconstrói saldo iterando dia a dia via gateway |
+| `GET /consolidacao/saldo` (período) | Verificado — implementado e coberto em todas as camadas |
+| Documentação sincronizada | `stack.md`, `implementacao/index.md`, `dados.md`, `observabilidade/index.md` |
+| Hook pre-commit + protocolo de branch | Bloqueia commits diretos em `main`/`develop`; checklist no CLAUDE.md |
 
-| Item | Diagnóstico real |
-|------|-----------------|
-| **Outbox cleanup job** | `OutboxRelay.java` marca registros como `publicado` mas nunca os deleta. Tabela `outbox` cresce indefinidamente. |
-| **DLQ consumer** | Fila `consolidacao.lancamentos.dlq` declarada em `RabbitConfig.java` com DLX configurado, mas sem `@RabbitListener`. Mensagens que falham ficam presas silenciosamente. |
+#### Pendentes para versões futuras
+| Item | Observação |
+|------|-----------|
+| Backoffice de DLQ | Replay controlado com audit trail — mencionado no `DlqConsumer.java` |
+| Idempotência com payload diferente para estorno | Estorno já é idempotente via UUID derivado; conflito de payload não verificado |
 
-#### 🟡 Fix rápido
-
-| Item | Diagnóstico real |
-|------|-----------------|
-| **Grafana "No data"** | Painel "Taxa de Erro" retorna vazio quando não há erros — precisa de `or vector(0)` na query PromQL. |
-
-#### 🟢 Diferenciais (não estão nos contratos nem implementados)
-
-| Endpoint | Estado |
-|----------|--------|
-| `POST /lancamentos/registros/{id}/estorno` | Ausente no `lancamentos.yaml` e no código |
-| `GET /lancamentos/registros/resumo` | Ausente no `lancamentos.yaml` e no código |
-| `POST /consolidacao/admin/reconstruir` | Ausente no `consolidado.yaml` e no código |
-
-#### Estimativa de esforço restante
-- Grafana fix → ~5 min
-- Outbox cleanup job → ~30 min (novo `@Scheduled` + migration de delete)
-- DLQ consumer → ~45 min (`@RabbitListener` + retry logic)
-- Cada diferencial → ~3–4h (contrato OpenAPI + implementação + testes)
-
-### Próximas etapas
-- Etapa 8 — Pipeline CI (GitHub Actions) + Chaos Engineering
-- Etapa 9 — Documentação Final e publicação
+#### Próximas etapas
+- **Etapa 8** — Pipeline CI (GitHub Actions) + Chaos Engineering
+- **Etapa 9** — Documentação Final e publicação
 
 ### Stack técnico (referência rápida)
-- **Serviços:** Spring Boot 3 + Java 21, Arquitetura Hexagonal + DDD Tático
-- **Mensageria:** RabbitMQ (AMQP) com Outbox Pattern (`@Scheduled` relay)
+- **Serviços:** Spring Boot 3.5.14 + Java 21, Arquitetura Hexagonal + DDD Tático
+- **Mensageria:** RabbitMQ (AMQP) com Outbox Pattern (`@Scheduled` relay + cleanup diário)
 - **Persistência:** PostgreSQL (por serviço) + Redis (cache consolidado)
 - **Gateway:** Traefik (local) | CloudFront + API Gateway HTTP API (prod)
 - **Observabilidade:** Prometheus + Loki + Grafana + Tempo + OTEL Collector
@@ -109,3 +98,27 @@ Para retomar o trabalho em uma nova sessão, basta dizer:
 > "Continue o roteiro a partir do estado atual no CLAUDE.md"
 
 Ao encerrar cada sessão: atualizar este bloco "Estado Atual" e fazer commit.
+
+### Protocolo obrigatório a cada merge em develop
+
+**A cada `git merge --no-ff` em develop**, antes de fechar a branch:
+
+1. Atualizar o bloco "Estado Atual" do CLAUDE.md — marcar o que foi entregue, remover o que não é mais pendente
+2. Atualizar `docs/implementacao/index.md` ou qualquer outro doc afetado pela mudança
+3. Incluir essas atualizações no commit da feature branch ou em commit imediato após o merge
+
+### Protocolo obrigatório antes de qualquer edit/write
+
+**ANTES de editar ou criar qualquer arquivo**, executar este checklist na ordem:
+
+1. `git rev-parse --abbrev-ref HEAD` — verificar branch atual
+2. Se estiver em `main` ou `develop`: **parar** e criar feature branch primeiro
+   ```
+   git checkout develop
+   git checkout -b <tipo>/<descricao-curta>
+   ```
+3. Só então iniciar os edits
+
+**Tipos de branch:** `feat/`, `fix/`, `docs/`, `refactor/`, `test/`, `chore/`
+
+O hook `pre-commit` também bloqueia commits diretos em `main` e `develop`, mas o checklist evita retrabalho (stash + mover branch) que acontece quando o erro é detectado só no commit.

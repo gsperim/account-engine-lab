@@ -6,8 +6,10 @@ import br.com.carrefour.lancamentos.domain.model.LancamentoId;
 import br.com.carrefour.lancamentos.domain.model.TipoLancamento;
 import br.com.carrefour.lancamentos.domain.model.Valor;
 import br.com.carrefour.lancamentos.domain.port.in.BuscarLancamentoUseCase;
+import br.com.carrefour.lancamentos.domain.port.in.EstornarLancamentoUseCase;
 import br.com.carrefour.lancamentos.domain.port.in.ListarLancamentosUseCase;
 import br.com.carrefour.lancamentos.domain.port.in.RegistrarLancamentoUseCase;
+import br.com.carrefour.lancamentos.domain.port.in.ResumoDiarioUseCase;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -39,6 +41,8 @@ class LancamentoControllerTest {
     @MockitoBean RegistrarLancamentoUseCase registrarUseCase;
     @MockitoBean BuscarLancamentoUseCase buscarUseCase;
     @MockitoBean ListarLancamentosUseCase listarUseCase;
+    @MockitoBean EstornarLancamentoUseCase estornarUseCase;
+    @MockitoBean ResumoDiarioUseCase resumoDiarioUseCase;
     // Necessário para que o SecurityConfig carregue sem jwk-set-uri real em testes
     @MockitoBean JwtDecoder jwtDecoder;
 
@@ -155,6 +159,7 @@ class LancamentoControllerTest {
                 "Venda balcão",
                 LocalDate.of(2026, 5, 9),
                 "usr_abc",
-                LocalDateTime.of(2026, 5, 9, 12, 0));
+                LocalDateTime.of(2026, 5, 9, 12, 0),
+                "test-hash", false, null);
     }
 }

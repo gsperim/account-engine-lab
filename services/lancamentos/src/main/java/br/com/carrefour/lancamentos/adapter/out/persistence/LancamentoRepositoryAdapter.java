@@ -53,6 +53,11 @@ public class LancamentoRepositoryAdapter implements LancamentoRepository {
         return jpaRepo.existsById(id.toUUID());
     }
 
+    @Override
+    public java.math.BigDecimal somarValorPorDataETipo(LocalDate data, TipoLancamento tipo) {
+        return jpaRepo.sumValorByDataCompetenciaAndTipo(data, tipo);
+    }
+
     private LancamentoJpaEntity toEntity(Lancamento l) {
         var e = new LancamentoJpaEntity();
         e.setId(l.getId().toUUID());
@@ -62,6 +67,9 @@ public class LancamentoRepositoryAdapter implements LancamentoRepository {
         e.setDataCompetencia(l.getDataCompetencia());
         e.setOperadorId(l.getOperadorId());
         e.setCriadoEm(l.getCriadoEm());
+        e.setPayloadHash(l.getPayloadHash());
+        e.setEstornado(l.isEstornado());
+        e.setEstornadoEm(l.getEstornadoEm());
         return e;
     }
 
@@ -73,6 +81,9 @@ public class LancamentoRepositoryAdapter implements LancamentoRepository {
                 e.getDescricao(),
                 e.getDataCompetencia(),
                 e.getOperadorId(),
-                e.getCriadoEm());
+                e.getCriadoEm(),
+                e.getPayloadHash(),
+                e.isEstornado(),
+                e.getEstornadoEm());
     }
 }

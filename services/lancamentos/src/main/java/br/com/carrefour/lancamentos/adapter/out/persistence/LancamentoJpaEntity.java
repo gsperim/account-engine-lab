@@ -37,4 +37,13 @@ public class LancamentoJpaEntity {
 
     @Column(name = "criado_em", nullable = false)
     private LocalDateTime criadoEm;
+
+    @Column(name = "payload_hash", nullable = false, length = 64)
+    private String payloadHash;
+
+    @Column(nullable = false)
+    private boolean estornado = false;
+
+    @Column(name = "estornado_em")
+    private LocalDateTime estornadoEm;
 }

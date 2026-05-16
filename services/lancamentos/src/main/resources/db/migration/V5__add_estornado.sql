@@ -1,0 +1,2 @@
+ALTER TABLE lancamentos ADD COLUMN estornado BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE lancamentos ADD COLUMN estornado_em TIMESTAMP;

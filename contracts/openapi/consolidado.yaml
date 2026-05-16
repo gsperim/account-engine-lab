@@ -16,6 +16,8 @@ servers:
 tags:
   - name: consolidacao
     description: Consulta de saldos consolidados por data
+  - name: admin
+    description: Operações administrativas — requerem role ADMIN
 
 paths:
   /saldo/{data}:
@@ -102,6 +104,56 @@ paths:
                   $ref: '#/components/schemas/SaldoConsolidadoResponse'
         '400':
           description: Período inválido (data_fim anterior a data_inicio, ou período > 90 dias)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/NaoAutorizado'
+
+  /admin/reconstruir:
+    post:
+      tags: [admin]
+      operationId: reconstruirConsolidado
+      summary: Reconstruir saldo consolidado por período
+      description: |
+        Reconstrói o saldo consolidado para cada data no intervalo, consultando o
+        serviço de lançamentos data a data. Operação idempotente — pode ser
+        executada múltiplas vezes com segurança. Período máximo: 90 dias.
+        Requer role ADMIN.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: data_inicio
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2026-05-01"
+        - name: data_fim
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2026-05-09"
+      responses:
+        '200':
+          description: Reconstrução concluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReconstrucaoResponse'
+              example:
+                datas_processadas: 9
+                divergencias_corrigidas: 2
+                data_inicio: "2026-05-01"
+                data_fim: "2026-05-09"
+        '400':
+          description: Parâmetros inválidos ou período > 90 dias
           content:
             application/json:
               schema:
@@ -198,6 +250,24 @@ components:
           format: date-time
           description: Timestamp UTC do último lançamento processado
           example: "2026-05-09T17:45:12.000Z"
+
+    ReconstrucaoResponse:
+      type: object
+      properties:
+        datas_processadas:
+          type: integer
+          example: 9
+        divergencias_corrigidas:
+          type: integer
+          example: 2
+        data_inicio:
+          type: string
+          format: date
+          example: "2026-05-01"
+        data_fim:
+          type: string
+          format: date
+          example: "2026-05-09"
 
     Erro:
       type: object

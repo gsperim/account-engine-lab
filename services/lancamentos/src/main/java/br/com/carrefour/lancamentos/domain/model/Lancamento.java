@@ -12,6 +12,9 @@ public final class Lancamento {
     private final LocalDate dataCompetencia;
     private final String operadorId;
     private final LocalDateTime criadoEm;
+    private final String payloadHash;
+    private boolean estornado;
+    private LocalDateTime estornadoEm;
 
     private Lancamento(Builder builder) {
         this.id              = builder.id;
@@ -21,6 +24,9 @@ public final class Lancamento {
         this.dataCompetencia = builder.dataCompetencia;
         this.operadorId      = builder.operadorId;
         this.criadoEm        = builder.criadoEm;
+        this.payloadHash     = builder.payloadHash;
+        this.estornado       = builder.estornado;
+        this.estornadoEm     = builder.estornadoEm;
     }
 
     public static Lancamento criar(
@@ -45,10 +51,11 @@ public final class Lancamento {
                 .dataCompetencia(dataCompetencia)
                 .operadorId(operadorId)
                 .criadoEm(LocalDateTime.now())
+                .payloadHash(PayloadHash.compute(tipo, valor, dataCompetencia, descricao))
+                .estornado(false)
                 .build();
     }
 
-    // Reconstitui aggregate a partir da persistência
     public static Lancamento reconstituir(
             LancamentoId id,
             TipoLancamento tipo,
@@ -56,7 +63,10 @@ public final class Lancamento {
             String descricao,
             LocalDate dataCompetencia,
             String operadorId,
-            LocalDateTime criadoEm) {
+            LocalDateTime criadoEm,
+            String payloadHash,
+            boolean estornado,
+            LocalDateTime estornadoEm) {
 
         return new Builder()
                 .id(id)
@@ -66,7 +76,15 @@ public final class Lancamento {
                 .dataCompetencia(dataCompetencia)
                 .operadorId(operadorId)
                 .criadoEm(criadoEm)
+                .payloadHash(payloadHash)
+                .estornado(estornado)
+                .estornadoEm(estornadoEm)
                 .build();
+    }
+
+    public void marcarEstornado() {
+        this.estornado   = true;
+        this.estornadoEm = LocalDateTime.now();
     }
 
     public LancamentoId getId()              { return id; }
@@ -76,6 +94,9 @@ public final class Lancamento {
     public LocalDate getDataCompetencia()    { return dataCompetencia; }
     public String getOperadorId()            { return operadorId; }
     public LocalDateTime getCriadoEm()       { return criadoEm; }
+    public String getPayloadHash()           { return payloadHash; }
+    public boolean isEstornado()             { return estornado; }
+    public LocalDateTime getEstornadoEm()    { return estornadoEm; }
 
     private static class Builder {
         LancamentoId id;
@@ -85,6 +106,9 @@ public final class Lancamento {
         LocalDate dataCompetencia;
         String operadorId;
         LocalDateTime criadoEm;
+        String payloadHash;
+        boolean estornado;
+        LocalDateTime estornadoEm;
 
         Builder id(LancamentoId id)                    { this.id = id; return this; }
         Builder tipo(TipoLancamento tipo)              { this.tipo = tipo; return this; }
@@ -93,6 +117,9 @@ public final class Lancamento {
         Builder dataCompetencia(LocalDate d)           { this.dataCompetencia = d; return this; }
         Builder operadorId(String operadorId)          { this.operadorId = operadorId; return this; }
         Builder criadoEm(LocalDateTime criadoEm)       { this.criadoEm = criadoEm; return this; }
+        Builder payloadHash(String payloadHash)        { this.payloadHash = payloadHash; return this; }
+        Builder estornado(boolean estornado)           { this.estornado = estornado; return this; }
+        Builder estornadoEm(LocalDateTime estornadoEm) { this.estornadoEm = estornadoEm; return this; }
         Lancamento build()                             { return new Lancamento(this); }
     }
 }

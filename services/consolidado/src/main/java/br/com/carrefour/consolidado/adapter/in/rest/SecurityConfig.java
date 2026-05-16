@@ -28,6 +28,7 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/health", "/actuator/prometheus", "/actuator/info").permitAll()
                 // Matriz de autorização — ADR-005 / docs/seguranca/index.md
                 .requestMatchers(HttpMethod.GET, "/saldo", "/saldo/**").hasAnyRole("GESTOR", "ADMIN")
+                .requestMatchers(HttpMethod.POST, "/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2

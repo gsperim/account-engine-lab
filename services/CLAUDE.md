@@ -125,10 +125,13 @@ adapter/out/messaging/   → RabbitMQ publisher (só em lançamentos)
 
 ---
 
-## Pendências ativas nesta pasta
+## Estado da implementação — Etapa 7 completa
 
-🟡 Outbox cleanup job — `OutboxJpaEntity` cresce indefinidamente; job de retenção pendente  
-🟡 DLQ consumer — `consolidacao.lancamentos.dlq` sem handler de reprocessamento  
-🟢 `POST /lancamentos/registros/{id}/estorno` — endpoint não implementado  
-🟢 `GET /lancamentos/registros/resumo` — endpoint não implementado  
-🟢 `POST /consolidacao/admin/reconstruir` — endpoint não implementado  
+**85 testes verdes** (49 lançamentos + 36 consolidado). Todos os endpoints da Etapa 7 implementados.
+
+| Serviço | Novos artefatos (sessão 2026-05-16) |
+|---------|-------------------------------------|
+| lancamentos | `OutboxRelay.limparPublicados()`, `DlqConsumer`, `PayloadHash`, `LancamentoConflitanteException`, `EstornarLancamentoService`, `ResumoDiarioService`, migrations V4 (payload_hash) e V5 (estornado) |
+| consolidado | `DlqConsumer`, `LancamentosGateway` + `LancamentosGatewayAdapter`, `ReconciliacaoDiariaJob`, `ReconstruirConsolidadoService`, `AdminController` |
+
+Pendente para versões futuras: backoffice de DLQ com replay controlado e audit trail.

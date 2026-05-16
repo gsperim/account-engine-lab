@@ -1,8 +1,9 @@
 package br.com.carrefour.lancamentos.application.usecase;
 
-import br.com.carrefour.lancamentos.domain.exception.LancamentoDuplicadoException;
+import br.com.carrefour.lancamentos.domain.exception.LancamentoConflitanteException;
 import br.com.carrefour.lancamentos.domain.model.Lancamento;
 import br.com.carrefour.lancamentos.domain.model.LancamentoId;
+import br.com.carrefour.lancamentos.domain.model.PayloadHash;
 import br.com.carrefour.lancamentos.domain.model.TipoLancamento;
 import br.com.carrefour.lancamentos.domain.model.Valor;
 import br.com.carrefour.lancamentos.domain.port.in.RegistrarLancamentoUseCase.Command;
@@ -15,6 +16,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
@@ -31,6 +34,7 @@ class RegistrarLancamentoServiceTest {
 
     static final UUID KEY_UUID = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     static final UUID KEY_DUP  = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+    static final LocalDate DATA = LocalDate.of(2026, 5, 9);
 
     @BeforeEach
     void setUp() {
@@ -39,7 +43,7 @@ class RegistrarLancamentoServiceTest {
 
     @Test
     void deveRegistrarLancamentoESalvarEEnfileirarNoOutbox() {
-        when(repository.existePorId(LancamentoId.de(KEY_UUID))).thenReturn(false);
+        when(repository.buscarPorId(LancamentoId.de(KEY_UUID))).thenReturn(Optional.empty());
         when(repository.salvar(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var resultado = service.executar(umCommand(KEY_UUID));
@@ -52,10 +56,29 @@ class RegistrarLancamentoServiceTest {
     }
 
     @Test
-    void deveLancarExcecaoQuandoIdJaExiste() {
-        when(repository.existePorId(LancamentoId.de(KEY_DUP))).thenReturn(true);
+    void deveRetornarExistenteQuandoReplayComMesmoPayload() {
+        var command = umCommand(KEY_DUP);
+        var hash = PayloadHash.compute(command.tipo(), command.valor(), command.dataCompetencia(), command.descricao());
+        var existente = Lancamento.reconstituir(
+                LancamentoId.de(KEY_DUP), TipoLancamento.CREDITO, Valor.de("150.00"),
+                "Venda balcão", DATA, "usr_abc123", LocalDateTime.now(), hash, false, null);
+        when(repository.buscarPorId(LancamentoId.de(KEY_DUP))).thenReturn(Optional.of(existente));
 
-        assertThatExceptionOfType(LancamentoDuplicadoException.class)
+        var resultado = service.executar(command);
+
+        assertThat(resultado).isSameAs(existente);
+        verify(repository, never()).salvar(any());
+        verify(outbox, never()).registrar(any());
+    }
+
+    @Test
+    void deveLancarExcecaoQuandoMesmaKeyComPayloadDiferente() {
+        var existente = Lancamento.reconstituir(
+                LancamentoId.de(KEY_DUP), TipoLancamento.DEBITO, Valor.de("999.00"),
+                "Outro payload", DATA, "usr_abc123", LocalDateTime.now(), "hash-diferente", false, null);
+        when(repository.buscarPorId(LancamentoId.de(KEY_DUP))).thenReturn(Optional.of(existente));
+
+        assertThatExceptionOfType(LancamentoConflitanteException.class)
             .isThrownBy(() -> service.executar(umCommand(KEY_DUP)));
 
         verify(repository, never()).salvar(any());
@@ -64,7 +87,7 @@ class RegistrarLancamentoServiceTest {
 
     @Test
     void naoDeveEnfileirarNoOutboxSeRepositorioFalhar() {
-        when(repository.existePorId(any())).thenReturn(false);
+        when(repository.buscarPorId(any())).thenReturn(Optional.empty());
         when(repository.salvar(any())).thenThrow(new RuntimeException("Banco indisponível"));
 
         assertThatThrownBy(() -> service.executar(umCommand(KEY_UUID)))
@@ -78,7 +101,7 @@ class RegistrarLancamentoServiceTest {
             TipoLancamento.CREDITO,
             Valor.de("150.00"),
             "Venda balcão",
-            LocalDate.of(2026, 5, 9),
+            DATA,
             "usr_abc123",
             key.toString()
         );
