@@ -109,3 +109,19 @@ Para retomar o trabalho em uma nova sessão, basta dizer:
 > "Continue o roteiro a partir do estado atual no CLAUDE.md"
 
 Ao encerrar cada sessão: atualizar este bloco "Estado Atual" e fazer commit.
+
+### Protocolo obrigatório antes de qualquer edit/write
+
+**ANTES de editar ou criar qualquer arquivo**, executar este checklist na ordem:
+
+1. `git rev-parse --abbrev-ref HEAD` — verificar branch atual
+2. Se estiver em `main` ou `develop`: **parar** e criar feature branch primeiro
+   ```
+   git checkout develop
+   git checkout -b <tipo>/<descricao-curta>
+   ```
+3. Só então iniciar os edits
+
+**Tipos de branch:** `feat/`, `fix/`, `docs/`, `refactor/`, `test/`, `chore/`
+
+O hook `pre-commit` também bloqueia commits diretos em `main` e `develop`, mas o checklist evita retrabalho (stash + mover branch) que acontece quando o erro é detectado só no commit.
