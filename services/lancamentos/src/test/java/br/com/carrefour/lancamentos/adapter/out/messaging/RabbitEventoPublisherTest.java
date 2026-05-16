@@ -67,6 +67,7 @@ class RabbitEventoPublisherTest {
                 "Venda",
                 LocalDate.of(2026, 5, 9),
                 "usr_test",
-                LocalDateTime.of(2026, 5, 9, 12, 0));
+                LocalDateTime.of(2026, 5, 9, 12, 0),
+                "test-hash");
     }
 }

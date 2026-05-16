@@ -155,6 +155,7 @@ class LancamentoControllerTest {
                 "Venda balcão",
                 LocalDate.of(2026, 5, 9),
                 "usr_abc",
-                LocalDateTime.of(2026, 5, 9, 12, 0));
+                LocalDateTime.of(2026, 5, 9, 12, 0),
+                "test-hash");
     }
 }
