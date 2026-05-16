@@ -25,7 +25,7 @@ tags:
 | 🔹 [RF-08](#rf-08) | Registrar estorno rastreável de lançamento | Lançamentos | [D-01](drivers.md#d-01) |
 | 🔹 [RF-09](#rf-09) | Consultar consolidação por período e granularidade | Consolidação | [D-02](drivers.md#d-02) |
 
-> 🔹 Requisitos marcados com este símbolo são **escopo diferencial** — vão além do enunciado original do desafio e refletem maturidade arquitetural em sistemas financeiros reais.
+> 🔹 Requisitos marcados com este símbolo vão além do enunciado original e são práticas comuns em sistemas financeiros de produção.
 
 ---
 
@@ -159,7 +159,7 @@ tags:
 
 **Regras de negócio:**
 - O saldo pode ser negativo — não há restrição de saldo mínimo.
-- O consolidado é **eventual** — pode haver atraso entre um lançamento registrado e sua refletividade no saldo consultado.
+- O consolidado é **eventual** — um lançamento registrado pode levar alguns segundos para aparecer no saldo consultado.
 
 **Casos de borda:**
 
@@ -275,7 +275,7 @@ Detalhado como parte das regras e casos de borda do [RF-01](#rf-01). A validaç�
 
 ## Requisitos Funcionais Detalhados — Escopo Diferencial
 
-> 🔹 Os requisitos abaixo não constam no enunciado original do desafio. São contribuições que demonstram maturidade arquitetural para sistemas financeiros reais: rastreabilidade de correções, recuperação de desastres, integridade contínua e análise de tendências.
+> 🔹 Os requisitos abaixo não constam no enunciado original. São práticas comuns em sistemas financeiros de produção: rastreabilidade de correções, recuperação de desastres, integridade contínua e análise de tendências.
 
 ### RF-06 — Reconciliação Periódica 🔹 { #rf-06 }
 

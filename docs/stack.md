@@ -81,7 +81,7 @@ Os **conceitos** do ArchiMate são aplicados em toda a documentação: Motivatio
 
 **O que está fora do escopo é o [Archi](https://www.archimatetool.com/)** — a ferramenta open-source que implementa a notação gráfica formal do ArchiMate. Em um engajamento real, o Archi produziria um modelo único com múltiplas views e rastreabilidade entre elementos em formato `.archimate`.
 
-Os diagramas são produzidos em Mermaid, eliminando dependência de ferramenta externa e mantendo tudo versionável em texto. A ausência da notação gráfica formal do Archi não compromete a substância das decisões arquiteturais documentadas.
+Os diagramas são produzidos em Mermaid, eliminando dependência de ferramenta externa e mantendo tudo versionável em texto. A ausência da notação gráfica formal do Archi não afeta as decisões arquiteturais documentadas.
 
 ### C4 Model — decomposição técnica
 

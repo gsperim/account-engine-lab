@@ -95,7 +95,7 @@ flowchart LR
 | **Alertas** | Alertmanager | Agrega, deduplica e roteia notificações |
 | **Visualização** | Grafana | Correlação entre todos os sinais numa única UI |
 
-> **Ponto de design:** o OTEL Collector é o único componente que vê todos os três sinais de aplicação (traces, métricas, logs). É ali que a redação de PII e o enriquecimento com atributos de ambiente acontecem de forma centralizada — sem tocar o código dos serviços.
+> O OTEL Collector é o único componente que vê todos os três sinais de aplicação (traces, métricas, logs). É ali que o mascaramento de PII e o enriquecimento com atributos de ambiente acontecem de forma centralizada — sem tocar o código dos serviços.
 
 ## Stack
 
@@ -145,7 +145,7 @@ Todos os logs devem ser emitidos em **JSON estruturado** com campos obrigatório
 | `message` | string | Aplicação |
 
 !!! warning "Redação de PII"
-    Antes de persistir no Loki, todos os logs passam por redação de CPF, CNPJ, e-mail e cartão de crédito — tanto via OTEL Collector (logs OTLP) quanto via Promtail (stdout Docker). Ver [ADR-016](../adr/ADR-016-redacao-pii-logs.md).
+    Antes de persistir no Loki, todos os logs passam por mascaramento de CPF, CNPJ, e-mail e cartão de crédito — tanto via OTEL Collector (logs OTLP) quanto via Promtail (stdout Docker). Ver [ADR-016](../adr/ADR-016-redacao-pii-logs.md).
 
 **Eventos que sempre geram log:**
 
