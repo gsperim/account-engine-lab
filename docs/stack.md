@@ -59,15 +59,22 @@ Decisão completa em [ADR-006](adr/ADR-006-container-runtime.md). docker-compose
 
 ---
 
-## Serviços de Aplicação *(a definir na Etapa 7)*
+## Serviços de Aplicação
 
-| Componente | Decisão pendente |
-|------------|-----------------|
-| Linguagem — Serviço de Lançamentos | — |
-| Linguagem — Serviço de Consolidação | — |
-| Framework HTTP | — |
-| ORM / query builder | — |
-| Framework de testes | — |
+Decisões tomadas e implementadas na Etapa 7. Decisão completa em [ADR-018](adr/ADR-018-stack-implementacao.md).
+
+| Componente | Decisão |
+|------------|---------|
+| Linguagem | Java 21 (LTS) — Virtual Threads disponíveis, Record classes para DTOs e Commands |
+| Framework HTTP | Spring Boot 3.5.14 + Spring MVC — geração de controllers via OpenAPI Generator (SDD) |
+| ORM | Spring Data JPA + Hibernate 6 — H2 em testes de slice (`@DataJpaTest`) |
+| Migrations | Flyway — `V1__init.sql` (lançamentos, consolidação) + `V2__create_outbox.sql` |
+| Mensageria | Spring AMQP (`spring-boot-starter-amqp`) — publisher com Outbox relay, consumer com CircuitBreaker |
+| Resiliência | Resilience4j — `@Retry` no publisher, `@CircuitBreaker` no consumer e publisher |
+| Segurança | `spring-boot-starter-oauth2-resource-server` — JWKS do Keycloak, `sub` como `operadorId` |
+| Observabilidade | Micrometer + OTEL SDK — exporta métricas, traces e logs via OTEL Collector |
+| Framework de testes | JUnit 5 + Mockito + AssertJ — 71 testes (42 lançamentos + 29 consolidado), todos verdes |
+| Testes de carga | k6 — smoke, load e stress com autenticação JWT (ROPC + Keycloak) |
 
 ---
 

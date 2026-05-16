@@ -455,11 +455,11 @@ No Grafana, consulte os eventos de segurança:
 |-----------|------|-------------|------------------|
 | [Plataforma](http://localhost:3000/d/plataforma-fluxo-de-caixa) | `plataforma` | Uptime (7 probes), PostgreSQL, Redis, RabbitMQ, Traefik | ✅ Agora |
 | [Logs Centralizados](http://localhost:3000/d/logs-fluxo-de-caixa) | `logs` | Volume por serviço, erros, stream filtrado, correlação por trace_id | ✅ Agora |
-| [Infraestrutura](http://localhost:3000/d/infraestrutura-e28094-fluxo-de-caixa) | `infra` | Throughput, taxa de erro, latência p50/p95/p99 por serviço | ⏳ Etapa 7 |
-| [Negócio](http://localhost:3000/d/negocio-e28094-fluxo-de-caixa) | `negocio` | Lançamentos/hora, BRL acumulado, DLQ, cache hit rate | ⏳ Etapa 7 |
-| [SLOs](http://localhost:3000/d/slos-e28094-fluxo-de-caixa) | `slo` | Burn rate, error budget consumido por SLO | ⏳ Etapa 7 |
+| [Infraestrutura](http://localhost:3000/d/infraestrutura-e28094-fluxo-de-caixa) | `infra` | Throughput, taxa de erro, latência p50/p95/p99 por serviço | 🟡 Parcial |
+| [Negócio](http://localhost:3000/d/negocio-e28094-fluxo-de-caixa) | `negocio` | Lançamentos/hora, BRL acumulado, DLQ, cache hit rate | 🟡 Parcial |
+| [SLOs](http://localhost:3000/d/slos-e28094-fluxo-de-caixa) | `slo` | Burn rate, error budget consumido por SLO | ✅ Funcional |
 
-> ⏳ = aguarda os serviços de Lançamentos e Consolidação enviarem OTLP (Etapa 7)
+> 🟡 Parcial = painel Taxa de Erro corrigido (`or vector(0)`); painéis de latência e lançamentos requerem tráfego k6 para popular.
 
 ---
 
