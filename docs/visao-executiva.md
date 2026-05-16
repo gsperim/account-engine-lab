@@ -143,7 +143,7 @@ Cada passo é independente. Se o passo 4 estiver lento, os passos 1, 2 e 3 conti
 
 ## Fase 2 — Arquitetura da Solução
 
-Com o domínio de negócio definido, a Fase 2 tomou as decisões sobre como o sistema é construído para honrar os compromissos firmados na Fase 1. As decisões técnicas foram guiadas por uma diretriz simples: **cada escolha deve ter um requisito de negócio como origem**, não uma preferência de tecnologia.
+Com o domínio de negócio definido, a Fase 2 tomou as decisões sobre como o sistema é construído para atender os requisitos definidos na Fase 1. As decisões técnicas foram guiadas por uma diretriz simples: **cada escolha deve ter um requisito de negócio como origem**, não uma preferência de tecnologia.
 
 ---
 

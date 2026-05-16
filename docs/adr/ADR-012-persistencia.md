@@ -78,7 +78,7 @@ O saldo do dia é calculado e armazenado a cada evento processado, em vez de ser
 
 **Por que pré-computar:** com `SELECT SUM(valor) FROM lancamentos_processados WHERE data = :data` executado a cada `GET /consolidacao/{data}` e 50 req/s, o banco receberia 50 queries de agregação por segundo sobre uma tabela que cresce indefinidamente. Com pré-computação, a query de leitura é `SELECT ... FROM consolidacao_diaria WHERE data = :data` — um lookup de chave primária, O(1) independentemente do histórico.
 
-**Consistência do pré-computo:** o upsert usa `INSERT ... ON CONFLICT DO UPDATE` com o `SUM` calculado na mesma query. Isso é atômico no PostgreSQL — sem race condition entre dois consumers processando lançamentos do mesmo dia em paralelo.
+O upsert usa `INSERT ... ON CONFLICT DO UPDATE` com o `SUM` calculado na mesma query — a operação é atômica no PostgreSQL. Dois consumers processando lançamentos do mesmo dia em paralelo não geram race condition.
 
 ### 7. Redis cache-aside com invalidação ativa
 
