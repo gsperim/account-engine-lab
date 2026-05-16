@@ -53,7 +53,7 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 - ✅ Etapa 6 — Observabilidade (stack PLG + Tempo + OTEL + 4 dashboards Grafana)
 - 🔄 Etapa 7 — Implementação (JWT ✅; pendentes: Outbox cleanup + DLQ consumer)
 
-### Onde estamos agora — Etapa 7 COMPLETA / Etapa 8 não iniciada
+### Onde estamos agora — Etapa 7 COMPLETA / Etapa 8 em progresso
 
 **Data:** 2026-05-16 | **85 testes verdes** (49 lançamentos + 36 consolidado)
 
@@ -74,14 +74,28 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 | Documentação sincronizada | `stack.md`, `implementacao/index.md`, `dados.md`, `observabilidade/index.md` |
 | Hook pre-commit + protocolo de branch | Bloqueia commits diretos em `main`/`develop`; checklist no CLAUDE.md |
 
+#### ✅ Etapa 8 — CI/CD entregue (Chaos Engineering pendente)
+
+| Item | Detalhe |
+|------|---------|
+| `ci.yml` | Testes (lancamentos + consolidado) + build Docker + scan Trivy CRITICAL/HIGH — verde no GitHub Actions |
+| `cd.yml` | Push para ECR via OIDC + GitHub Release — trigger manual (`workflow_dispatch`); requer `AWS_DEPLOY_ROLE_ARN` |
+| `docs.yml` | MkDocs build + deploy no GitHub Pages via GitHub Actions source — publicado em `https://gsperim.github.io/account-engine-lab/` |
+| CVEs corrigidos | netty 4.1.132→4.1.133 (CVE-2026-42583), postgresql 42.7.10→42.7.11 (CVE-2026-42198) via BOM override; `.trivyignore` para CVEs de OS da distroless |
+| Frontend Angular | Plano completo em `docs/implementacao/frontend.md` — implementação após Etapa 8 completa |
+
 #### Pendentes para versões futuras
 | Item | Observação |
 |------|-----------|
 | Backoffice de DLQ | Replay controlado com audit trail — mencionado no `DlqConsumer.java` |
 | Idempotência com payload diferente para estorno | Estorno já é idempotente via UUID derivado; conflito de payload não verificado |
 
+#### Próximo passo imediato
+- **Chaos Engineering** — executar os 5 experimentos do `docs/implementacao/caos.md` com Pumba + k6 + evidências Grafana (único item restante da Etapa 8)
+
 #### Próximas etapas
-- **Etapa 8** — Pipeline CI (GitHub Actions) + Chaos Engineering
+- **Etapa 8** — Chaos Engineering (pendente)
+- **Frontend Angular** — após Etapa 8 (plano em `docs/implementacao/frontend.md`)
 - **Etapa 9** — Documentação Final e publicação
 
 ### Stack técnico (referência rápida)
@@ -91,6 +105,7 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 - **Gateway:** Traefik (local) | CloudFront + API Gateway HTTP API (prod)
 - **Observabilidade:** Prometheus + Loki + Grafana + Tempo + OTEL Collector
 - **Contratos:** OpenAPI 3.1 spec-first, controllers gerados via OpenAPI Generator
+- **CI/CD:** GitHub Actions — `ci.yml` (testes + Trivy), `cd.yml` (ECR manual), `docs.yml` (GitHub Pages)
 
 ### Protocolo de continuidade entre sessões
 
