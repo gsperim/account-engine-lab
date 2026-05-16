@@ -13,8 +13,6 @@ COPY contracts/openapi/consolidado.yaml     contracts/openapi/consolidado.yaml
 
 WORKDIR /workspace/services/consolidado
 
-RUN sed -i "s|org.gradle.java.home=.*|org.gradle.java.home=${JAVA_HOME}|" gradle.properties
-
 RUN ./gradlew dependencies --no-daemon -q 2>&1 | tail -3
 
 COPY services/consolidado/src src/
