@@ -485,14 +485,19 @@ A implementação de auditoria na Etapa 7 registrará *quem* criou cada lançame
 
 Nome, e-mail e possivelmente CPF do Gestor e do Caixa. Completamente fora do escopo da Etapa 4 — documentado aqui para rastreabilidade do risco.
 
-### Política de retenção
+### Política de retenção { #política-de-retenção }
 
 | Dado | Retenção | Base legal |
 |------|----------|-----------|
 | Registros financeiros (`lancamentos`, `consolidacao_diaria`) | **5 anos** | Obrigação fiscal — Lei 9.613/98, IN RFB 1.990/2020 |
-| Logs de auditoria (`audit_log`, CloudWatch) | **2 anos** | LGPD art. 16 — dados de legítimo interesse com prazo razoável |
+| Dados de auditoria em `lancamentos` (`operador_id`, `criado_em`, `idempotency_key`) | **5 anos** | Inerente à retenção do registro financeiro — dados de auditoria são colunas da própria tabela |
+| Logs estruturados (Loki local) | **7 dias** | Capacidade operacional — rotação automática |
+| Logs estruturados (CloudWatch) | **30 dias** | Investigação operacional |
+| Logs estruturados (S3 → IA) | **90 dias → indefinido** | LGPD art. 16 — legítimo interesse + compliance |
 | Cache Redis (`saldo:{data}`) | TTL 60s–1h | Dado derivado, não retido |
 | Outbox processada | **7 dias** | Janela operacional — sem obrigação legal após processamento |
+
+**Observação sobre auditoria:** a trilha de auditoria não está em uma tabela `audit_log` separada — está embutida na tabela `lancamentos` (colunas `operador_id`, `idempotency_key`, `payload_hash`, `criado_em`, `estorno_de`, `estornado_por`) e complementada pelos logs estruturados. Ver [Trilha de Auditoria](../seguranca/index.md#trilha-de-auditoria) para detalhes de implementação.
 
 ### Direito de exclusão (LGPD art. 18)
 

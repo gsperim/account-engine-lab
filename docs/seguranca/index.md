@@ -311,49 +311,67 @@ sequenceDiagram
 
 **Requisito:** [NFR-09](../negocio/requisitos.md#nfr-09) — toda operação de escrita deve gerar trilha imutável com identidade, timestamp UTC e recurso afetado.
 
-### Schema da tabela `audit_log`
+A trilha de auditoria é distribuída em duas camadas complementares: **dados** (o que aconteceu, com qual valor, por quem) e **observabilidade** (quando, em qual contexto, com qual trace). Não há uma tabela `audit_log` separada — os dados de auditoria estão embutidos na própria tabela `lancamentos` por design.
 
-Cada serviço mantém sua própria `audit_log` no PostgreSQL local — sem cruzar fronteiras de serviço.
+### Dados imutáveis em `lancamentos`
 
-```sql
-CREATE TABLE audit_log (
-    id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    operador_id  VARCHAR(64) NOT NULL,   -- claim "sub" do JWT
-    operador_role VARCHAR(20) NOT NULL,  -- claim "role" do JWT
-    acao         VARCHAR(50) NOT NULL,   -- ex: "lancamento.criado", "estorno.registrado"
-    recurso_id   UUID,                  -- ID do recurso afetado (lancamento, estorno)
-    payload      JSONB,                 -- snapshot do recurso no momento da ação
-    ip_origem    INET,                  -- IP extraído do header X-Forwarded-For pelo gateway
-    criado_em    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+O Serviço de Lançamentos é implementado como *OAuth2 Resource Server*: valida o JWT localmente e extrai a identidade do operador diretamente do token, sem depender de headers injetados pelo gateway.
 
--- Índices para auditoria por operador e por recurso
-CREATE INDEX idx_audit_operador ON audit_log(operador_id, criado_em DESC);
-CREATE INDEX idx_audit_recurso  ON audit_log(recurso_id)  WHERE recurso_id IS NOT NULL;
+```java
+// LancamentoController.extrairOperadorId()
+var sub = jwt.getSubject();                          // claim "sub" (UUID Keycloak)
+if (sub != null && !sub.isBlank()) return sub;
+return jwt.getClaimAsString("preferred_username");   // fallback
 ```
 
-A tabela é **append-only** — sem UPDATE nem DELETE. Registros são retidos por 2 anos ([política de retenção](../arquitetura/dados.md#política-de-retenção)).
+Cada registro na tabela `lancamentos` carrega:
 
-### Como o serviço captura a identidade
+| Campo | Conteúdo | Imutável |
+|-------|----------|:--------:|
+| `id` | UUID único gerado pelo banco | ✅ |
+| `operador_id` | `sub` do JWT — UUID do operador no Keycloak | ✅ |
+| `idempotency_key` | UUID fornecido pelo cliente no header `Idempotency-Key` | ✅ |
+| `payload_hash` | SHA-256 do payload da requisição | ✅ |
+| `criado_em` | Timestamp UTC via `@CreationTimestamp` — não atualizável | ✅ |
+| `estorno_de` | UUID do lançamento original (quando este registro é um estorno) | ✅ |
+| `estornado_por` | UUID do estorno associado (preenchido pelo handler de estorno) | ⬜ (único campo atualizável) |
 
-O gateway injeta os claims do JWT como headers antes de encaminhar a requisição:
+A tabela é **append-only**: sem `UPDATE` nem `DELETE` sobre registros confirmados. Estornos geram um novo lançamento — nunca modificam o original. Retenção: **5 anos** (obrigação fiscal — Lei 9.613/98), ver [política de retenção](../arquitetura/dados.md#política-de-retenção).
 
+### Logs estruturados como trilha operacional
+
+Cada requisição gera um log estruturado JSON com os campos:
+
+```json
+{
+  "@timestamp":    "2026-05-17T03:37:04.681Z",
+  "level":         "INFO",
+  "event":         "lancamento.registrado",
+  "traceId":       "4b5f9a1e2d3c8b7a",
+  "spanId":        "9e1f2a3b",
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440000",
+  "http_method":   "POST",
+  "http_path":     "/registros",
+  "message":       "lançamento registrado id=3f2b9c10 valor=150.00 tipo=CREDITO"
+}
 ```
-X-User-Id:   usr_7f3b9a10        ← claim "sub"
-X-User-Role: caixa               ← claim "role"
-X-Forwarded-For: 203.0.113.5    ← IP do cliente (adicionado pelo gateway)
-```
 
-O serviço lê esses headers e os persiste no `audit_log` a cada operação de escrita confirmada. A gravação na `audit_log` ocorre **na mesma transação** que a operação principal — se a transação falhar, não há registro de auditoria parcial.
+Esses logs são coletados pelo Promtail, indexados no Loki e correlacionados ao trace no Tempo via `traceId`. Retenção: 7 dias local (Loki) · 30 dias CloudWatch · 90+ dias em S3.
 
-### Ações auditadas
+### Evidências capturadas por operação
 
-| Ação | Serviço | Recurso afetado |
-|------|---------|----------------|
-| `lancamento.criado` | Lançamentos | `lancamentos.id` |
-| `estorno.registrado` | Lançamentos | `lancamentos.id` (estorno) |
-| `recalculo.solicitado` | Lançamentos | job_id |
-| `reconciliacao.executada` | Consolidação | — (operação global) |
+| Operação | Evidência em `lancamentos` | Evidência em log |
+|----------|---------------------------|-----------------|
+| Registro de lançamento | `id`, `operador_id`, `criado_em`, `idempotency_key`, `payload_hash` | `event: lancamento.registrado` |
+| Estorno | `id` novo + `estorno_de` apontando para original; original recebe `estornado_por` | `event: estorno.registrado` |
+| Tentativa duplicada (mesma key, payload diferente) | HTTP 409 — registro original preservado | `event: idempotency.conflito` |
+| Replay idempotente (mesma key, mesmo payload) | HTTP 200 — registro original retornado | `event: idempotency.replay` |
+
+### Rastreabilidade distribuída (tracing)
+
+Cada operação de lançamento registra um `correlation_id` no MDC via `LoggingContextFilter` e propaga o `traceId` pelo RabbitMQ até o Serviço de Consolidação. É possível rastrear o caminho completo de um lançamento — do request HTTP até a atualização do saldo consolidado — no Grafana Tempo via `traceId`.
+
+> **Evolução futura:** uma tabela `audit_log` dedicada (com `acao`, `recurso_id` e snapshot JSONB) agregaria mais contexto de negócio por operação. O `operador_id` e o `criado_em` já estão em `lancamentos`, portanto a migração seria aditiva — sem reescrever dados existentes.
 
 ---
 
