@@ -89,37 +89,60 @@ flowchart LR
 
 ### Claims e Escopos JWT
 
-Todo access token carrega os seguintes claims relevantes para autorização:
+Todo access token carrega os seguintes claims relevantes para autorização. O exemplo abaixo representa um token real emitido pelo Keycloak para o usuário `caixa.demo`:
 
 ```json
 {
-  "sub":    "usr_7f3b9a10",
-  "iss":    "https://auth.fluxocaixa.internal",
-  "aud":    "api.fluxocaixa",
-  "exp":    1746800000,
-  "iat":    1746799100,
-  "jti":    "550e8400-e29b-41d4-a716-446655440000",
-  "role":   "caixa",
-  "scope":  "lancamentos:write lancamentos:read"
+  "sub":                "3f2b9c10-e7d4-4a1b-9f3e-446655440000",
+  "iss":                "http://gw-keycloak:8080/realms/fluxocaixa",
+  "aud":                ["frontend-app"],
+  "exp":                1746800300,
+  "iat":                1746800000,
+  "jti":                "550e8400-e29b-41d4-a716-446655440000",
+  "preferred_username": "caixa.demo",
+  "role":               "caixa",
+  "scope":              "openid lancamentos:write lancamentos:read consolidacao:read"
 }
 ```
 
-| Claim | Finalidade |
-|-------|-----------|
-| `sub` | Identificador único do sujeito — usado para auditoria ([NFR-09](../negocio/requisitos.md#nfr-09)) |
-| `jti` | JWT ID único — chave de idempotência na lista de revogação |
-| `role` | Papel do ator (`caixa`, `gestor`, `pdv`, `admin`) |
-| `scope` | Escopos autorizados — validados pelo API Gateway e pelos serviços |
-| `exp` | Expiração — TTL de **15 minutos** para access tokens |
+| Claim | Finalidade | Observação |
+|-------|-----------|------------|
+| `sub` | UUID do operador no Keycloak — gravado como `operadorId` em cada lançamento ([NFR-09](../negocio/requisitos.md#nfr-09)) | Incluído via scope `basic` (mapper `oidc-sub-mapper`) |
+| `preferred_username` | Username do operador — fallback de `operadorId` quando `sub` está ausente | Incluído via scope `basic` |
+| `role` | Papel do ator: `caixa`, `gestor`, `admin` (usuários humanos) ou `pdv` (hardcoded no cliente) | Mapeado pelo `jwtAuthenticationConverter` para `ROLE_CAIXA`, `ROLE_GESTOR`, etc. |
+| `scope` | Escopos concedidos — presença verificada nos dois serviços via Spring Security | Escopos do sistema são **opcionais** — devem ser solicitados explicitamente no fluxo de autenticação |
+| `iss` | Issuer do realm Keycloak — validado automaticamente pelo `oauth2-resource-server` | Formato: `http://<host>/realms/<realm-name>` |
+| `aud` | Client ID que solicitou o token | Sem audience mapper configurado — padrão Keycloak |
+| `exp` | Expiração — TTL de **5 minutos** (300 s configurados no realm) | — |
+| `jti` | JWT ID único — presente no token, não usado ativamente pelo sistema | Revogação por `jti` foi descartada em [ADR-013](../adr/ADR-013-revogacao-tokens.md) |
+
+#### Como `role` chega ao token
+
+O mecanismo difere conforme o tipo de ator:
+
+| Ator | Client | Mecanismo no realm | Resultado no token |
+|------|--------|-------------------|--------------------|
+| Caixa / Gestor / Admin | `frontend-app` | `oidc-usermodel-attribute-mapper` — lê o atributo `role` do usuário Keycloak | `"role": "caixa"` (valor do atributo) |
+| Sistema PDV | `pdv-service` | `oidc-hardcoded-claim-mapper` — valor fixo no cliente, sem usuário | `"role": "pdv"` (sempre) |
+
+#### Como o serviço usa os claims
+
+O `jwtAuthenticationConverter` em ambos os serviços converte:
+- `scope` → authorities `SCOPE_lancamentos:write`, `SCOPE_lancamentos:read`, etc.
+- `role` → authority `ROLE_CAIXA`, `ROLE_GESTOR`, `ROLE_PDV`, `ROLE_ADMIN`
+
+O `LancamentoController` extrai `operadorId` chamando `jwt.getSubject()`, com fallback para `jwt.getClaimAsString("preferred_username")` caso `sub` esteja ausente.
 
 ### Escopos do Sistema
 
-| Escopo | Descrição |
-|--------|-----------|
-| `lancamentos:write` | Registrar lançamentos e estornos |
-| `lancamentos:read` | Consultar lançamentos por período |
-| `consolidacao:read` | Consultar saldo consolidado e por período |
-| `consolidacao:admin` | Reconciliação periódica e recálculo assíncrono |
+Os escopos abaixo são configurados como **optional scopes** no Keycloak e devem ser solicitados explicitamente no parâmetro `scope` do fluxo de autenticação.
+
+| Escopo | Descrição | Disponível para |
+|--------|-----------|----------------|
+| `lancamentos:write` | Registrar lançamentos e estornos | `frontend-app`, `pdv-service` |
+| `lancamentos:read` | Consultar lançamentos por período | `frontend-app`, `pdv-service` |
+| `consolidacao:read` | Consultar saldo consolidado e por período | `frontend-app` |
+| `consolidacao:admin` | Reconciliação periódica e reconstrução de saldo | `frontend-app` |
 
 ---
 

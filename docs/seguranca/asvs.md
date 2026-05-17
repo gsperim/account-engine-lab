@@ -138,7 +138,7 @@ Os níveis ASVS são cumulativos: L2 supõe L1 atendido. Os controles L3 (para s
 
 | Controle | Gap atual | Justificativa | Roadmap |
 |----------|-----------|---------------|---------|
-| V2.4 (hashing de senha) | Senhas gerenciadas pelo Keycloak (bcrypt interno) — sem visibilidade direta | Responsabilidade do IdP | Keycloak usa Pbkdf2 por padrão; upgradar para Argon2id na config do realm |
+| V2.4 (hashing de senha) | Senhas gerenciadas pelo Keycloak (bcrypt interno) — sem visibilidade direta | Responsabilidade do IdP | Keycloak usa Pbkdf2 por padrão; migrar para Argon2id na config do realm |
 | V6.2 (criptografia em trânsito intra-pod) | mTLS intra-pod não implementado | SGs por pod + rede VPC privada mitigam | Service mesh (Istio) na evolução para múltiplos clusters |
 | V11.1.6 (limites de negócio por período) | Sem limite diário de volume por operador | Não solicitado no escopo | Throttling por `operadorId` — evolution path |
 | V14.3 (SAST automatizado no pipeline) | Trivy cobre CVEs de dependências; sem análise estática de código | CI tem Trivy; SAST exige tooling adicional | SpotBugs + SonarCloud no `ci.yml` |
