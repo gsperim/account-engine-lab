@@ -181,10 +181,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '~1.8'
+          terraform_wrapper: false
+
       - name: Setup Infracost
         uses: infracost/actions/setup@v3
         with:
           api-key: ${{ secrets.INFRACOST_API_KEY || '' }}
+
+      - name: Terraform init (baixar módulos)
+        run: terraform init -upgrade
+        working-directory: terraform
 
       - name: Gerar relatório HTML
         run: |
