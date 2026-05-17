@@ -28,20 +28,32 @@ public class OutboxRelay {
         var pendentes = outboxRepo.buscarPendentes();
         if (pendentes.isEmpty()) return;
 
-        log.info("outbox_relay pendentes={}", pendentes.size());
+        log.atInfo()
+                .addKeyValue("event",    "outbox_relay_inicio")
+                .addKeyValue("pendentes", pendentes.size())
+                .log("Outbox relay iniciado");
 
         for (var entry : pendentes) {
             try {
                 publisher.publicar(entry.getPayload(), entry.getLancamentoId());
                 entry.marcarPublicado();
                 outboxRepo.save(entry);
-                log.info("outbox_publicado outbox_id={} lancamento_id={} tentativas={}",
-                        entry.getId(), entry.getLancamentoId(), entry.getTentativas() + 1);
+                log.atInfo()
+                        .addKeyValue("event",        "outbox_publicado")
+                        .addKeyValue("outbox_id",    entry.getId())
+                        .addKeyValue("lancamento_id", entry.getLancamentoId())
+                        .addKeyValue("tentativas",   entry.getTentativas() + 1)
+                        .log("Evento publicado no RabbitMQ");
             } catch (Exception e) {
                 entry.incrementarTentativas();
                 outboxRepo.save(entry);
-                log.warn("outbox_falhou outbox_id={} lancamento_id={} tentativas={} motivo={}",
-                        entry.getId(), entry.getLancamentoId(), entry.getTentativas(), e.getMessage());
+                log.atWarn()
+                        .addKeyValue("event",        "outbox_falhou")
+                        .addKeyValue("outbox_id",    entry.getId())
+                        .addKeyValue("lancamento_id", entry.getLancamentoId())
+                        .addKeyValue("tentativas",   entry.getTentativas())
+                        .setCause(e)
+                        .log("Falha ao publicar evento — será retentado");
             }
         }
     }
@@ -49,11 +61,14 @@ public class OutboxRelay {
     @Scheduled(cron = "0 0 3 * * *")
     @Transactional
     public void limparPublicados() {
-        var limite = LocalDateTime.now().minusDays(7);
+        var limite    = LocalDateTime.now().minusDays(7);
         int removidos = outboxRepo.deletarPublicadosAntes(limite);
         if (removidos > 0) {
-            log.info("outbox_cleanup removidos={} antes={}", removidos, limite);
+            log.atInfo()
+                    .addKeyValue("event",    "outbox_cleanup")
+                    .addKeyValue("removidos", removidos)
+                    .addKeyValue("antes",    limite)
+                    .log("Outbox cleanup concluído");
         }
     }
-
 }

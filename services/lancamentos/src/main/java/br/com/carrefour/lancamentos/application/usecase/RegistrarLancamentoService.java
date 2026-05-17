@@ -30,34 +30,37 @@ public class RegistrarLancamentoService implements RegistrarLancamentoUseCase {
     public Lancamento executar(Command command) {
         var id = LancamentoId.de(command.idempotencyKey());
 
-        log.info("registrando lancamento idempotency_key={} tipo={} valor={}",
-                command.idempotencyKey(), command.tipo(), command.valor().toBigDecimal());
-
         var existente = repository.buscarPorId(id);
         if (existente.isPresent()) {
-            var hashRecebido = PayloadHash.compute(command.tipo(), command.valor(), command.dataCompetencia(), command.descricao());
+            var hashRecebido = PayloadHash.compute(command.tipo(), command.valor(),
+                    command.dataCompetencia(), command.descricao());
             if (existente.get().getPayloadHash().equals(hashRecebido)) {
-                log.info("lancamento idempotente replay idempotency_key={}", command.idempotencyKey());
+                log.atInfo()
+                        .addKeyValue("event",           "lancamento_replay_idempotente")
+                        .addKeyValue("idempotency_key", command.idempotencyKey())
+                        .log("Replay idempotente — lançamento já existe com mesmo payload");
                 return existente.get();
             }
-            log.warn("lancamento conflitante idempotency_key={}", command.idempotencyKey());
+            log.atWarn()
+                    .addKeyValue("event",           "lancamento_conflitante")
+                    .addKeyValue("idempotency_key", command.idempotencyKey())
+                    .log("Conflito de idempotência — mesmo key, payload diferente");
             throw new LancamentoConflitanteException(command.idempotencyKey());
         }
 
         var lancamento = Lancamento.criar(
-            id,
-            command.tipo(),
-            command.valor(),
-            command.descricao(),
-            command.dataCompetencia(),
-            command.operadorId()
-        );
+                id, command.tipo(), command.valor(),
+                command.descricao(), command.dataCompetencia(), command.operadorId());
 
         var salvo = repository.salvar(lancamento);
         outbox.registrar(salvo);
 
-        log.info("lancamento registrado idempotency_key={} operador={}",
-                command.idempotencyKey(), command.operadorId());
+        log.atInfo()
+                .addKeyValue("event",           "lancamento_registrado")
+                .addKeyValue("idempotency_key", command.idempotencyKey())
+                .addKeyValue("tipo",            command.tipo())
+                .addKeyValue("operador_id",     command.operadorId())
+                .log("Lançamento registrado com sucesso");
 
         return salvo;
     }

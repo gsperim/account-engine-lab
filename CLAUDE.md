@@ -41,7 +41,7 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 
 ## Estado Atual
 
-**Data:** 2026-05-17 | **Branch:** `main` (entregue) + `feat/chaos-engineering` (pendente de merge)
+**Data:** 2026-05-17 | **Branch:** `develop` (pós merge de `feat/structured-logging`)
 **Repositório:** https://github.com/gsperim/account-engine-lab
 
 ### Etapas concluídas
@@ -51,11 +51,13 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 - ✅ Etapa 4 — Dados e Persistência (ADR-012)
 - ✅ Etapa 5 — Segurança
 - ✅ Etapa 6 — Observabilidade (stack PLG + Tempo + OTEL + 4 dashboards Grafana)
-- 🔄 Etapa 7 — Implementação (JWT ✅; pendentes: Outbox cleanup + DLQ consumer)
+- ✅ Etapa 7 — Implementação (completa)
+- ✅ Etapa 8 — CI/CD + Chaos Engineering (completa)
+- ✅ Observabilidade avançada — logs estruturados + tracing end-to-end (completa)
 
-### Onde estamos agora — Etapa 7 COMPLETA / Etapa 8 em progresso
+### Onde estamos agora — Etapas 7, 8 e Observabilidade avançada COMPLETAS
 
-**Data:** 2026-05-16 | **85 testes verdes** (49 lançamentos + 36 consolidado)
+**Data:** 2026-05-17 | **106 testes verdes** (lançamentos + consolidado)
 
 #### ✅ Etapa 7 — tudo entregue
 
@@ -91,15 +93,23 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 | Backoffice de DLQ | Replay controlado com audit trail — mencionado no `DlqConsumer.java` |
 | Idempotência com payload diferente para estorno | Estorno já é idempotente via UUID derivado; conflito de payload não verificado |
 
-#### Melhorias de observabilidade em andamento (`feat/chaos-engineering`)
-| Item | Observação |
-|------|-----------|
-| RabbitMQ observation-enabled | `spring.rabbitmq.listener.simple.observation-enabled=true` + `spring.rabbitmq.template.observation-enabled=true` — propaga traceId para logs do consumer |
-| Logs estruturados (addKeyValue) | Substituir interpolação de string por campos JSON de primeiro nível no Logstash — `LancamentoEventoConsumer` e demais adapters |
-| Build info no MDC | Injetar `version` e `commit_hash` via `build-info` do Actuator |
+#### ✅ Observabilidade avançada — `feat/structured-logging` COMPLETA
+
+| Item | Estado | Detalhe |
+|------|--------|---------|
+| `LoggingContextFilter` | ✅ | HTTP method + path no MDC para todos os requests, nos dois serviços |
+| `MessagingLogContextAspect` | ✅ | Wraps `@RabbitListener` automaticamente — correlation_id + cleanup MDC sem try/finally |
+| RabbitMQ observation-enabled | ✅ | traceId propaga pelo RabbitMQ (publisher + consumer); confirmado no Loki |
+| Logs estruturados (SLF4J fluent API) | ✅ | `addKeyValue("event", ...)` + `.setCause(t)` em 20 pontos de log nos dois serviços |
+| `RestClient.Builder` injetado | ✅ | `LancamentosGatewayAdapter` usa builder auto-configurado → trace propaga em chamadas HTTP |
+| Campo `event` no Loki | ✅ | Promtail extrai `event` para structured_metadata |
+| Logs Keycloak no Grafana | ✅ | Promtail `output: source: message` restrito a serviços Spring |
+| OTEL no outbox-relay | ✅ | `MANAGEMENT_OTLP_TRACING_ENDPOINT` + rede `observability` adicionados |
+| `MethodArgumentTypeMismatchException` → 400 | ✅ | `GlobalExceptionHandler` lançamentos retorna 400 para UUID inválido no header |
+| Stress test 14.66% falhas | ✅ corrigido | Bug no `stress.js`: token estático do `setup()` expirava aos 5min; teste dura 7min → 401 nos últimos 60s com clock skew 60s do Spring Security. Fix: `expiresAt` no setup + `getCaixaToken/getGestorToken` com renovação per-VU gradual |
+| Build info no MDC | 🔲 pendente futuro | `version` + `commit_hash` via `build-info` do Actuator — não bloqueia merge |
 
 #### Próximas etapas
-- **Melhorias de observabilidade** — itens acima (branch `feat/chaos-engineering`)
 - **Frontend Angular** — plano em `docs/implementacao/frontend.md`
 - **Etapa 9** — Documentação Final e publicação
 

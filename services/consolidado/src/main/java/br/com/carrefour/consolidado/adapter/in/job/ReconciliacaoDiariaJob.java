@@ -27,8 +27,8 @@ public class ReconciliacaoDiariaJob {
             SaldoConsolidadoRepository repository,
             MeterRegistry meterRegistry) {
         this.lancamentosGateway = lancamentosGateway;
-        this.repository = repository;
-        this.divergenciasTotal = Counter.builder("saldo_reconciliado_divergencias_total")
+        this.repository         = repository;
+        this.divergenciasTotal  = Counter.builder("saldo_reconciliado_divergencias_total")
                 .description("Divergências detectadas na reconciliação diária")
                 .register(meterRegistry);
     }
@@ -36,36 +36,56 @@ public class ReconciliacaoDiariaJob {
     @Scheduled(cron = "0 0 2 * * *")
     public void reconciliar() {
         var ontem = LocalDate.now().minusDays(1);
-        log.info("reconciliacao_inicio data={}", ontem);
+
+        log.atInfo()
+                .addKeyValue("event", "reconciliacao_inicio")
+                .addKeyValue("data",  ontem)
+                .log("Reconciliação diária iniciada");
 
         try {
-            var resumo = lancamentosGateway.buscarResumoDiario(ontem);
+            var resumo   = lancamentosGateway.buscarResumoDiario(ontem);
             var saldoOpt = repository.buscarPorData(ontem);
 
             if (saldoOpt.isEmpty()) {
                 if (resumo.totalLancamentos() > 0) {
-                    log.error("reconciliacao_divergencia data={} motivo=saldo_ausente lancamentos={}",
-                            ontem, resumo.totalLancamentos());
+                    log.atError()
+                            .addKeyValue("event",       "reconciliacao_divergencia")
+                            .addKeyValue("data",        ontem)
+                            .addKeyValue("motivo",      "saldo_ausente")
+                            .addKeyValue("lancamentos", resumo.totalLancamentos())
+                            .log("Divergência: saldo consolidado ausente para data com lançamentos");
                     divergenciasTotal.increment();
                 }
                 return;
             }
 
-            var saldo = saldoOpt.get();
+            var saldo       = saldoOpt.get();
             var diffCreditos = resumo.totalCreditos().subtract(saldo.getTotalCreditos()).abs();
             var diffDebitos  = resumo.totalDebitos().subtract(saldo.getTotalDebitos()).abs();
 
             if (diffCreditos.compareTo(TOLERANCIA) > 0 || diffDebitos.compareTo(TOLERANCIA) > 0) {
-                log.error("reconciliacao_divergencia data={} creditos_lancamentos={} creditos_consolidado={} debitos_lancamentos={} debitos_consolidado={}",
-                        ontem,
-                        resumo.totalCreditos(), saldo.getTotalCreditos(),
-                        resumo.totalDebitos(), saldo.getTotalDebitos());
+                log.atError()
+                        .addKeyValue("event",                "reconciliacao_divergencia")
+                        .addKeyValue("data",                 ontem)
+                        .addKeyValue("creditos_lancamentos", resumo.totalCreditos())
+                        .addKeyValue("creditos_consolidado", saldo.getTotalCreditos())
+                        .addKeyValue("debitos_lancamentos",  resumo.totalDebitos())
+                        .addKeyValue("debitos_consolidado",  saldo.getTotalDebitos())
+                        .log("Divergência de valores entre lançamentos e consolidado");
                 divergenciasTotal.increment();
             } else {
-                log.info("reconciliacao_ok data={} lancamentos={}", ontem, resumo.totalLancamentos());
+                log.atInfo()
+                        .addKeyValue("event",      "reconciliacao_ok")
+                        .addKeyValue("data",       ontem)
+                        .addKeyValue("lancamentos", resumo.totalLancamentos())
+                        .log("Reconciliação concluída sem divergências");
             }
         } catch (Exception e) {
-            log.error("reconciliacao_erro data={} motivo={}", ontem, e.getMessage());
+            log.atError()
+                    .addKeyValue("event", "reconciliacao_erro")
+                    .addKeyValue("data",  ontem)
+                    .setCause(e)
+                    .log("Erro na reconciliação diária");
         }
     }
 }

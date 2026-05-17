@@ -100,18 +100,30 @@ adapter/out/messaging/   → RabbitMQ publisher (só em lançamentos)
     LancamentoTest · ValorTest · SaldoConsolidadoTest
 ```
 
-**Total: 71 testes** — 42 em lançamentos, 29 em consolidado.
+**Total: 106 testes** — lançamentos + consolidado (cresceu com handlers no GlobalExceptionHandler).
 
 ---
 
 ## Decisões de implementação não óbvias
 
 - **`TipoMovimento` no consolidado é um tipo próprio**, não importado de lançamentos — bounded context deliberadamente separado. O `LancamentoEventoConsumer` faz a tradução (Anti-Corruption Layer).
-- **Outbox polling via `@Scheduled`** — implementação antecipada da Etapa 8. A versão com Debezium CDC está planejada como diferencial na Etapa 8.
+- **Outbox polling via `@Scheduled`** — relay em container separado (`outbox-relay`). A publicação usa `OutboxPublisher` (componente distinto de `OutboxRelay`) para que o Spring AOP aplique `@CircuitBreaker` + `@Retry` corretamente — self-invocation bypassa o proxy.
 - **Virtual Threads habilitadas** (`spring.threads.virtual.enabled=true`) — alinha com o NFR de throughput do consolidado (50 req/s).
 - **OpenAPI Generator na build** — qualquer mudança no contrato `.yaml` quebra a compilação se o controller não implementar a nova interface. Essa é a intenção: contratos são lei.
 - **`@WebMvcTest` + Spring Security**: não usar `@EnableMethodSecurity` (quebra detecção de `@RequestMapping` em interfaces CGLIB-proxied). Regras de autorização ficam no `SecurityFilterChain`. Nos testes: `@Import(SecurityConfig.class)` + `@MockitoBean JwtDecoder` + `SecurityMockMvcRequestPostProcessors.jwt()`. Paths nos testes devem ser os do contrato (`/registros`, `/saldo`), não os prefixos do Traefik.
 - **`operadorId` vem do claim `sub` do JWT** (UUID Keycloak) — fallback para `preferred_username` se ausente. Extraído via `SecurityContextHolder` no `LancamentoController`.
+- **Logging estruturado via SLF4J 2.0 fluent API** — `addKeyValue("event", ...)` + `.setCause(t)`. Contexto de sessão (http_method, http_path, correlation_id) via MDC no `LoggingContextFilter` / `MessagingLogContextAspect`; por-evento via `addKeyValue`. Não usar `logstash-logback-encoder` (exigiria logback XML).
+- **`RestClient.Builder` injetado** — `LancamentosGatewayAdapter` recebe `RestClient.Builder` via DI. Instanciar `RestClient.builder()` diretamente (estático) desliga a instrumentação do Micrometer e quebra a propagação de trace.
+- **`MessagingLogContextAspect`** — AOP em `@RabbitListener` apenas para ciclo de vida do MDC (salva/restaura contexto). Não logar entrada/saída de método — gera ruído. Consumers sem try/finally de MDC.
+
+### Rastreabilidade — Observabilidade (logging estruturado + tracing)
+| Artefato | Arquivo |
+|---|---|
+| MDC por request HTTP | `lancamentos/.../adapter/in/rest/LoggingContextFilter.java` · `consolidado/.../adapter/in/rest/LoggingContextFilter.java` |
+| MDC por consumer RabbitMQ | `consolidado/.../adapter/in/messaging/MessagingLogContextAspect.java` — `@Around @RabbitListener` |
+| Propagação trace RabbitMQ | `application.properties` — `spring.rabbitmq.listener.simple.observation-enabled=true` (consolidado) + `spring.rabbitmq.template.observation-enabled=true` (lancamentos) |
+| Propagação trace HTTP outbound | `LancamentosGatewayAdapter` — `RestClient.Builder` injetado pelo Spring |
+| Promtail pipeline | `observability/promtail.yml` — extrai `event`, `trace_id`, `span_id`, `correlation_id`; output restrito a serviços Spring |
 
 ### Rastreabilidade — Segurança (ADR-004 / ADR-014)
 | Artefato | Arquivo |
@@ -125,13 +137,13 @@ adapter/out/messaging/   → RabbitMQ publisher (só em lançamentos)
 
 ---
 
-## Estado da implementação — Etapa 7 completa
+## Estado da implementação — Etapas 7 e 8 completas
 
-**85 testes verdes** (49 lançamentos + 36 consolidado). Todos os endpoints da Etapa 7 implementados.
+**106 testes verdes**. Todos os endpoints implementados e cobertos.
 
-| Serviço | Novos artefatos (sessão 2026-05-16) |
-|---------|-------------------------------------|
-| lancamentos | `OutboxRelay.limparPublicados()`, `DlqConsumer`, `PayloadHash`, `LancamentoConflitanteException`, `EstornarLancamentoService`, `ResumoDiarioService`, migrations V4 (payload_hash) e V5 (estornado) |
-| consolidado | `DlqConsumer`, `LancamentosGateway` + `LancamentosGatewayAdapter`, `ReconciliacaoDiariaJob`, `ReconstruirConsolidadoService`, `AdminController` |
+| Serviço | Artefatos relevantes (2026-05-16/17) |
+|---------|--------------------------------------|
+| lancamentos | `OutboxPublisher` (AOP fix), `EstornarLancamentoService` (pessimistic lock), `LoggingContextFilter`, `LoggingContextFilter`, logs refatorados |
+| consolidado | `MessagingLogContextAspect`, `LoggingContextFilter`, `LancamentosGatewayAdapter` (RestClient.Builder), logs refatorados |
 
 Pendente para versões futuras: backoffice de DLQ com replay controlado e audit trail.

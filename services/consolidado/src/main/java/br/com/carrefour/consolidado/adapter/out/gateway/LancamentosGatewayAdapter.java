@@ -17,9 +17,10 @@ public class LancamentosGatewayAdapter implements LancamentosGateway {
     private final RestClient restClient;
 
     public LancamentosGatewayAdapter(
+            RestClient.Builder builder,
             @Value("${reconciliacao.lancamentos.base-url}") String baseUrl,
             @Value("${reconciliacao.lancamentos.service-token}") String serviceToken) {
-        this.restClient = RestClient.builder()
+        this.restClient = builder
                 .baseUrl(baseUrl)
                 .defaultHeader("Authorization", "Bearer " + serviceToken)
                 .build();
