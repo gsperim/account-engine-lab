@@ -55,17 +55,20 @@ jobs:
         run: mkdocs build --verbose
 
       # ── Structurizr → HTML estático ─────────────────────────────────────────
+      # structurizr/cli está descontinuado; site-generatr (avisi-cloud) é a
+      # ferramenta mantida para gerar HTML estático a partir de workspace.dsl.
+      # Monta apenas a pasta structurizr/ para excluir o symlink docs/ e manter
+      # a exportação C4 separada da documentação MkDocs.
       - name: Exportar C4 — HTML estático (Structurizr)
         run: |
-          mkdir -p site/c4
+          mkdir -p /tmp/c4-model site/c4
+          cp structurizr/workspace.dsl structurizr/workspace.json /tmp/c4-model/ 2>/dev/null || true
+          cp structurizr/theme.json /tmp/c4-model/ 2>/dev/null || true
           docker run --rm \
-            -v "$GITHUB_WORKSPACE/structurizr:/usr/local/structurizr" \
-            structurizr/cli:latest \
-            export \
-            -workspace workspace.dsl \
-            -format static \
-            -output /usr/local/structurizr/static
-          cp -r structurizr/static/* site/c4/
+            -v "/tmp/c4-model:/var/model" \
+            ghcr.io/avisi-cloud/structurizr-site-generatr:latest \
+            generate-site -w workspace.dsl
+          cp -r /tmp/c4-model/dist/* site/c4/
 
       # ── Relatórios de testes (último CI verde em main) ──────────────────────
       - name: Baixar relatório — lancamentos
