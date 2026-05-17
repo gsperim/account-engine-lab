@@ -11,8 +11,10 @@
  *   6–7min  → recuperação
  *
  * Tokens JWT:
- *   Cada VU obtém seu próprio token e renova automaticamente antes do vencimento.
- *   Duração total = 7min > TTL de 5min → renovação transparente por VU.
+ *   setup() obtém um token compartilhado (evita thundering herd no boot).
+ *   Cada VU usa esse token até 30s antes de expirar; após isso, renova per-VU via
+ *   auth.js (1 chamada ao Keycloak por VU, com cache subsequente).
+ *   Duração total = 7min > TTL de 5min — coberta por essa renovação gradual.
  *
  * Execução:
  *   k6 run tests/k6/stress.js
@@ -35,13 +37,25 @@ const taxaRateLimit      = new Rate('rate_limit_atingido');
 const lancamentosOk      = new Counter('lancamentos_ok');
 const lancamentosFalha   = new Counter('lancamentos_falha');
 
-// Busca tokens uma única vez antes de todos os VUs iniciarem.
-// Evita thundering herd de centenas de VUs autenticando simultaneamente no Keycloak.
+// Busca tokens uma única vez antes de todos os VUs iniciarem para evitar thundering
+// herd no Keycloak com centenas de VUs autenticando simultaneamente no início.
+// expiresAt marca 30s antes da expiração real (mesmo buffer do auth.js).
 export function setup() {
   return {
     tokenCaixa:  tokenCaixa(),
     tokenGestor: tokenGestor(),
+    expiresAt:   Math.floor(Date.now() / 1000) + 300 - 30,
   };
+}
+
+// Usa token compartilhado enquanto válido; após expiresAt, delega ao auth.js
+// que faz login uma única vez por VU e cacheia (sem chamadas extras ao Keycloak).
+function getCaixaToken(data) {
+  return Math.floor(Date.now() / 1000) < data.expiresAt ? data.tokenCaixa : tokenCaixa();
+}
+
+function getGestorToken(data) {
+  return Math.floor(Date.now() / 1000) < data.expiresAt ? data.tokenGestor : tokenGestor();
 }
 
 // IP fictício fixo por VU — cada VU simula um cliente distinto para o rate limit por IP do Traefik
@@ -93,7 +107,7 @@ export const options = {
 export function consultarConsolidado(data) {
   const date = dataAleatoria();
   const res  = http.get(`${CONSOLIDACAO_URL}/saldo/${date}`, {
-    headers: { ...HEADERS, Authorization: `Bearer ${data.tokenGestor}`, 'X-Forwarded-For': vuIP() },
+    headers: { ...HEADERS, Authorization: `Bearer ${getGestorToken(data)}`, 'X-Forwarded-For': vuIP() },
     timeout: '5s',
   });
 
@@ -116,7 +130,7 @@ export function registrarLancamento(data) {
   });
 
   const res = http.post(`${LANCAMENTOS_URL}/registros`, payload, {
-    headers: { ...HEADERS, 'Idempotency-Key': randomUUID(), Authorization: `Bearer ${data.tokenCaixa}` },
+    headers: { ...HEADERS, 'Idempotency-Key': randomUUID(), Authorization: `Bearer ${getCaixaToken(data)}` },
     timeout: '10s',
   });
 
