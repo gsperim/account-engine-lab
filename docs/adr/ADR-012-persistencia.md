@@ -124,3 +124,40 @@ Descartado. Memcached não suporta persistência (AOF/RDB) — um restart apaga 
 - **Duplicação de dados:** `lancamentos_processados` replica parte do estado de `lancamentos`. Custo: storage adicional e lógica de projeção. Benefício: isolamento de serviço e idempotência garantida.
 - **Recálculo full-scan por data no consumer:** `SELECT SUM FROM lancamentos_processados WHERE data = :data` faz um scan parcial a cada evento. Para volumes muito altos (milhares de lançamentos por dia), esse scan cresce — mitigado pelo índice em `data_competencia`.
 - **Latência do polling:** o Outbox Relay adiciona até 500ms de latência entre persistência e publicação. Aceitável para consistência eventual — não para casos de uso que exigem propagação em tempo real.
+
+---
+
+## ISO 4217 — Moeda e Evolution Path
+
+A **ISO 4217** padroniza códigos de moeda de três letras (BRL, USD, EUR) usados em sistemas financeiros para garantir portabilidade e ausência de ambiguidade na representação de valores monetários.
+
+### Escopo atual — single-currency
+
+O sistema opera exclusivamente em **BRL (Real Brasileiro)**. O campo `valor` armazena o montante sem campo de moeda explícito — a moeda é implícita pelo contexto do sistema. Essa decisão foi tomada conscientemente por:
+
+- O enunciado do desafio não menciona operação multi-moeda
+- Adicionar `moeda VARCHAR(3)` agora sem requisito imediato seria YAGNI
+- O tipo `NUMERIC(15,2)` garante precisão independente de qual moeda for adotada no futuro
+
+O contrato OpenAPI documenta explicitamente: `"Valor em BRL — mínimo R$ 0,01, duas casas decimais"`.
+
+### Evolution Path — multi-moeda
+
+Quando o suporte a múltiplas moedas se tornar necessário, a migração é cirúrgica:
+
+```sql
+-- Migração incremental — não reescreve dados existentes
+ALTER TABLE lancamentos
+  ADD COLUMN moeda VARCHAR(3) NOT NULL DEFAULT 'BRL';
+
+ALTER TABLE consolidacao_diaria
+  ADD COLUMN moeda VARCHAR(3) NOT NULL DEFAULT 'BRL';
+
+-- Novo índice composto para consultas por data + moeda
+CREATE INDEX idx_consolidacao_data_moeda
+  ON consolidacao_diaria(data_competencia, moeda);
+```
+
+No modelo Java, `Valor` (value object) passaria a encapsular `BigDecimal montante` + `String moeda` (ISO 4217). O `NUMERIC(15,2)` mantém precisão para qualquer moeda com até 2 casas decimais; moedas com 3 casas decimais (KWD, BHD) exigiriam revisão para `NUMERIC(15,3)`.
+
+**Impacto na API:** o campo `moeda` seria adicionado ao OpenAPI como opcional com default `"BRL"` — compatibilidade com versão anterior preservada.

@@ -251,3 +251,21 @@ A degradação é **previsível, observável e recuperável** — os três pilar
 11. Restaurar consolidado
 12. Experimento 5 — Falha combinada      → validar degradação previsível
 ```
+
+---
+
+## ISO 31000 — Riscos Materializados e Evidências
+
+O Chaos Engineering é a aplicação prática da gestão de riscos prevista na **ISO 31000**: cada experimento materializa deliberadamente um risco operacional e verifica se os controles existentes são suficientes para manter o sistema dentro do apetite ao risco declarado.
+
+| Risco (ISO 31000) | Experimento | Controle testado | Resultado | Risco residual |
+|-------------------|:-----------:|-----------------|:---------:|:--------------:|
+| Falha de cache (Redis indisponível) | 1 | `CacheErrorHandler` → fallback PostgreSQL | ✅ `http_req_failed < 5%` | Muito baixo |
+| Falha do broker de mensagens | 2 | Outbox Pattern + Circuit Breaker Resilience4j | ✅ Lançamentos: 201; circuito abre e fecha | Baixo |
+| Degradação de latência de cache | 3 | Timeout Redis 200ms + fallback gracioso | ✅ `0.29%` de falha; p99 = 248ms | Muito baixo |
+| Falha do serviço dependente (consolidado) | 4 | Independência por design — NFR-01 | ✅ Lançamentos indiferentes | Muito baixo |
+| Falha combinada de múltiplos componentes | 5 | Todos os padrões de resiliência em conjunto | ✅ `0.05%` global; degradação previsível | Muito baixo |
+
+**Apetite ao risco declarado:** degradação parcial com disponibilidade mantida é aceitável; perda de lançamento ou saldo incorreto não detectado é inaceitável. Os experimentos confirmam que nenhum dos cenários testados viola esse apetite.
+
+> O registro de riscos completo e o plano de continuidade operacional estão em [Continuidade Operacional](continuidade.md).
