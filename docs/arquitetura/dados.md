@@ -130,6 +130,42 @@ O relay faz polling periódico (ex.: a cada 500ms) na `outbox` por registros com
 
 ---
 
+### Tabela `audit_log`
+
+Trilha de auditoria de operações de escrita — persistida de forma assíncrona após o commit da transação principal ([NFR-09](../negocio/requisitos.md#nfr-09)). Gerada pelo `AuditEventListener` via `@TransactionalEventListener(AFTER_COMMIT)` + `@Async`: o response HTTP já foi enviado quando o registro é gravado; falha no audit é logada e nunca propaga para a operação de negócio.
+
+```sql
+CREATE TABLE audit_log (
+    id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    operador_id VARCHAR(255) NOT NULL,
+    acao        VARCHAR(100) NOT NULL,
+    recurso_id  UUID,
+    contexto    TEXT,        -- JSON: campos relevantes da operação
+    criado_em   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_audit_log_operador ON audit_log(operador_id, criado_em DESC);
+CREATE INDEX idx_audit_log_recurso  ON audit_log(recurso_id) WHERE recurso_id IS NOT NULL;
+CREATE INDEX idx_audit_log_acao     ON audit_log(acao, criado_em DESC);
+```
+
+**Ações registradas:**
+
+| `acao` | `recurso_id` | `contexto` (JSON) |
+|--------|-------------|-------------------|
+| `lancamento.registrado` | UUID do lançamento | `{"tipo": "CREDITO", "valor": "150.00"}` |
+| `estorno.registrado` | UUID do estorno | `{"original_id": "...", "valor": "150.00"}` |
+
+**Decisões de design:**
+
+| Escolha | Motivo |
+|---------|--------|
+| Tabela separada de `lancamentos` | `lancamentos` retém os campos de rastreabilidade financeira (`operador_id`, `idempotency_key`, `payload_hash`); `audit_log` registra *ações* com contexto de negócio — propósitos distintos |
+| `contexto TEXT` (JSON sem schema fixo) | Cada ação tem campos relevantes diferentes; evita colunas nulas; permite evolução sem migration de schema |
+| `AFTER_COMMIT` + `@Async` | Audit não bloqueia a resposta ao cliente; falha no audit não reverte o lançamento — operação de negócio é prioritária |
+
+---
+
 ## Serviço de Consolidação — PostgreSQL
 
 ### Tabela `lancamentos_processados`
@@ -437,10 +473,11 @@ A tabela `lancamentos_processados` cresce na mesma proporção. A `consolidacao_
 |--------|----------------|
 | `lancamentos` | ~183 MB |
 | `outbox` (com limpeza semanal) | ~5 MB (estável) |
+| `audit_log` (retenção 5 anos) | ~20 MB |
 | `lancamentos_processados` | ~183 MB |
 | `consolidacao_diaria` | < 1 MB |
-| Índices (estimativa 40% das tabelas) | ~150 MB |
-| **Total** | **~522 MB** |
+| Índices (estimativa 40% das tabelas) | ~155 MB |
+| **Total** | **~547 MB** |
 
 Bem dentro do `db.t3.medium` (20 GB gp3) provisionado no Terraform — há espaço para crescimento de 40× antes de precisar aumentar o volume.
 
@@ -479,7 +516,7 @@ A implementação de auditoria na Etapa 7 registrará *quem* criou cada lançame
 | Artefato de auditoria | Onde fica | Contém dado pessoal |
 |----------------------|-----------|---------------------|
 | Log estruturado de cada requisição | CloudWatch Logs | Sim — `user_id`, IP |
-| Tabela `audit_log` (Etapa 7) | PostgreSQL (Lançamentos) | Sim — `operador_id`, timestamp |
+| Tabela `audit_log` | PostgreSQL (Lançamentos) | Sim — `operador_id`, timestamp |
 
 **3. Serviço de Autenticação (Etapa 7)**
 
@@ -491,13 +528,14 @@ Nome, e-mail e possivelmente CPF do Gestor e do Caixa. Completamente fora do esc
 |------|----------|-----------|
 | Registros financeiros (`lancamentos`, `consolidacao_diaria`) | **5 anos** | Obrigação fiscal — Lei 9.613/98, IN RFB 1.990/2020 |
 | Dados de auditoria em `lancamentos` (`operador_id`, `criado_em`, `idempotency_key`) | **5 anos** | Inerente à retenção do registro financeiro — dados de auditoria são colunas da própria tabela |
+| Tabela `audit_log` (`operador_id`, `acao`, `recurso_id`, `contexto`) | **5 anos** | Contém `operador_id` (dado pessoal — identificação do operador); retenção alinhada à obrigação fiscal do registro financeiro associado |
 | Logs estruturados (Loki local) | **7 dias** | Capacidade operacional — rotação automática |
 | Logs estruturados (CloudWatch) | **30 dias** | Investigação operacional |
 | Logs estruturados (S3 → IA) | **90 dias → indefinido** | LGPD art. 16 — legítimo interesse + compliance |
 | Cache Redis (`saldo:{data}`) | TTL 60s–1h | Dado derivado, não retido |
 | Outbox processada | **7 dias** | Janela operacional — sem obrigação legal após processamento |
 
-**Observação sobre auditoria:** a trilha de auditoria não está em uma tabela `audit_log` separada — está embutida na tabela `lancamentos` (colunas `operador_id`, `idempotency_key`, `payload_hash`, `criado_em`, `estorno_de`, `estornado_por`) e complementada pelos logs estruturados. Ver [Trilha de Auditoria](../seguranca/index.md#trilha-de-auditoria) para detalhes de implementação.
+**Observação sobre auditoria:** a trilha de auditoria opera em duas camadas complementares. A tabela `lancamentos` carrega os campos de rastreabilidade financeira imutáveis (`operador_id`, `idempotency_key`, `payload_hash`, `criado_em`, `estorno_de`, `estornado_por`). A tabela `audit_log` registra ações de negócio com contexto estruturado, persistida de forma assíncrona após o commit. Ver [Trilha de Auditoria](../seguranca/index.md#trilha-de-auditoria) para detalhes de implementação.
 
 ### Direito de exclusão (LGPD art. 18)
 

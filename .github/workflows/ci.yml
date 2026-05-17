@@ -168,3 +168,33 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           trivyignores: .trivyignore
+
+  infracost:
+    name: Custo estimado (Infracost)
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    # A chave é gratuita mas obrigatória — sem ela o job falha sem
+    # quebrar o CI. Obter em: https://dashboard.infracost.io
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Infracost
+        uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY || '' }}
+
+      - name: Gerar relatório HTML
+        run: |
+          infracost breakdown \
+            --config-file terraform/infracost.yml \
+            --format html \
+            --out-file index.html
+
+      - name: Upload relatório
+        uses: actions/upload-artifact@v4
+        with:
+          name: infracost-report
+          path: index.html
+          retention-days: 30

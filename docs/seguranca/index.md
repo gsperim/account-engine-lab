@@ -311,7 +311,13 @@ sequenceDiagram
 
 **Requisito:** [NFR-09](../negocio/requisitos.md#nfr-09) — toda operação de escrita deve gerar trilha imutável com identidade, timestamp UTC e recurso afetado.
 
-A trilha de auditoria é distribuída em duas camadas complementares: **dados** (o que aconteceu, com qual valor, por quem) e **observabilidade** (quando, em qual contexto, com qual trace). Não há uma tabela `audit_log` separada — os dados de auditoria estão embutidos na própria tabela `lancamentos` por design.
+A trilha de auditoria opera em três camadas complementares:
+
+| Camada | Artefato | O que registra |
+|--------|----------|---------------|
+| **Dados financeiros** | Tabela `lancamentos` | Campos de rastreabilidade imutáveis embutidos em cada registro |
+| **Ações de negócio** | Tabela `audit_log` | Ação realizada, operador, recurso afetado e contexto estruturado |
+| **Observabilidade** | Logs estruturados + tracing | Contexto de execução, trace distribuído, correlação com RabbitMQ |
 
 ### Dados imutáveis em `lancamentos`
 
@@ -338,6 +344,23 @@ Cada registro na tabela `lancamentos` carrega:
 
 A tabela é **append-only**: sem `UPDATE` nem `DELETE` sobre registros confirmados. Estornos geram um novo lançamento — nunca modificam o original. Retenção: **5 anos** (obrigação fiscal — Lei 9.613/98), ver [política de retenção](../arquitetura/dados.md#política-de-retenção).
 
+### Tabela `audit_log` — ações de negócio
+
+Registra *o que o operador fez*, com contexto de negócio por operação. Persistida de forma assíncrona pelo `AuditEventListener` após o commit da transação principal — o response HTTP já foi enviado quando o registro é gravado. Falha no audit é logada e nunca propaga para a operação de negócio.
+
+```
+AuditPublisher (port) → AuditPublisherAdapter → ApplicationEvent
+    → AuditEventListener @TransactionalEventListener(AFTER_COMMIT) @Async
+        → audit_log (PostgreSQL)
+```
+
+| `acao` | `recurso_id` | `contexto` (JSON) | Origem |
+|--------|-------------|-------------------|--------|
+| `lancamento.registrado` | UUID do lançamento | `{"tipo": "CREDITO", "valor": "150.00"}` | `RegistrarLancamentoService` |
+| `estorno.registrado` | UUID do estorno | `{"original_id": "...", "valor": "150.00"}` | `EstornarLancamentoService` |
+
+Retenção: **5 anos** — contém `operador_id` (dado pessoal vinculado ao registro financeiro), ver [política de retenção](../arquitetura/dados.md#política-de-retenção).
+
 ### Logs estruturados como trilha operacional
 
 Cada requisição gera um log estruturado JSON com os campos:
@@ -360,18 +383,16 @@ Esses logs são coletados pelo Promtail, indexados no Loki e correlacionados ao 
 
 ### Evidências capturadas por operação
 
-| Operação | Evidência em `lancamentos` | Evidência em log |
-|----------|---------------------------|-----------------|
-| Registro de lançamento | `id`, `operador_id`, `criado_em`, `idempotency_key`, `payload_hash` | `event: lancamento.registrado` |
-| Estorno | `id` novo + `estorno_de` apontando para original; original recebe `estornado_por` | `event: estorno.registrado` |
-| Tentativa duplicada (mesma key, payload diferente) | HTTP 409 — registro original preservado | `event: idempotency.conflito` |
-| Replay idempotente (mesma key, mesmo payload) | HTTP 200 — registro original retornado | `event: idempotency.replay` |
+| Operação | Em `lancamentos` | Em `audit_log` | Em log |
+|----------|-----------------|----------------|--------|
+| Registro de lançamento | `id`, `operador_id`, `criado_em`, `idempotency_key`, `payload_hash` | `lancamento.registrado` + tipo/valor | `event: lancamento.registrado` |
+| Estorno | `id` novo + `estorno_de` → original; original recebe `estornado_por` | `estorno.registrado` + original_id/valor | `event: estorno.registrado` |
+| Tentativa duplicada (mesma key, payload diferente) | HTTP 409 — registro original preservado | — (não chega ao use case) | `event: idempotency.conflito` |
+| Replay idempotente (mesma key, mesmo payload) | HTTP 200 — registro original retornado | — (não chega ao use case) | `event: idempotency.replay` |
 
 ### Rastreabilidade distribuída (tracing)
 
 Cada operação de lançamento registra um `correlation_id` no MDC via `LoggingContextFilter` e propaga o `traceId` pelo RabbitMQ até o Serviço de Consolidação. É possível rastrear o caminho completo de um lançamento — do request HTTP até a atualização do saldo consolidado — no Grafana Tempo via `traceId`.
-
-> **Evolução futura:** uma tabela `audit_log` dedicada (com `acao`, `recurso_id` e snapshot JSONB) agregaria mais contexto de negócio por operação. O `operador_id` e o `criado_em` já estão em `lancamentos`, portanto a migração seria aditiva — sem reescrever dados existentes.
 
 ---
 
