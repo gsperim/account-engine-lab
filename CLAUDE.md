@@ -41,7 +41,7 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 
 ## Estado Atual
 
-**Data:** 2026-05-16 | **Branch:** `main` (entregue) + `arch/etapa-7-implementacao` + `docs/mkdocs-material-features` (pendente de merge)
+**Data:** 2026-05-17 | **Branch:** `develop` (pós sessão 2026-05-17)
 **Repositório:** https://github.com/gsperim/account-engine-lab
 
 ### Etapas concluídas
@@ -51,11 +51,15 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 - ✅ Etapa 4 — Dados e Persistência (ADR-012)
 - ✅ Etapa 5 — Segurança
 - ✅ Etapa 6 — Observabilidade (stack PLG + Tempo + OTEL + 4 dashboards Grafana)
-- 🔄 Etapa 7 — Implementação (JWT ✅; pendentes: Outbox cleanup + DLQ consumer)
+- ✅ Etapa 7 — Implementação (completa)
+- ✅ Etapa 8 — CI/CD + Chaos Engineering (completa)
+- ✅ Observabilidade avançada — logs estruturados + tracing end-to-end (completa)
+- ✅ Conformidade normativa — ISO 8601/20022/4217/27001/22301/31000/37301 + OWASP ASVS (completa)
+- ✅ Audit log assíncrono — `audit_log` pós-commit em lançamentos (completa)
 
-### Onde estamos agora — Etapa 7 COMPLETA / Etapa 8 em progresso
+### Onde estamos agora — pré-Etapa 9
 
-**Data:** 2026-05-16 | **85 testes verdes** (49 lançamentos + 36 consolidado)
+**Data:** 2026-05-17 | **106+ testes verdes** (lançamentos + consolidado)
 
 #### ✅ Etapa 7 — tudo entregue
 
@@ -74,7 +78,7 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 | Documentação sincronizada | `stack.md`, `implementacao/index.md`, `dados.md`, `observabilidade/index.md` |
 | Hook pre-commit + protocolo de branch | Bloqueia commits diretos em `main`/`develop`; checklist no CLAUDE.md |
 
-#### ✅ Etapa 8 — CI/CD entregue (Chaos Engineering pendente)
+#### ✅ Etapa 8 — COMPLETA
 
 | Item | Detalhe |
 |------|---------|
@@ -82,6 +86,7 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 | `cd.yml` | Push para ECR via OIDC + GitHub Release — trigger manual (`workflow_dispatch`); requer `AWS_DEPLOY_ROLE_ARN` |
 | `docs.yml` | MkDocs build + deploy no GitHub Pages via GitHub Actions source — publicado em `https://gsperim.github.io/account-engine-lab/` |
 | CVEs corrigidos | netty 4.1.132→4.1.133 (CVE-2026-42583), postgresql 42.7.10→42.7.11 (CVE-2026-42198) via BOM override; `.trivyignore` para CVEs de OS da distroless |
+| Chaos Engineering | 5 experimentos executados com Pumba + k6; todos os NFRs confirmados — ver `docs/implementacao/caos.md` |
 | Frontend Angular | Plano completo em `docs/implementacao/frontend.md` — implementação após Etapa 8 completa |
 
 #### Pendentes para versões futuras
@@ -89,14 +94,20 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 |------|-----------|
 | Backoffice de DLQ | Replay controlado com audit trail — mencionado no `DlqConsumer.java` |
 | Idempotência com payload diferente para estorno | Estorno já é idempotente via UUID derivado; conflito de payload não verificado |
+| Build info no MDC | `version` + `commit_hash` via `build-info` do Actuator |
+
+#### ✅ Entregues nesta sessão (2026-05-17)
+
+| Item | Detalhe |
+|------|---------|
+| **fix/stress** | `stress.js`: token estático do `setup()` expirava em 5min com teste de 7min → 401 nos últimos 60s (clock skew 60s Spring Security = 14.66% falhas). Fix: `expiresAt` + helpers `getCaixaToken/getGestorToken` |
+| **docs/conformidade-normativa** | 7 normas ISO + OWASP ASVS aplicadas; 3 docs novos (`asvs.md`, `continuidade.md`, `conformidade.md`); mapeamento Anexo A ISO 27001 no `seguranca/index.md`; ISO 31000 em `caos.md`; ISO 20022 em ADR-001; ISO 4217 evolution path em ADR-012; `mkdocs.yml` — Segurança expandida de 1 para 4 páginas |
+| **fix/seguranca-claims-jwt** | Claims JWT alinhados com implementação real: TTL 5min (não 15min), `iss` real do realm Keycloak, `aud` = client ID, `jti` não usado como revogação, `preferred_username` adicionado, mecanismo de `role` documentado (atributo de usuário vs. hardcoded para PDV) |
+| **fix/trilha-auditoria** | Seção "Trilha de Auditoria" reescrita: removida tabela `audit_log` fictícia e mecanismo de headers gateway que não existem; documentada a trilha real (`operador_id` em `lancamentos` + logs estruturados); política de retenção expandida em `dados.md` |
+| **feat/audit-log** | `audit_log` assíncrono pós-commit em lançamentos: V6 Flyway, `AuditEvento` record, `AuditPublisher` port, `AuditPublisherAdapter`, `AuditEventListener` (`@TransactionalEventListener(AFTER_COMMIT)` + `@Async`), `@EnableAsync`; injetado em `RegistrarLancamentoService` e `EstornarLancamentoService`; `AuditEventListenerTest` |
 
 #### Próximo passo imediato
-- **Chaos Engineering** — executar os 5 experimentos do `docs/implementacao/caos.md` com Pumba + k6 + evidências Grafana (único item restante da Etapa 8)
-
-#### Próximas etapas
-- **Etapa 8** — Chaos Engineering (pendente)
-- **Frontend Angular** — após Etapa 8 (plano em `docs/implementacao/frontend.md`)
-- **Etapa 9** — Documentação Final e publicação
+**Etapa 9 — Documentação Final e publicação**
 
 ### Stack técnico (referência rápida)
 - **Serviços:** Spring Boot 3.5.14 + Java 21, Arquitetura Hexagonal + DDD Tático

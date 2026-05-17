@@ -104,3 +104,20 @@ O split de deployment é a evolução correta se:
 3. A idempotência do consumer precisar de controle mais rigoroso (ex: exatamente um único consumer ativo)
 
 Nesse caso, `consolidado-worker` e `consolidado-api` já estão conceptualmente separados no código — o split de deployment é uma decisão de infraestrutura, não uma refatoração de domínio.
+
+---
+
+## Alinhamento Semântico com ISO 20022
+
+A ISO 20022 é o padrão internacional de mensagens financeiras usado por sistemas de pagamento, câmaras de compensação e bancos centrais. O sistema não implementa os schemas técnicos da norma (fora do escopo para um sistema interno de controle de caixa), mas **alinha deliberadamente sua terminologia de domínio** com os conceitos canônicos que a norma define.
+
+| Conceito ISO 20022 | Implementação no sistema | Por quê importa |
+|--------------------|--------------------------|----------------|
+| *CreditTransfer* | `TipoMovimento.CREDITO` | Evita terminologia ambígua ("entrada", "recebimento") — alinha com semântica universal |
+| *DebitTransfer* | `TipoMovimento.DEBITO` | Idem para saídas |
+| *ReversalTransaction* | Estorno via `POST /registros/{id}/estorno` — novo lançamento com tipo inverso | Nunca modifica o original — alinha com o conceito de reversão como nova transação |
+| *ValueDate* | `data_competencia` | Distingue a data do fato econômico da data de processamento (`criado_em`) |
+| *UniqueTransactionReference* | `Idempotency-Key` (UUID v4) no header HTTP | Rastreabilidade de ponta a ponta — cada transação tem referência única imutável |
+| *AccountStatement* | Saldo consolidado diário (`SaldoConsolidado`) | O consolidado é um *statement* por dia — leitura de saldo, não de lançamentos individuais |
+
+Este alinhamento facilita integrações futuras com sistemas bancários ou de pagamento que falem ISO 20022 nativamente, sem exigir refatoração do modelo de domínio.

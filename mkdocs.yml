@@ -117,7 +117,11 @@ nav:
     - Stack e Ferramentas: stack.md
     - Decisões Arquiteturais: adr/index.md
 
-  - Segurança: seguranca/index.md
+  - Segurança:
+    - Visão Geral: seguranca/index.md
+    - OWASP ASVS: seguranca/asvs.md
+    - Continuidade Operacional: seguranca/continuidade.md
+    - Conformidade e Evidências: seguranca/conformidade.md
 
   - Observabilidade: observabilidade/index.md
 

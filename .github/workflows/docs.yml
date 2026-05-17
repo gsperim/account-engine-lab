@@ -7,10 +7,16 @@ on:
       - 'docs/**'
       - 'mkdocs.yml'
       - 'requirements.txt'
+      - 'structurizr/**'
       - '.github/workflows/docs.yml'
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
   pages: write
   id-token: write
@@ -23,6 +29,10 @@ jobs:
   build:
     name: Build documentação
     runs-on: ubuntu-latest
+    # Quando disparado por workflow_run, só continua se o CI passou
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
 
     steps:
       - uses: actions/checkout@v4
@@ -43,6 +53,48 @@ jobs:
 
       - name: Build MkDocs
         run: mkdocs build --verbose
+
+      # ── Structurizr → HTML estático ─────────────────────────────────────────
+      - name: Exportar C4 — HTML estático (Structurizr)
+        run: |
+          mkdir -p site/c4
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE/structurizr:/usr/local/structurizr" \
+            structurizr/cli:latest \
+            export \
+            -workspace workspace.dsl \
+            -format static \
+            -output /usr/local/structurizr/static
+          cp -r structurizr/static/* site/c4/
+
+      # ── Relatórios de testes (último CI verde em main) ──────────────────────
+      - name: Baixar relatório — lancamentos
+        uses: dawidd6/action-download-artifact@v9
+        with:
+          workflow: ci.yml
+          branch: main
+          name: test-results-lancamentos
+          path: site/tests/lancamentos
+          if_no_artifact_found: warn
+
+      - name: Baixar relatório — consolidado
+        uses: dawidd6/action-download-artifact@v9
+        with:
+          workflow: ci.yml
+          branch: main
+          name: test-results-consolidado
+          path: site/tests/consolidado
+          if_no_artifact_found: warn
+
+      # ── Infracost (último CI verde em main) ─────────────────────────────────
+      - name: Baixar relatório Infracost
+        uses: dawidd6/action-download-artifact@v9
+        with:
+          workflow: ci.yml
+          branch: main
+          name: infracost-report
+          path: site/infracost
+          if_no_artifact_found: warn
 
       - name: Upload artefato para Pages
         uses: actions/upload-pages-artifact@v3

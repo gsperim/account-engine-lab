@@ -84,9 +84,11 @@ scrape_configs:
           - http://tempo:3200/ready
           # Dados (15692 = metrics plugin, sem auth)
           - http://rabbitmq:15692/metrics
-          # Etapa 7 — serviços de aplicação
+          # Serviços de aplicação
           - http://lancamentos:8080/health/live
+          - http://lancamentos:8080/health/ready
           - http://consolidado:8080/health/live
+          - http://consolidado:8080/health/ready
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

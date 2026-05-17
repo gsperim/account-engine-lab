@@ -3,15 +3,22 @@ package br.com.carrefour.lancamentos.adapter.out.persistence;
 import br.com.carrefour.lancamentos.domain.model.TipoLancamento;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface LancamentoJpaRepository extends JpaRepository<LancamentoJpaEntity, UUID> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT l FROM LancamentoJpaEntity l WHERE l.id = :id")
+    Optional<LancamentoJpaEntity> findByIdForUpdate(@Param("id") UUID id);
 
     Page<LancamentoJpaEntity> findByDataCompetencia(LocalDate data, Pageable pageable);
 

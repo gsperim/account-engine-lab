@@ -5,19 +5,14 @@ import br.com.carrefour.consolidado.domain.port.in.ProcessarLancamentoUseCase;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
-
-import java.util.Optional;
-import java.util.UUID;
 
 @Component
 public class LancamentoEventoConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(LancamentoEventoConsumer.class);
-    private static final String CORRELATION_HEADER = "X-Correlation-ID";
 
     private final ProcessarLancamentoUseCase processarUseCase;
 
@@ -28,33 +23,36 @@ public class LancamentoEventoConsumer {
     @RabbitListener(queues = RabbitConfig.QUEUE)
     @CircuitBreaker(name = "rabbit-consumer", fallbackMethod = "consumirFallback")
     public void consumir(LancamentoRegistradoEvento evento, Message amqpMessage) {
-        var correlationId = Optional.ofNullable(
-                amqpMessage.getMessageProperties().<String>getHeader(CORRELATION_HEADER))
-                .orElseGet(() -> UUID.randomUUID().toString());
+        var payload = evento.payload();
 
-        MDC.put("correlation_id", correlationId);
-        try {
-            var payload = evento.payload();
-            log.info("evento recebido lancamento_id={} tipo={} valor={}",
-                    payload.lancamentoId(), payload.tipo(), payload.valor());
+        log.atInfo()
+                .addKeyValue("event",         "evento_recebido")
+                .addKeyValue("lancamento_id", payload.lancamentoId())
+                .addKeyValue("tipo",          payload.tipo())
+                .log("Evento de lançamento recebido");
 
-            processarUseCase.executar(new ProcessarLancamentoUseCase.Command(
-                    payload.lancamentoId(),
-                    TipoMovimento.de(payload.tipo()),
-                    payload.valor(),
-                    payload.dataCompetencia()
-            ));
+        processarUseCase.executar(new ProcessarLancamentoUseCase.Command(
+                payload.lancamentoId(),
+                TipoMovimento.de(payload.tipo()),
+                payload.valor(),
+                payload.dataCompetencia()
+        ));
 
-            log.info("saldo atualizado lancamento_id={} data={}", payload.lancamentoId(), payload.dataCompetencia());
-        } finally {
-            MDC.remove("correlation_id");
-        }
+        log.atInfo()
+                .addKeyValue("event",         "saldo_atualizado")
+                .addKeyValue("lancamento_id", payload.lancamentoId())
+                .addKeyValue("data",          payload.dataCompetencia())
+                .log("Saldo consolidado atualizado");
     }
 
-    // Fallback: circuit aberto — rejeita a mensagem para a DLQ em vez de bloquear o listener.
+    @SuppressWarnings("unused")
     private void consumirFallback(LancamentoRegistradoEvento evento, Message amqpMessage, Throwable t) {
-        log.error("consumer_circuit_aberto lancamento_id={} motivo={} — mensagem encaminhada para DLQ",
-                evento.payload().lancamentoId(), t.getMessage());
+        log.atError()
+                .addKeyValue("event",         "consumer_circuit_aberto")
+                .addKeyValue("lancamento_id", evento.payload().lancamentoId())
+                .addKeyValue("motivo",        t.getMessage())
+                .setCause(t)
+                .log("Circuit breaker aberto — mensagem encaminhada para DLQ");
         throw new RuntimeException("circuit breaker aberto: " + t.getMessage(), t);
     }
 }

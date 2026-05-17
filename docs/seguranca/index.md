@@ -89,37 +89,60 @@ flowchart LR
 
 ### Claims e Escopos JWT
 
-Todo access token carrega os seguintes claims relevantes para autorização:
+Todo access token carrega os seguintes claims relevantes para autorização. O exemplo abaixo representa um token real emitido pelo Keycloak para o usuário `caixa.demo`:
 
 ```json
 {
-  "sub":    "usr_7f3b9a10",
-  "iss":    "https://auth.fluxocaixa.internal",
-  "aud":    "api.fluxocaixa",
-  "exp":    1746800000,
-  "iat":    1746799100,
-  "jti":    "550e8400-e29b-41d4-a716-446655440000",
-  "role":   "caixa",
-  "scope":  "lancamentos:write lancamentos:read"
+  "sub":                "3f2b9c10-e7d4-4a1b-9f3e-446655440000",
+  "iss":                "http://gw-keycloak:8080/realms/fluxocaixa",
+  "aud":                ["frontend-app"],
+  "exp":                1746800300,
+  "iat":                1746800000,
+  "jti":                "550e8400-e29b-41d4-a716-446655440000",
+  "preferred_username": "caixa.demo",
+  "role":               "caixa",
+  "scope":              "openid lancamentos:write lancamentos:read consolidacao:read"
 }
 ```
 
-| Claim | Finalidade |
-|-------|-----------|
-| `sub` | Identificador único do sujeito — usado para auditoria ([NFR-09](../negocio/requisitos.md#nfr-09)) |
-| `jti` | JWT ID único — chave de idempotência na lista de revogação |
-| `role` | Papel do ator (`caixa`, `gestor`, `pdv`, `admin`) |
-| `scope` | Escopos autorizados — validados pelo API Gateway e pelos serviços |
-| `exp` | Expiração — TTL de **15 minutos** para access tokens |
+| Claim | Finalidade | Observação |
+|-------|-----------|------------|
+| `sub` | UUID do operador no Keycloak — gravado como `operadorId` em cada lançamento ([NFR-09](../negocio/requisitos.md#nfr-09)) | Incluído via scope `basic` (mapper `oidc-sub-mapper`) |
+| `preferred_username` | Username do operador — fallback de `operadorId` quando `sub` está ausente | Incluído via scope `basic` |
+| `role` | Papel do ator: `caixa`, `gestor`, `admin` (usuários humanos) ou `pdv` (hardcoded no cliente) | Mapeado pelo `jwtAuthenticationConverter` para `ROLE_CAIXA`, `ROLE_GESTOR`, etc. |
+| `scope` | Escopos concedidos — presença verificada nos dois serviços via Spring Security | Escopos do sistema são **opcionais** — devem ser solicitados explicitamente no fluxo de autenticação |
+| `iss` | Issuer do realm Keycloak — validado automaticamente pelo `oauth2-resource-server` | Formato: `http://<host>/realms/<realm-name>` |
+| `aud` | Client ID que solicitou o token | Sem audience mapper configurado — padrão Keycloak |
+| `exp` | Expiração — TTL de **5 minutos** (300 s configurados no realm) | — |
+| `jti` | JWT ID único — presente no token, não usado ativamente pelo sistema | Revogação por `jti` foi descartada em [ADR-013](../adr/ADR-013-revogacao-tokens.md) |
+
+#### Como `role` chega ao token
+
+O mecanismo difere conforme o tipo de ator:
+
+| Ator | Client | Mecanismo no realm | Resultado no token |
+|------|--------|-------------------|--------------------|
+| Caixa / Gestor / Admin | `frontend-app` | `oidc-usermodel-attribute-mapper` — lê o atributo `role` do usuário Keycloak | `"role": "caixa"` (valor do atributo) |
+| Sistema PDV | `pdv-service` | `oidc-hardcoded-claim-mapper` — valor fixo no cliente, sem usuário | `"role": "pdv"` (sempre) |
+
+#### Como o serviço usa os claims
+
+O `jwtAuthenticationConverter` em ambos os serviços converte:
+- `scope` → authorities `SCOPE_lancamentos:write`, `SCOPE_lancamentos:read`, etc.
+- `role` → authority `ROLE_CAIXA`, `ROLE_GESTOR`, `ROLE_PDV`, `ROLE_ADMIN`
+
+O `LancamentoController` extrai `operadorId` chamando `jwt.getSubject()`, com fallback para `jwt.getClaimAsString("preferred_username")` caso `sub` esteja ausente.
 
 ### Escopos do Sistema
 
-| Escopo | Descrição |
-|--------|-----------|
-| `lancamentos:write` | Registrar lançamentos e estornos |
-| `lancamentos:read` | Consultar lançamentos por período |
-| `consolidacao:read` | Consultar saldo consolidado e por período |
-| `consolidacao:admin` | Reconciliação periódica e recálculo assíncrono |
+Os escopos abaixo são configurados como **optional scopes** no Keycloak e devem ser solicitados explicitamente no parâmetro `scope` do fluxo de autenticação.
+
+| Escopo | Descrição | Disponível para |
+|--------|-----------|----------------|
+| `lancamentos:write` | Registrar lançamentos e estornos | `frontend-app`, `pdv-service` |
+| `lancamentos:read` | Consultar lançamentos por período | `frontend-app`, `pdv-service` |
+| `consolidacao:read` | Consultar saldo consolidado e por período | `frontend-app` |
+| `consolidacao:admin` | Reconciliação periódica e reconstrução de saldo | `frontend-app` |
 
 ---
 
@@ -288,49 +311,88 @@ sequenceDiagram
 
 **Requisito:** [NFR-09](../negocio/requisitos.md#nfr-09) — toda operação de escrita deve gerar trilha imutável com identidade, timestamp UTC e recurso afetado.
 
-### Schema da tabela `audit_log`
+A trilha de auditoria opera em três camadas complementares:
 
-Cada serviço mantém sua própria `audit_log` no PostgreSQL local — sem cruzar fronteiras de serviço.
+| Camada | Artefato | O que registra |
+|--------|----------|---------------|
+| **Dados financeiros** | Tabela `lancamentos` | Campos de rastreabilidade imutáveis embutidos em cada registro |
+| **Ações de negócio** | Tabela `audit_log` | Ação realizada, operador, recurso afetado e contexto estruturado |
+| **Observabilidade** | Logs estruturados + tracing | Contexto de execução, trace distribuído, correlação com RabbitMQ |
 
-```sql
-CREATE TABLE audit_log (
-    id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    operador_id  VARCHAR(64) NOT NULL,   -- claim "sub" do JWT
-    operador_role VARCHAR(20) NOT NULL,  -- claim "role" do JWT
-    acao         VARCHAR(50) NOT NULL,   -- ex: "lancamento.criado", "estorno.registrado"
-    recurso_id   UUID,                  -- ID do recurso afetado (lancamento, estorno)
-    payload      JSONB,                 -- snapshot do recurso no momento da ação
-    ip_origem    INET,                  -- IP extraído do header X-Forwarded-For pelo gateway
-    criado_em    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+### Dados imutáveis em `lancamentos`
 
--- Índices para auditoria por operador e por recurso
-CREATE INDEX idx_audit_operador ON audit_log(operador_id, criado_em DESC);
-CREATE INDEX idx_audit_recurso  ON audit_log(recurso_id)  WHERE recurso_id IS NOT NULL;
+O Serviço de Lançamentos é implementado como *OAuth2 Resource Server*: valida o JWT localmente e extrai a identidade do operador diretamente do token, sem depender de headers injetados pelo gateway.
+
+```java
+// LancamentoController.extrairOperadorId()
+var sub = jwt.getSubject();                          // claim "sub" (UUID Keycloak)
+if (sub != null && !sub.isBlank()) return sub;
+return jwt.getClaimAsString("preferred_username");   // fallback
 ```
 
-A tabela é **append-only** — sem UPDATE nem DELETE. Registros são retidos por 2 anos ([política de retenção](../arquitetura/dados.md#política-de-retenção)).
+Cada registro na tabela `lancamentos` carrega:
 
-### Como o serviço captura a identidade
+| Campo | Conteúdo | Imutável |
+|-------|----------|:--------:|
+| `id` | UUID único gerado pelo banco | ✅ |
+| `operador_id` | `sub` do JWT — UUID do operador no Keycloak | ✅ |
+| `idempotency_key` | UUID fornecido pelo cliente no header `Idempotency-Key` | ✅ |
+| `payload_hash` | SHA-256 do payload da requisição | ✅ |
+| `criado_em` | Timestamp UTC via `@CreationTimestamp` — não atualizável | ✅ |
+| `estorno_de` | UUID do lançamento original (quando este registro é um estorno) | ✅ |
+| `estornado_por` | UUID do estorno associado (preenchido pelo handler de estorno) | ⬜ (único campo atualizável) |
 
-O gateway injeta os claims do JWT como headers antes de encaminhar a requisição:
+A tabela é **append-only**: sem `UPDATE` nem `DELETE` sobre registros confirmados. Estornos geram um novo lançamento — nunca modificam o original. Retenção: **5 anos** (obrigação fiscal — Lei 9.613/98), ver [política de retenção](../arquitetura/dados.md#política-de-retenção).
+
+### Tabela `audit_log` — ações de negócio
+
+Registra *o que o operador fez*, com contexto de negócio por operação. Persistida de forma assíncrona pelo `AuditEventListener` após o commit da transação principal — o response HTTP já foi enviado quando o registro é gravado. Falha no audit é logada e nunca propaga para a operação de negócio.
 
 ```
-X-User-Id:   usr_7f3b9a10        ← claim "sub"
-X-User-Role: caixa               ← claim "role"
-X-Forwarded-For: 203.0.113.5    ← IP do cliente (adicionado pelo gateway)
+AuditPublisher (port) → AuditPublisherAdapter → ApplicationEvent
+    → AuditEventListener @TransactionalEventListener(AFTER_COMMIT) @Async
+        → audit_log (PostgreSQL)
 ```
 
-O serviço lê esses headers e os persiste no `audit_log` a cada operação de escrita confirmada. A gravação na `audit_log` ocorre **na mesma transação** que a operação principal — se a transação falhar, não há registro de auditoria parcial.
+| `acao` | `recurso_id` | `contexto` (JSON) | Origem |
+|--------|-------------|-------------------|--------|
+| `lancamento.registrado` | UUID do lançamento | `{"tipo": "CREDITO", "valor": "150.00"}` | `RegistrarLancamentoService` |
+| `estorno.registrado` | UUID do estorno | `{"original_id": "...", "valor": "150.00"}` | `EstornarLancamentoService` |
 
-### Ações auditadas
+Retenção: **5 anos** — contém `operador_id` (dado pessoal vinculado ao registro financeiro), ver [política de retenção](../arquitetura/dados.md#política-de-retenção).
 
-| Ação | Serviço | Recurso afetado |
-|------|---------|----------------|
-| `lancamento.criado` | Lançamentos | `lancamentos.id` |
-| `estorno.registrado` | Lançamentos | `lancamentos.id` (estorno) |
-| `recalculo.solicitado` | Lançamentos | job_id |
-| `reconciliacao.executada` | Consolidação | — (operação global) |
+### Logs estruturados como trilha operacional
+
+Cada requisição gera um log estruturado JSON com os campos:
+
+```json
+{
+  "@timestamp":    "2026-05-17T03:37:04.681Z",
+  "level":         "INFO",
+  "event":         "lancamento.registrado",
+  "traceId":       "4b5f9a1e2d3c8b7a",
+  "spanId":        "9e1f2a3b",
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440000",
+  "http_method":   "POST",
+  "http_path":     "/registros",
+  "message":       "lançamento registrado id=3f2b9c10 valor=150.00 tipo=CREDITO"
+}
+```
+
+Esses logs são coletados pelo Promtail, indexados no Loki e correlacionados ao trace no Tempo via `traceId`. Retenção: 7 dias local (Loki) · 30 dias CloudWatch · 90+ dias em S3.
+
+### Evidências capturadas por operação
+
+| Operação | Em `lancamentos` | Em `audit_log` | Em log |
+|----------|-----------------|----------------|--------|
+| Registro de lançamento | `id`, `operador_id`, `criado_em`, `idempotency_key`, `payload_hash` | `lancamento.registrado` + tipo/valor | `event: lancamento.registrado` |
+| Estorno | `id` novo + `estorno_de` → original; original recebe `estornado_por` | `estorno.registrado` + original_id/valor | `event: estorno.registrado` |
+| Tentativa duplicada (mesma key, payload diferente) | HTTP 409 — registro original preservado | — (não chega ao use case) | `event: idempotency.conflito` |
+| Replay idempotente (mesma key, mesmo payload) | HTTP 200 — registro original retornado | — (não chega ao use case) | `event: idempotency.replay` |
+
+### Rastreabilidade distribuída (tracing)
+
+Cada operação de lançamento registra um `correlation_id` no MDC via `LoggingContextFilter` e propaga o `traceId` pelo RabbitMQ até o Serviço de Consolidação. É possível rastrear o caminho completo de um lançamento — do request HTTP até a atualização do saldo consolidado — no Grafana Tempo via `traceId`.
 
 ---
 
@@ -373,3 +435,29 @@ Traefik configura os limites via middleware `RateLimit` por rota. Em produção,
 **Por que PostgreSQL rota com mais frequência:** é o dado mais sensível (lançamentos financeiros). O RDS Proxy elimina o custo operacional da rotação — as conexões existentes não são derrubadas durante a troca de senha.
 
 **Por que as chaves Keycloak não rotam mensalmente:** rotação de chaves assimétricas exige janela de coexistência (o JWKS deve conter o par antigo até todos os tokens emitidos com ele expirarem — máximo 5 minutos com o TTL atual). A rotação anual com janela de 10 minutos é suficiente para o perfil de risco.
+
+---
+
+## Mapeamento ISO 27001 { #mapeamento-iso-27001 }
+
+Os controles abaixo mapeam os Controles do Anexo A da **ISO/IEC 27001:2022** para as decisões e artefatos implementados neste sistema. Controles não listados estão fora do escopo do sistema (ex.: segurança física, gestão de ativos de RH).
+
+| Controle ISO 27001 | Descrição | Status | Artefato |
+|--------------------|-----------|:------:|---------|
+| **A.5.15** — Controle de acesso | Regras de acesso definidas por identidade e função | ✅ | Matriz de autorização · escopos JWT · Keycloak RBAC |
+| **A.5.16** — Gerenciamento de identidade | Identidades únicas por ator — sem credenciais compartilhadas | ✅ | Keycloak realm + `operadorId` = `sub` claim |
+| **A.5.17** — Autenticação | Mecanismos de autenticação robustos por tipo de ator | ✅ | PKCE (humanos) + Client Credentials (máquinas) · [ADR-014](../adr/ADR-014-identity-provider.md) |
+| **A.5.23** — Segurança em serviços de nuvem | Controles de segurança nos serviços AWS utilizados | ✅ | IAM + IRSA + Secrets Manager + KMS · [ADR-010](../adr/ADR-010-seguranca.md) |
+| **A.8.2** — Direitos de acesso privilegiados | Separação de privilégios entre roles (`caixa`, `gestor`, `admin`) | ✅ | `SecurityConfig.securityFilterChain()` |
+| **A.8.5** — Autenticação segura | Proteção contra acesso não autenticado a todos os endpoints | ✅ | JWT obrigatório em todas as rotas · [ADR-004](../adr/ADR-004-jwt-validacao-local.md) |
+| **A.8.7** — Proteção contra malware | Scan de vulnerabilidades em imagens de container | ✅ | Trivy no `ci.yml` — bloqueia CRITICAL/HIGH |
+| **A.8.12** — Prevenção de vazamento de dados | PII e tokens não gravados em logs | ✅ | [ADR-016](../adr/ADR-016-redacao-pii-logs.md) |
+| **A.8.13** — Backup de informações | Dados com backup e retenção definidos | ✅ | AWS Backup cross-region + política de retenção · [dados.md](../arquitetura/dados.md) |
+| **A.8.16** — Monitoramento de atividades | Logs estruturados com rastreabilidade de operações | ✅ | Loki + Grafana + Prometheus + Tempo |
+| **A.8.17** — Sincronização de relógio | Timestamps UTC em todos os componentes | ✅ | `OffsetDateTime` + ISO 8601 + NTP via AWS |
+| **A.8.20** — Segurança de redes | Segmentação de rede e controle de tráfego | ✅ | Redes Docker isoladas (local) · VPC + SGs (prod) |
+| **A.8.23** — Filtragem de conteúdo web | WAF com regras OWASP em produção | ✅ | AWS WAF v2 + CloudFront · [ADR-010](../adr/ADR-010-seguranca.md) |
+| **A.8.24** — Uso de criptografia | Criptografia em repouso e em trânsito | ✅ | KMS CMK + TLS obrigatório em produção |
+| **A.8.25** — Ciclo de vida de desenvolvimento seguro | Segurança integrada desde o design | ✅ | Spec-first ([ADR-017](../adr/ADR-017-spec-driven-development.md)) + testes de segurança no CI |
+| **A.8.26** — Requisitos de segurança de aplicação | NFRs de segurança documentados e rastreados | ✅ | [NFR-05](../negocio/requisitos.md#nfr-05), [NFR-06](../negocio/requisitos.md#nfr-06), [NFR-09](../negocio/requisitos.md#nfr-09) |
+| **A.8.28** — Codificação segura | Queries parametrizadas, sem deserialização arbitrária | ✅ | JPA prepared statements + Jackson tipos explícitos |

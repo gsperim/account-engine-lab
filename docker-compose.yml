@@ -25,7 +25,6 @@ services:
   # ── Serviço de Lançamentos ─────────────────────────────────────────────────
   # build implementado na Etapa 7 — sobe com: docker compose --profile app up
   lancamentos:
-    container_name: app-lancamentos
     profiles: [app]
     build:
       context: .
@@ -76,13 +75,17 @@ services:
       dockerfile: services/lancamentos/Dockerfile
       target: outbox-relay
     environment:
-      DATABASE_URL: "postgresql://${POSTGRES_LANCAMENTOS_USER:-lancamentos}:${POSTGRES_LANCAMENTOS_PASSWORD:-changeme}@postgres-lancamentos:5432/${POSTGRES_LANCAMENTOS_DB:-lancamentos}"
-      RABBITMQ_URL: "amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/"
-      OUTBOX_POLL_INTERVAL: "${OUTBOX_POLL_INTERVAL:-500ms}"
-      LOG_LEVEL: "${LOG_LEVEL:-info}"
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres-lancamentos:5432/${POSTGRES_LANCAMENTOS_DB:-lancamentos_dev}"
+      SPRING_DATASOURCE_USERNAME: "${POSTGRES_LANCAMENTOS_USER:-lancamentos}"
+      SPRING_DATASOURCE_PASSWORD: "${POSTGRES_LANCAMENTOS_PASSWORD:-lancamentos_dev}"
+      SPRING_RABBITMQ_HOST: "rabbitmq"
+      SPRING_RABBITMQ_USERNAME: "${RABBITMQ_USER:-fluxocaixa}"
+      SPRING_RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD:-fluxocaixa_dev}"
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: "http://obs-otel-collector:4318/v1/traces"
     networks:
       - lancamentos-data
       - messaging
+      - observability
     depends_on:
       postgres-lancamentos:
         condition: service_healthy

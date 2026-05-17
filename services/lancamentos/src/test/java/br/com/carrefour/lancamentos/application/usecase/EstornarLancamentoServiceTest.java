@@ -6,6 +6,8 @@ import br.com.carrefour.lancamentos.domain.model.LancamentoId;
 import br.com.carrefour.lancamentos.domain.model.TipoLancamento;
 import br.com.carrefour.lancamentos.domain.model.Valor;
 import br.com.carrefour.lancamentos.domain.port.in.EstornarLancamentoUseCase.Command;
+import br.com.carrefour.lancamentos.domain.model.AuditEvento;
+import br.com.carrefour.lancamentos.domain.port.out.AuditPublisher;
 import br.com.carrefour.lancamentos.domain.port.out.LancamentoRepository;
 import br.com.carrefour.lancamentos.domain.port.out.OutboxPort;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +31,7 @@ class EstornarLancamentoServiceTest {
 
     @Mock LancamentoRepository repository;
     @Mock OutboxPort           outbox;
+    @Mock AuditPublisher       audit;
 
     EstornarLancamentoService service;
 
@@ -37,13 +40,13 @@ class EstornarLancamentoServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new EstornarLancamentoService(repository, outbox);
+        service = new EstornarLancamentoService(repository, outbox, audit);
     }
 
     @Test
     void deveCriarEstornoComTipoInversoEMesmoValor() {
         var original = lancamentoCredito(ORIGINAL_ID, false);
-        when(repository.buscarPorId(LancamentoId.de(ORIGINAL_ID))).thenReturn(Optional.of(original));
+        when(repository.buscarPorIdComLock(LancamentoId.de(ORIGINAL_ID))).thenReturn(Optional.of(original));
         when(repository.buscarPorId(argThat(id -> !id.toUUID().equals(ORIGINAL_ID)))).thenReturn(Optional.empty());
         when(repository.salvar(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -55,11 +58,12 @@ class EstornarLancamentoServiceTest {
         assertThat(estorno.getDescricao()).contains(ORIGINAL_ID.toString());
         assertThat(original.isEstornado()).isTrue();
         verify(outbox).registrar(estorno);
+        verify(audit).registrar(any(AuditEvento.class));
     }
 
     @Test
     void deveLancarExcecaoQuandoLancamentoNaoEncontrado() {
-        when(repository.buscarPorId(any())).thenReturn(Optional.empty());
+        when(repository.buscarPorIdComLock(any())).thenReturn(Optional.empty());
 
         assertThatExceptionOfType(NoSuchElementException.class)
             .isThrownBy(() -> service.executar(new Command(LancamentoId.de(ORIGINAL_ID), "usr_test")));
@@ -71,7 +75,7 @@ class EstornarLancamentoServiceTest {
     @Test
     void deveLancarExcecaoQuandoJaEstornado() {
         var original = lancamentoCredito(ORIGINAL_ID, true);
-        when(repository.buscarPorId(LancamentoId.de(ORIGINAL_ID))).thenReturn(Optional.of(original));
+        when(repository.buscarPorIdComLock(LancamentoId.de(ORIGINAL_ID))).thenReturn(Optional.of(original));
 
         assertThatExceptionOfType(LancamentoJaEstornadoException.class)
             .isThrownBy(() -> service.executar(new Command(LancamentoId.de(ORIGINAL_ID), "usr_test")));
@@ -84,7 +88,7 @@ class EstornarLancamentoServiceTest {
     void deveRetornarEstornoExistenteEmReplayIdempotente() {
         var original = lancamentoCredito(ORIGINAL_ID, false);
         var estornoExistente = lancamentoDebito(UUID.nameUUIDFromBytes(("estorno-" + ORIGINAL_ID).getBytes()));
-        when(repository.buscarPorId(LancamentoId.de(ORIGINAL_ID))).thenReturn(Optional.of(original));
+        when(repository.buscarPorIdComLock(LancamentoId.de(ORIGINAL_ID))).thenReturn(Optional.of(original));
         when(repository.buscarPorId(argThat(id -> !id.toUUID().equals(ORIGINAL_ID)))).thenReturn(Optional.of(estornoExistente));
 
         var resultado = service.executar(new Command(LancamentoId.de(ORIGINAL_ID), "usr_test"));

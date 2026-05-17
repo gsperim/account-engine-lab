@@ -43,6 +43,7 @@ scrape_configs:
             trace_id:       traceId
             span_id:        spanId
             correlation_id: correlation_id
+            event:          event
             message:        message
             logger_name:    logger_name
 
@@ -72,8 +73,12 @@ scrape_configs:
           trace_id:
           span_id:
           correlation_id:
+          event:
 
-      # Usa o campo message como linha de log quando disponível (JSON dos serviços)
-      # Containers sem JSON mantêm a linha original
-      - output:
-          source: message
+      # Para serviços Spring Boot (JSON): usa o campo message extraído como linha.
+      # Para outros containers (Keycloak, RabbitMQ, Postgres): mantém a linha original.
+      - match:
+          selector: '{service=~"lancamentos|consolidado"}'
+          stages:
+            - output:
+                source: message
