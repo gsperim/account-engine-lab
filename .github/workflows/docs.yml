@@ -61,14 +61,15 @@ jobs:
       # a exportação C4 separada da documentação MkDocs.
       - name: Exportar C4 — HTML estático (Structurizr)
         run: |
-          mkdir -p /tmp/c4-model site/c4
-          cp structurizr/workspace.dsl structurizr/workspace.json /tmp/c4-model/ 2>/dev/null || true
-          cp structurizr/theme.json /tmp/c4-model/ 2>/dev/null || true
+          mkdir -p /tmp/c4-model/build/site site/c4
+          cp structurizr/workspace.dsl /tmp/c4-model/
+          cp structurizr/workspace.json /tmp/c4-model/ 2>/dev/null || true
+          cp structurizr/theme.json     /tmp/c4-model/ 2>/dev/null || true
           docker run --rm \
             -v "/tmp/c4-model:/var/model" \
             ghcr.io/avisi-cloud/structurizr-site-generatr:latest \
             generate-site -w workspace.dsl
-          cp -r /tmp/c4-model/dist/* site/c4/
+          cp -r /tmp/c4-model/build/site/* site/c4/
 
       # ── Relatórios de testes (último CI verde em main) ──────────────────────
       - name: Baixar relatório — lancamentos
