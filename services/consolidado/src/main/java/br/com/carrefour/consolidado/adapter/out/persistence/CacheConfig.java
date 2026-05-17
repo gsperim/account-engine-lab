@@ -80,24 +80,42 @@ public class CacheConfig implements CachingConfigurer {
         @Override
         public void handleCacheGetError(RuntimeException e, Cache cache, Object key) {
             errorsTotal.increment();
-            log.warn("cache_fallback_ativo cache={} key={} motivo={} — servindo do banco",
-                    cache.getName(), key, e.getMessage());
+            log.atWarn()
+                    .addKeyValue("event", "cache_fallback_ativo")
+                    .addKeyValue("cache", cache.getName())
+                    .addKeyValue("key",   key)
+                    .setCause(e)
+                    .log("Falha no cache Redis — servindo do banco");
         }
 
         @Override
         public void handleCachePutError(RuntimeException e, Cache cache, Object key, Object value) {
             errorsTotal.increment();
-            log.warn("cache_put_error cache={} key={} motivo={}", cache.getName(), key, e.getMessage());
+            log.atWarn()
+                    .addKeyValue("event", "cache_put_error")
+                    .addKeyValue("cache", cache.getName())
+                    .addKeyValue("key",   key)
+                    .setCause(e)
+                    .log("Erro ao gravar no cache Redis");
         }
 
         @Override
         public void handleCacheEvictError(RuntimeException e, Cache cache, Object key) {
-            log.warn("cache_evict_error cache={} key={} motivo={}", cache.getName(), key, e.getMessage());
+            log.atWarn()
+                    .addKeyValue("event", "cache_evict_error")
+                    .addKeyValue("cache", cache.getName())
+                    .addKeyValue("key",   key)
+                    .setCause(e)
+                    .log("Erro ao invalidar entrada no cache Redis");
         }
 
         @Override
         public void handleCacheClearError(RuntimeException e, Cache cache) {
-            log.warn("cache_clear_error cache={} motivo={}", cache.getName(), e.getMessage());
+            log.atWarn()
+                    .addKeyValue("event", "cache_clear_error")
+                    .addKeyValue("cache", cache.getName())
+                    .setCause(e)
+                    .log("Erro ao limpar cache Redis");
         }
     }
 }

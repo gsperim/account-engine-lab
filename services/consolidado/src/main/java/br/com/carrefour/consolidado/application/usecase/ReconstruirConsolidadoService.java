@@ -67,12 +67,20 @@ public class ReconstruirConsolidadoService implements ReconstruirConsolidadoUseC
 
             if (diverge) {
                 divergenciasCorrigidas++;
-                log.info("reconstrucao_corrigido data={}", data);
+                log.atInfo()
+                        .addKeyValue("event", "reconstrucao_corrigido")
+                        .addKeyValue("data",  data)
+                        .log("Saldo corrigido durante reconstrução");
             }
         }
 
-        log.info("reconstrucao_concluida inicio={} fim={} processadas={} corrigidas={}",
-                inicio, fim, datasProcessadas, divergenciasCorrigidas);
+        log.atInfo()
+                .addKeyValue("event",      "reconstrucao_concluida")
+                .addKeyValue("inicio",     inicio)
+                .addKeyValue("fim",        fim)
+                .addKeyValue("processadas", datasProcessadas)
+                .addKeyValue("corrigidas",  divergenciasCorrigidas)
+                .log("Reconstrução do consolidado concluída");
 
         return new Resultado(datasProcessadas, divergenciasCorrigidas, inicio, fim);
     }

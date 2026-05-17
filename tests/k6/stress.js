@@ -35,6 +35,15 @@ const taxaRateLimit      = new Rate('rate_limit_atingido');
 const lancamentosOk      = new Counter('lancamentos_ok');
 const lancamentosFalha   = new Counter('lancamentos_falha');
 
+// Busca tokens uma única vez antes de todos os VUs iniciarem.
+// Evita thundering herd de centenas de VUs autenticando simultaneamente no Keycloak.
+export function setup() {
+  return {
+    tokenCaixa:  tokenCaixa(),
+    tokenGestor: tokenGestor(),
+  };
+}
+
 // IP fictício fixo por VU — cada VU simula um cliente distinto para o rate limit por IP do Traefik
 function vuIP() {
   const id = __VU % 254 || 1;
@@ -81,10 +90,10 @@ export const options = {
 };
 
 // ── Cenário 1: stress no consolidado ─────────────────────────────────────────
-export function consultarConsolidado() {
-  const data = dataAleatoria();
-  const res  = http.get(`${CONSOLIDACAO_URL}/saldo/${data}`, {
-    headers: { ...HEADERS, Authorization: `Bearer ${tokenGestor()}`, 'X-Forwarded-For': vuIP() },
+export function consultarConsolidado(data) {
+  const date = dataAleatoria();
+  const res  = http.get(`${CONSOLIDACAO_URL}/saldo/${date}`, {
+    headers: { ...HEADERS, Authorization: `Bearer ${data.tokenGestor}`, 'X-Forwarded-For': vuIP() },
     timeout: '5s',
   });
 
@@ -98,7 +107,7 @@ export function consultarConsolidado() {
 }
 
 // ── Cenário 2: lançamentos contínuos (prova que o serviço segue operacional) ──
-export function registrarLancamento() {
+export function registrarLancamento(data) {
   const payload = JSON.stringify({
     tipo:             tipoAleatorio(),
     valor:            valorAleatorio(),
@@ -107,7 +116,7 @@ export function registrarLancamento() {
   });
 
   const res = http.post(`${LANCAMENTOS_URL}/registros`, payload, {
-    headers: { ...HEADERS, 'Idempotency-Key': randomUUID(), Authorization: `Bearer ${tokenCaixa()}` },
+    headers: { ...HEADERS, 'Idempotency-Key': randomUUID(), Authorization: `Bearer ${data.tokenCaixa}` },
     timeout: '10s',
   });
 

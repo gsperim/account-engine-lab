@@ -41,7 +41,7 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 
 ## Estado Atual
 
-**Data:** 2026-05-17 | **Branch:** `main` (entregue) + `feat/chaos-engineering` (pendente de merge)
+**Data:** 2026-05-17 | **Branch:** `develop` (pós Etapa 8) + `feat/structured-logging` (em andamento)
 **Repositório:** https://github.com/gsperim/account-engine-lab
 
 ### Etapas concluídas
@@ -53,9 +53,9 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 - ✅ Etapa 6 — Observabilidade (stack PLG + Tempo + OTEL + 4 dashboards Grafana)
 - 🔄 Etapa 7 — Implementação (JWT ✅; pendentes: Outbox cleanup + DLQ consumer)
 
-### Onde estamos agora — Etapa 7 COMPLETA / Etapa 8 em progresso
+### Onde estamos agora — Etapas 7 e 8 COMPLETAS / Observabilidade em andamento
 
-**Data:** 2026-05-16 | **85 testes verdes** (49 lançamentos + 36 consolidado)
+**Data:** 2026-05-17 | **106 testes verdes** (lançamentos + consolidado)
 
 #### ✅ Etapa 7 — tudo entregue
 
@@ -91,15 +91,39 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 | Backoffice de DLQ | Replay controlado com audit trail — mencionado no `DlqConsumer.java` |
 | Idempotência com payload diferente para estorno | Estorno já é idempotente via UUID derivado; conflito de payload não verificado |
 
-#### Melhorias de observabilidade em andamento (`feat/chaos-engineering`)
-| Item | Observação |
-|------|-----------|
-| RabbitMQ observation-enabled | `spring.rabbitmq.listener.simple.observation-enabled=true` + `spring.rabbitmq.template.observation-enabled=true` — propaga traceId para logs do consumer |
-| Logs estruturados (addKeyValue) | Substituir interpolação de string por campos JSON de primeiro nível no Logstash — `LancamentoEventoConsumer` e demais adapters |
-| Build info no MDC | Injetar `version` e `commit_hash` via `build-info` do Actuator |
+#### 🔄 Melhorias de observabilidade em andamento (`feat/structured-logging`)
+
+| Item | Estado | Detalhe |
+|------|--------|---------|
+| `LoggingContextFilter` | ✅ implementado | HTTP method + path no MDC para todos os requests, nos dois serviços |
+| `MessagingLogContextAspect` | ✅ implementado | Wraps `@RabbitListener` automaticamente — correlation_id + cleanup MDC sem try/finally |
+| RabbitMQ observation-enabled | ✅ implementado | traceId propaga pelo RabbitMQ (publisher + consumer); confirmado no Loki |
+| Logs estruturados (SLF4J fluent API) | ✅ implementado | `addKeyValue("event", ...)` + `.setCause(t)` em 20 pontos de log nos dois serviços |
+| `RestClient.Builder` injetado | ✅ corrigido | `LancamentosGatewayAdapter` agora usa builder auto-configurado → trace propaga em chamadas HTTP |
+| Campo `event` no Loki | ✅ implementado | Promtail extrai `event` para structured_metadata |
+| Logs Keycloak no Grafana | ✅ corrigido | Promtail `output: source: message` restrito a serviços Spring; demais mantêm linha original |
+| OTEL no outbox-relay | ✅ corrigido | `MANAGEMENT_OTLP_TRACING_ENDPOINT` + rede `observability` adicionados |
+| `MethodArgumentTypeMismatchException` → 400 | ✅ corrigido | `GlobalExceptionHandler` lançamentos agora retorna 400 para UUID inválido no header |
+| Build info no MDC | 🔲 pendente | `version` + `commit_hash` via `build-info` do Actuator |
+| Stress test lançamentos (14.66% falhas) | 🔲 investigar | HikariCP ou contention no banco com 3 instâncias — próxima sessão |
+
+**O que falta para merge:**
+- Rebuild + testes após correção do `GlobalExceptionHandler`
+- Investigar falhas no stress com 3 instâncias de lançamentos
+- Commit e merge em `develop`
+
+#### Decisões técnicas da sessão 2026-05-17
+| Decisão | Escolha | Motivo |
+|---------|---------|--------|
+| `logstash-logback-encoder` vs SLF4J nativo | SLF4J `addKeyValue` nativo | Sem dep extra; Spring Boot 3.4+ já suporta; logstash requereria logback XML |
+| MDC pesado vs `addKeyValue` por log | MDC para sessão + `addKeyValue` para evento | Aspecto/filtro configura contexto uma vez; per-log só campos específicos |
+| Formato ECS vs Logstash | Manteve Logstash | ECS usa objetos nested — `log.level`, `trace.id` — quebra Promtail sem reconfig; sem ganho prático para nosso stack |
+| AOP para logging de entrada/saída | Recusado | "Papagaio com megafone" — gera ruído; AOP só para MDC lifecycle do RabbitMQ |
+| `event` como message vs addKeyValue separado | `setMessage` legível + `addKeyValue("event", ...)` | Message para humanos; event para queries no Loki |
 
 #### Próximas etapas
-- **Melhorias de observabilidade** — itens acima (branch `feat/chaos-engineering`)
+- **Observabilidade** — fechar `feat/structured-logging` (itens acima)
+- **Stress test** — investigar 14.66% de falhas em lançamentos com 3 instâncias
 - **Frontend Angular** — plano em `docs/implementacao/frontend.md`
 - **Etapa 9** — Documentação Final e publicação
 

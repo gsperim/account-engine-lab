@@ -25,7 +25,6 @@ services:
   # ── Serviço de Lançamentos ─────────────────────────────────────────────────
   # build implementado na Etapa 7 — sobe com: docker compose --profile app up
   lancamentos:
-    container_name: app-lancamentos
     profiles: [app]
     build:
       context: .
@@ -82,9 +81,11 @@ services:
       SPRING_RABBITMQ_HOST: "rabbitmq"
       SPRING_RABBITMQ_USERNAME: "${RABBITMQ_USER:-fluxocaixa}"
       SPRING_RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD:-fluxocaixa_dev}"
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: "http://obs-otel-collector:4318/v1/traces"
     networks:
       - lancamentos-data
       - messaging
+      - observability
     depends_on:
       postgres-lancamentos:
         condition: service_healthy

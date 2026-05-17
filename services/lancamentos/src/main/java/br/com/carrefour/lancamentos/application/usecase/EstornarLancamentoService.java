@@ -33,7 +33,8 @@ public class EstornarLancamentoService implements EstornarLancamentoUseCase {
     @Transactional
     public Lancamento executar(Command command) {
         var original = repository.buscarPorIdComLock(command.originalId())
-                .orElseThrow(() -> new NoSuchElementException("Lançamento não encontrado: " + command.originalId()));
+                .orElseThrow(() -> new NoSuchElementException(
+                        "Lançamento não encontrado: " + command.originalId()));
 
         if (original.isEstornado()) {
             throw new LancamentoJaEstornadoException(command.originalId().toUUID());
@@ -43,10 +44,13 @@ public class EstornarLancamentoService implements EstornarLancamentoUseCase {
         var estornoId = LancamentoId.de(UUID.nameUUIDFromBytes(
                 ("estorno-" + command.originalId().toUUID()).getBytes(StandardCharsets.UTF_8)));
 
-        // Verifica se o estorno já foi criado (replay idempotente)
         var estornoExistente = repository.buscarPorId(estornoId);
         if (estornoExistente.isPresent()) {
-            log.info("estorno idempotente replay original_id={}", command.originalId().toUUID());
+            log.atInfo()
+                    .addKeyValue("event",       "estorno_replay_idempotente")
+                    .addKeyValue("original_id", command.originalId().toUUID())
+                    .addKeyValue("estorno_id",  estornoId.toUUID())
+                    .log("Replay idempotente — estorno já registrado");
             return estornoExistente.get();
         }
 
@@ -55,13 +59,9 @@ public class EstornarLancamentoService implements EstornarLancamentoUseCase {
                 : TipoLancamento.CREDITO;
 
         var estorno = Lancamento.criar(
-                estornoId,
-                tipoEstorno,
-                original.getValor(),
+                estornoId, tipoEstorno, original.getValor(),
                 "Estorno de " + command.originalId().toUUID(),
-                original.getDataCompetencia(),
-                command.operadorId()
-        );
+                original.getDataCompetencia(), command.operadorId());
 
         original.marcarEstornado();
         repository.salvar(original);
@@ -69,8 +69,12 @@ public class EstornarLancamentoService implements EstornarLancamentoUseCase {
         var salvo = repository.salvar(estorno);
         outbox.registrar(salvo);
 
-        log.info("estorno registrado original_id={} estorno_id={}",
-                command.originalId().toUUID(), estornoId.toUUID());
+        log.atInfo()
+                .addKeyValue("event",       "estorno_registrado")
+                .addKeyValue("original_id", command.originalId().toUUID())
+                .addKeyValue("estorno_id",  estornoId.toUUID())
+                .addKeyValue("operador_id", command.operadorId())
+                .log("Estorno registrado com sucesso");
 
         return salvo;
     }
