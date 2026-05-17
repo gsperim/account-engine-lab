@@ -6,6 +6,8 @@ import br.com.carrefour.lancamentos.domain.model.LancamentoId;
 import br.com.carrefour.lancamentos.domain.model.TipoLancamento;
 import br.com.carrefour.lancamentos.domain.model.Valor;
 import br.com.carrefour.lancamentos.domain.port.in.EstornarLancamentoUseCase.Command;
+import br.com.carrefour.lancamentos.domain.model.AuditEvento;
+import br.com.carrefour.lancamentos.domain.port.out.AuditPublisher;
 import br.com.carrefour.lancamentos.domain.port.out.LancamentoRepository;
 import br.com.carrefour.lancamentos.domain.port.out.OutboxPort;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +31,7 @@ class EstornarLancamentoServiceTest {
 
     @Mock LancamentoRepository repository;
     @Mock OutboxPort           outbox;
+    @Mock AuditPublisher       audit;
 
     EstornarLancamentoService service;
 
@@ -37,7 +40,7 @@ class EstornarLancamentoServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new EstornarLancamentoService(repository, outbox);
+        service = new EstornarLancamentoService(repository, outbox, audit);
     }
 
     @Test
@@ -55,6 +58,7 @@ class EstornarLancamentoServiceTest {
         assertThat(estorno.getDescricao()).contains(ORIGINAL_ID.toString());
         assertThat(original.isEstornado()).isTrue();
         verify(outbox).registrar(estorno);
+        verify(audit).registrar(any(AuditEvento.class));
     }
 
     @Test

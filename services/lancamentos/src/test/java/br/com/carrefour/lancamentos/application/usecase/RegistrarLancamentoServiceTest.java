@@ -7,6 +7,8 @@ import br.com.carrefour.lancamentos.domain.model.PayloadHash;
 import br.com.carrefour.lancamentos.domain.model.TipoLancamento;
 import br.com.carrefour.lancamentos.domain.model.Valor;
 import br.com.carrefour.lancamentos.domain.port.in.RegistrarLancamentoUseCase.Command;
+import br.com.carrefour.lancamentos.domain.model.AuditEvento;
+import br.com.carrefour.lancamentos.domain.port.out.AuditPublisher;
 import br.com.carrefour.lancamentos.domain.port.out.LancamentoRepository;
 import br.com.carrefour.lancamentos.domain.port.out.OutboxPort;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +31,7 @@ class RegistrarLancamentoServiceTest {
 
     @Mock LancamentoRepository repository;
     @Mock OutboxPort           outbox;
+    @Mock AuditPublisher       audit;
 
     RegistrarLancamentoService service;
 
@@ -38,7 +41,7 @@ class RegistrarLancamentoServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new RegistrarLancamentoService(repository, outbox);
+        service = new RegistrarLancamentoService(repository, outbox, audit);
     }
 
     @Test
@@ -53,6 +56,7 @@ class RegistrarLancamentoServiceTest {
         assertThat(resultado.getValor()).isEqualTo(Valor.de("150.00"));
         verify(repository).salvar(any(Lancamento.class));
         verify(outbox).registrar(any(Lancamento.class));
+        verify(audit).registrar(any(AuditEvento.class));
     }
 
     @Test

@@ -1,10 +1,12 @@
 package br.com.carrefour.lancamentos.application.usecase;
 
 import br.com.carrefour.lancamentos.domain.exception.LancamentoJaEstornadoException;
+import br.com.carrefour.lancamentos.domain.model.AuditEvento;
 import br.com.carrefour.lancamentos.domain.model.Lancamento;
 import br.com.carrefour.lancamentos.domain.model.LancamentoId;
 import br.com.carrefour.lancamentos.domain.model.TipoLancamento;
 import br.com.carrefour.lancamentos.domain.port.in.EstornarLancamentoUseCase;
+import br.com.carrefour.lancamentos.domain.port.out.AuditPublisher;
 import br.com.carrefour.lancamentos.domain.port.out.LancamentoRepository;
 import br.com.carrefour.lancamentos.domain.port.out.OutboxPort;
 import org.slf4j.Logger;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
@@ -23,10 +26,13 @@ public class EstornarLancamentoService implements EstornarLancamentoUseCase {
 
     private final LancamentoRepository repository;
     private final OutboxPort           outbox;
+    private final AuditPublisher       audit;
 
-    public EstornarLancamentoService(LancamentoRepository repository, OutboxPort outbox) {
+    public EstornarLancamentoService(LancamentoRepository repository, OutboxPort outbox,
+                                     AuditPublisher audit) {
         this.repository = repository;
         this.outbox     = outbox;
+        this.audit      = audit;
     }
 
     @Override
@@ -68,6 +74,13 @@ public class EstornarLancamentoService implements EstornarLancamentoUseCase {
 
         var salvo = repository.salvar(estorno);
         outbox.registrar(salvo);
+        audit.registrar(new AuditEvento(
+                command.operadorId(),
+                "estorno.registrado",
+                salvo.getId().toUUID(),
+                Map.of("original_id", command.originalId().toUUID().toString(),
+                       "valor",       original.getValor().toString())
+        ));
 
         log.atInfo()
                 .addKeyValue("event",       "estorno_registrado")
