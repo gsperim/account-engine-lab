@@ -41,7 +41,7 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 
 ## Estado Atual
 
-**Data:** 2026-05-17 | **Branch:** `develop` (pós merge de `feat/structured-logging`)
+**Data:** 2026-05-17 | **Branch:** `develop` (pós sessão 2026-05-17)
 **Repositório:** https://github.com/gsperim/account-engine-lab
 
 ### Etapas concluídas
@@ -54,10 +54,12 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 - ✅ Etapa 7 — Implementação (completa)
 - ✅ Etapa 8 — CI/CD + Chaos Engineering (completa)
 - ✅ Observabilidade avançada — logs estruturados + tracing end-to-end (completa)
+- ✅ Conformidade normativa — ISO 8601/20022/4217/27001/22301/31000/37301 + OWASP ASVS (completa)
+- ✅ Audit log assíncrono — `audit_log` pós-commit em lançamentos (completa)
 
-### Onde estamos agora — Etapas 7, 8 e Observabilidade avançada COMPLETAS
+### Onde estamos agora — pré-Etapa 9
 
-**Data:** 2026-05-17 | **106 testes verdes** (lançamentos + consolidado)
+**Data:** 2026-05-17 | **106+ testes verdes** (lançamentos + consolidado)
 
 #### ✅ Etapa 7 — tudo entregue
 
@@ -92,26 +94,20 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 |------|-----------|
 | Backoffice de DLQ | Replay controlado com audit trail — mencionado no `DlqConsumer.java` |
 | Idempotência com payload diferente para estorno | Estorno já é idempotente via UUID derivado; conflito de payload não verificado |
+| Build info no MDC | `version` + `commit_hash` via `build-info` do Actuator |
 
-#### ✅ Observabilidade avançada — `feat/structured-logging` COMPLETA
+#### ✅ Entregues nesta sessão (2026-05-17)
 
-| Item | Estado | Detalhe |
-|------|--------|---------|
-| `LoggingContextFilter` | ✅ | HTTP method + path no MDC para todos os requests, nos dois serviços |
-| `MessagingLogContextAspect` | ✅ | Wraps `@RabbitListener` automaticamente — correlation_id + cleanup MDC sem try/finally |
-| RabbitMQ observation-enabled | ✅ | traceId propaga pelo RabbitMQ (publisher + consumer); confirmado no Loki |
-| Logs estruturados (SLF4J fluent API) | ✅ | `addKeyValue("event", ...)` + `.setCause(t)` em 20 pontos de log nos dois serviços |
-| `RestClient.Builder` injetado | ✅ | `LancamentosGatewayAdapter` usa builder auto-configurado → trace propaga em chamadas HTTP |
-| Campo `event` no Loki | ✅ | Promtail extrai `event` para structured_metadata |
-| Logs Keycloak no Grafana | ✅ | Promtail `output: source: message` restrito a serviços Spring |
-| OTEL no outbox-relay | ✅ | `MANAGEMENT_OTLP_TRACING_ENDPOINT` + rede `observability` adicionados |
-| `MethodArgumentTypeMismatchException` → 400 | ✅ | `GlobalExceptionHandler` lançamentos retorna 400 para UUID inválido no header |
-| Stress test 14.66% falhas | ✅ corrigido | Bug no `stress.js`: token estático do `setup()` expirava aos 5min; teste dura 7min → 401 nos últimos 60s com clock skew 60s do Spring Security. Fix: `expiresAt` no setup + `getCaixaToken/getGestorToken` com renovação per-VU gradual |
-| Build info no MDC | 🔲 pendente futuro | `version` + `commit_hash` via `build-info` do Actuator — não bloqueia merge |
+| Item | Detalhe |
+|------|---------|
+| **fix/stress** | `stress.js`: token estático do `setup()` expirava em 5min com teste de 7min → 401 nos últimos 60s (clock skew 60s Spring Security = 14.66% falhas). Fix: `expiresAt` + helpers `getCaixaToken/getGestorToken` |
+| **docs/conformidade-normativa** | 7 normas ISO + OWASP ASVS aplicadas; 3 docs novos (`asvs.md`, `continuidade.md`, `conformidade.md`); mapeamento Anexo A ISO 27001 no `seguranca/index.md`; ISO 31000 em `caos.md`; ISO 20022 em ADR-001; ISO 4217 evolution path em ADR-012; `mkdocs.yml` — Segurança expandida de 1 para 4 páginas |
+| **fix/seguranca-claims-jwt** | Claims JWT alinhados com implementação real: TTL 5min (não 15min), `iss` real do realm Keycloak, `aud` = client ID, `jti` não usado como revogação, `preferred_username` adicionado, mecanismo de `role` documentado (atributo de usuário vs. hardcoded para PDV) |
+| **fix/trilha-auditoria** | Seção "Trilha de Auditoria" reescrita: removida tabela `audit_log` fictícia e mecanismo de headers gateway que não existem; documentada a trilha real (`operador_id` em `lancamentos` + logs estruturados); política de retenção expandida em `dados.md` |
+| **feat/audit-log** | `audit_log` assíncrono pós-commit em lançamentos: V6 Flyway, `AuditEvento` record, `AuditPublisher` port, `AuditPublisherAdapter`, `AuditEventListener` (`@TransactionalEventListener(AFTER_COMMIT)` + `@Async`), `@EnableAsync`; injetado em `RegistrarLancamentoService` e `EstornarLancamentoService`; `AuditEventListenerTest` |
 
-#### Próximas etapas
-- **Frontend Angular** — plano em `docs/implementacao/frontend.md`
-- **Etapa 9** — Documentação Final e publicação
+#### Próximo passo imediato
+**Etapa 9 — Documentação Final e publicação**
 
 ### Stack técnico (referência rápida)
 - **Serviços:** Spring Boot 3.5.14 + Java 21, Arquitetura Hexagonal + DDD Tático

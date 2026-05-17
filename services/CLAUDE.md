@@ -135,15 +135,29 @@ adapter/out/messaging/   → RabbitMQ publisher (só em lançamentos)
 | Rota Keycloak no Traefik | `docker-compose.yml` labels `keycloak` + `traefik/dynamic/middlewares.yml` `strip-auth` |
 | Auth no k6 | `tests/k6/auth.js` — ROPC, cache per-VU, retry no boot |
 
+### Rastreabilidade — Audit Log (NFR-09 / ISO 37301)
+| Artefato | Arquivo |
+|---|---|
+| Domain model | `lancamentos/.../domain/model/AuditEvento.java` — record puro, sem dependência Spring |
+| Port | `lancamentos/.../domain/port/out/AuditPublisher.java` — interface hexagonal |
+| Adapter (publicação) | `lancamentos/.../adapter/out/audit/AuditPublisherAdapter.java` — publica Spring `ApplicationEvent` |
+| Listener (persistência) | `lancamentos/.../adapter/out/audit/AuditEventListener.java` — `@TransactionalEventListener(AFTER_COMMIT)` + `@Async` |
+| Entidade JPA | `lancamentos/.../adapter/out/persistence/AuditLogJpaEntity.java` |
+| Repositório | `lancamentos/.../adapter/out/persistence/AuditLogJpaRepository.java` |
+| Migration | `lancamentos/src/main/resources/db/migration/V6__create_audit_log.sql` |
+| Testes | `AuditEventListenerTest.java` — persistência correta + falha silenciosa |
+
+**Decisão não-óbvia:** o listener usa `AFTER_COMMIT` + `@Async` — o response HTTP é enviado antes do audit ser gravado. Falha no audit é capturada e logada, nunca propagada. Com Virtual Threads habilitado, Spring Boot usa virtual thread executor para `@Async` sem config extra.
+
 ---
 
-## Estado da implementação — Etapas 7 e 8 completas
+## Estado da implementação — pré-Etapa 9
 
-**106 testes verdes**. Todos os endpoints implementados e cobertos.
+**106+ testes verdes**. Todos os endpoints implementados e cobertos. Audit log ativo em lançamentos.
 
-| Serviço | Artefatos relevantes (2026-05-16/17) |
+| Serviço | Artefatos relevantes (2026-05-17) |
 |---------|--------------------------------------|
-| lancamentos | `OutboxPublisher` (AOP fix), `EstornarLancamentoService` (pessimistic lock), `LoggingContextFilter`, `LoggingContextFilter`, logs refatorados |
-| consolidado | `MessagingLogContextAspect`, `LoggingContextFilter`, `LancamentosGatewayAdapter` (RestClient.Builder), logs refatorados |
+| lancamentos | `AuditEventListener`, `AuditPublisherAdapter`, `AuditLogJpaEntity`, `V6__create_audit_log.sql`, logs refatorados |
+| consolidado | `MessagingLogContextAspect`, `LoggingContextFilter`, `LancamentosGatewayAdapter` (RestClient.Builder) |
 
-Pendente para versões futuras: backoffice de DLQ com replay controlado e audit trail.
+Pendente para versões futuras: audit no consolidado (admin ops), backoffice de DLQ.
