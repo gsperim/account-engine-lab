@@ -1,16 +1,20 @@
 package br.com.carrefour.lancamentos.application.usecase;
 
 import br.com.carrefour.lancamentos.domain.exception.LancamentoConflitanteException;
+import br.com.carrefour.lancamentos.domain.model.AuditEvento;
 import br.com.carrefour.lancamentos.domain.model.Lancamento;
 import br.com.carrefour.lancamentos.domain.model.LancamentoId;
 import br.com.carrefour.lancamentos.domain.model.PayloadHash;
 import br.com.carrefour.lancamentos.domain.port.in.RegistrarLancamentoUseCase;
+import br.com.carrefour.lancamentos.domain.port.out.AuditPublisher;
 import br.com.carrefour.lancamentos.domain.port.out.LancamentoRepository;
 import br.com.carrefour.lancamentos.domain.port.out.OutboxPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Map;
 
 @Service
 public class RegistrarLancamentoService implements RegistrarLancamentoUseCase {
@@ -19,10 +23,13 @@ public class RegistrarLancamentoService implements RegistrarLancamentoUseCase {
 
     private final LancamentoRepository repository;
     private final OutboxPort           outbox;
+    private final AuditPublisher       audit;
 
-    public RegistrarLancamentoService(LancamentoRepository repository, OutboxPort outbox) {
+    public RegistrarLancamentoService(LancamentoRepository repository, OutboxPort outbox,
+                                      AuditPublisher audit) {
         this.repository = repository;
         this.outbox     = outbox;
+        this.audit      = audit;
     }
 
     @Override
@@ -54,6 +61,12 @@ public class RegistrarLancamentoService implements RegistrarLancamentoUseCase {
 
         var salvo = repository.salvar(lancamento);
         outbox.registrar(salvo);
+        audit.registrar(new AuditEvento(
+                command.operadorId(),
+                "lancamento.registrado",
+                salvo.getId().toUUID(),
+                Map.of("tipo", command.tipo().name(), "valor", command.valor().toString())
+        ));
 
         log.atInfo()
                 .addKeyValue("event",           "lancamento_registrado")
