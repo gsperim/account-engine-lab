@@ -32,7 +32,7 @@ public class EstornarLancamentoService implements EstornarLancamentoUseCase {
     @Override
     @Transactional
     public Lancamento executar(Command command) {
-        var original = repository.buscarPorId(command.originalId())
+        var original = repository.buscarPorIdComLock(command.originalId())
                 .orElseThrow(() -> new NoSuchElementException("Lançamento não encontrado: " + command.originalId()));
 
         if (original.isEstornado()) {

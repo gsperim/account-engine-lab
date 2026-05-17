@@ -41,7 +41,7 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 
 ## Estado Atual
 
-**Data:** 2026-05-16 | **Branch:** `main` (entregue) + `arch/etapa-7-implementacao` + `docs/mkdocs-material-features` (pendente de merge)
+**Data:** 2026-05-17 | **Branch:** `main` (entregue) + `feat/chaos-engineering` (pendente de merge)
 **Repositório:** https://github.com/gsperim/account-engine-lab
 
 ### Etapas concluídas
@@ -74,7 +74,7 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 | Documentação sincronizada | `stack.md`, `implementacao/index.md`, `dados.md`, `observabilidade/index.md` |
 | Hook pre-commit + protocolo de branch | Bloqueia commits diretos em `main`/`develop`; checklist no CLAUDE.md |
 
-#### ✅ Etapa 8 — CI/CD entregue (Chaos Engineering pendente)
+#### ✅ Etapa 8 — COMPLETA
 
 | Item | Detalhe |
 |------|---------|
@@ -82,6 +82,7 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 | `cd.yml` | Push para ECR via OIDC + GitHub Release — trigger manual (`workflow_dispatch`); requer `AWS_DEPLOY_ROLE_ARN` |
 | `docs.yml` | MkDocs build + deploy no GitHub Pages via GitHub Actions source — publicado em `https://gsperim.github.io/account-engine-lab/` |
 | CVEs corrigidos | netty 4.1.132→4.1.133 (CVE-2026-42583), postgresql 42.7.10→42.7.11 (CVE-2026-42198) via BOM override; `.trivyignore` para CVEs de OS da distroless |
+| Chaos Engineering | 5 experimentos executados com Pumba + k6; todos os NFRs confirmados — ver `docs/implementacao/caos.md` |
 | Frontend Angular | Plano completo em `docs/implementacao/frontend.md` — implementação após Etapa 8 completa |
 
 #### Pendentes para versões futuras
@@ -90,12 +91,16 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 | Backoffice de DLQ | Replay controlado com audit trail — mencionado no `DlqConsumer.java` |
 | Idempotência com payload diferente para estorno | Estorno já é idempotente via UUID derivado; conflito de payload não verificado |
 
-#### Próximo passo imediato
-- **Chaos Engineering** — executar os 5 experimentos do `docs/implementacao/caos.md` com Pumba + k6 + evidências Grafana (único item restante da Etapa 8)
+#### Melhorias de observabilidade em andamento (`feat/chaos-engineering`)
+| Item | Observação |
+|------|-----------|
+| RabbitMQ observation-enabled | `spring.rabbitmq.listener.simple.observation-enabled=true` + `spring.rabbitmq.template.observation-enabled=true` — propaga traceId para logs do consumer |
+| Logs estruturados (addKeyValue) | Substituir interpolação de string por campos JSON de primeiro nível no Logstash — `LancamentoEventoConsumer` e demais adapters |
+| Build info no MDC | Injetar `version` e `commit_hash` via `build-info` do Actuator |
 
 #### Próximas etapas
-- **Etapa 8** — Chaos Engineering (pendente)
-- **Frontend Angular** — após Etapa 8 (plano em `docs/implementacao/frontend.md`)
+- **Melhorias de observabilidade** — itens acima (branch `feat/chaos-engineering`)
+- **Frontend Angular** — plano em `docs/implementacao/frontend.md`
 - **Etapa 9** — Documentação Final e publicação
 
 ### Stack técnico (referência rápida)

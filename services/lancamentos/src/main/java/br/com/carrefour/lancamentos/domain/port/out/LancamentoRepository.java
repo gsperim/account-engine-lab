@@ -12,6 +12,8 @@ import java.util.Optional;
 public interface LancamentoRepository {
     Lancamento salvar(Lancamento lancamento);
     Optional<Lancamento> buscarPorId(LancamentoId id);
+    // SELECT ... FOR UPDATE — usar quando a leitura precisa ser exclusiva até o commit (ex: estorno)
+    Optional<Lancamento> buscarPorIdComLock(LancamentoId id);
     List<Lancamento> buscarPorDataCompetencia(LocalDate data, TipoLancamento tipo, int page, int size);
     long contarPorDataCompetencia(LocalDate data, TipoLancamento tipo);
     boolean existePorId(LancamentoId id);

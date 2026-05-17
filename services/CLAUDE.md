@@ -30,8 +30,8 @@ adapter/out/messaging/   → RabbitMQ publisher (só em lançamentos)
 ### ADR-002 (Message Broker — RabbitMQ) + ADR-003 (Outbox Pattern)
 | Artefato | Arquivo |
 |---|---|
-| Publicação com retry | `lancamentos/.../adapter/out/messaging/RabbitEventoPublisher.java` |
-| Retry + Circuit Breaker | `RabbitEventoPublisher.java` — `@Retry` + `@CircuitBreaker(rabbit-publisher)` |
+| Publicação direta (testes) | `lancamentos/.../adapter/out/messaging/RabbitEventoPublisher.java` |
+| Retry + Circuit Breaker | `OutboxRelay.java` — `@CircuitBreaker` + `@Retry(rabbit-publisher)` |
 | Persistência atômica | `lancamentos/.../adapter/out/messaging/OutboxRelay.java` + `OutboxRepositoryAdapter.java` |
 | Entidade outbox | `lancamentos/.../adapter/out/persistence/OutboxJpaEntity.java` |
 | Consumer + ACL | `consolidado/.../adapter/in/messaging/LancamentoEventoConsumer.java` |

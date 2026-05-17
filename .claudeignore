@@ -9,8 +9,15 @@ services/*/build/
 services/*/.gradle/
 services/*/bin/
 
-# Structurizr — cache e runtime
+# Structurizr — cache, runtime e exports gerados
 structurizr/.structurizr/
+structurizr/exports/
+
+# Java — bytecode e caches de IDE
+**/*.class
+**/.classpath
+**/.project
+**/.settings/
 
 # Git internals
 .git/

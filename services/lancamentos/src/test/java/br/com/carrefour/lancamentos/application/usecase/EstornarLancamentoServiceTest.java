@@ -43,7 +43,7 @@ class EstornarLancamentoServiceTest {
     @Test
     void deveCriarEstornoComTipoInversoEMesmoValor() {
         var original = lancamentoCredito(ORIGINAL_ID, false);
-        when(repository.buscarPorId(LancamentoId.de(ORIGINAL_ID))).thenReturn(Optional.of(original));
+        when(repository.buscarPorIdComLock(LancamentoId.de(ORIGINAL_ID))).thenReturn(Optional.of(original));
         when(repository.buscarPorId(argThat(id -> !id.toUUID().equals(ORIGINAL_ID)))).thenReturn(Optional.empty());
         when(repository.salvar(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -59,7 +59,7 @@ class EstornarLancamentoServiceTest {
 
     @Test
     void deveLancarExcecaoQuandoLancamentoNaoEncontrado() {
-        when(repository.buscarPorId(any())).thenReturn(Optional.empty());
+        when(repository.buscarPorIdComLock(any())).thenReturn(Optional.empty());
 
         assertThatExceptionOfType(NoSuchElementException.class)
             .isThrownBy(() -> service.executar(new Command(LancamentoId.de(ORIGINAL_ID), "usr_test")));
@@ -71,7 +71,7 @@ class EstornarLancamentoServiceTest {
     @Test
     void deveLancarExcecaoQuandoJaEstornado() {
         var original = lancamentoCredito(ORIGINAL_ID, true);
-        when(repository.buscarPorId(LancamentoId.de(ORIGINAL_ID))).thenReturn(Optional.of(original));
+        when(repository.buscarPorIdComLock(LancamentoId.de(ORIGINAL_ID))).thenReturn(Optional.of(original));
 
         assertThatExceptionOfType(LancamentoJaEstornadoException.class)
             .isThrownBy(() -> service.executar(new Command(LancamentoId.de(ORIGINAL_ID), "usr_test")));
@@ -84,7 +84,7 @@ class EstornarLancamentoServiceTest {
     void deveRetornarEstornoExistenteEmReplayIdempotente() {
         var original = lancamentoCredito(ORIGINAL_ID, false);
         var estornoExistente = lancamentoDebito(UUID.nameUUIDFromBytes(("estorno-" + ORIGINAL_ID).getBytes()));
-        when(repository.buscarPorId(LancamentoId.de(ORIGINAL_ID))).thenReturn(Optional.of(original));
+        when(repository.buscarPorIdComLock(LancamentoId.de(ORIGINAL_ID))).thenReturn(Optional.of(original));
         when(repository.buscarPorId(argThat(id -> !id.toUUID().equals(ORIGINAL_ID)))).thenReturn(Optional.of(estornoExistente));
 
         var resultado = service.executar(new Command(LancamentoId.de(ORIGINAL_ID), "usr_test"));
