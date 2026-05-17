@@ -62,7 +62,8 @@ jobs:
       - name: Exportar C4 — HTML estático (Structurizr)
         run: |
           mkdir -p /tmp/c4-model site/c4
-          cp structurizr/workspace.dsl /tmp/c4-model/
+          cp structurizr/workspace.dsl  /tmp/c4-model/
+          cp structurizr/overview.md    /tmp/c4-model/
           cp structurizr/workspace.json /tmp/c4-model/ 2>/dev/null || true
           cp structurizr/theme.json     /tmp/c4-model/ 2>/dev/null || true
           docker run --rm \
