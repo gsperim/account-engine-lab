@@ -51,7 +51,9 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 - ✅ Etapa 4 — Dados e Persistência (ADR-012)
 - ✅ Etapa 5 — Segurança
 - ✅ Etapa 6 — Observabilidade (stack PLG + Tempo + OTEL + 4 dashboards Grafana)
-- 🔄 Etapa 7 — Implementação (JWT ✅; pendentes: Outbox cleanup + DLQ consumer)
+- ✅ Etapa 7 — Implementação (completa)
+- ✅ Etapa 8 — CI/CD + Chaos Engineering (completa)
+- 🔄 Observabilidade avançada — logs estruturados + tracing end-to-end (em andamento)
 
 ### Onde estamos agora — Etapas 7 e 8 COMPLETAS / Observabilidade em andamento
 
@@ -112,18 +114,14 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 - Investigar falhas no stress com 3 instâncias de lançamentos
 - Commit e merge em `develop`
 
-#### Decisões técnicas da sessão 2026-05-17
-| Decisão | Escolha | Motivo |
-|---------|---------|--------|
-| `logstash-logback-encoder` vs SLF4J nativo | SLF4J `addKeyValue` nativo | Sem dep extra; Spring Boot 3.4+ já suporta; logstash requereria logback XML |
-| MDC pesado vs `addKeyValue` por log | MDC para sessão + `addKeyValue` para evento | Aspecto/filtro configura contexto uma vez; per-log só campos específicos |
-| Formato ECS vs Logstash | Manteve Logstash | ECS usa objetos nested — `log.level`, `trace.id` — quebra Promtail sem reconfig; sem ganho prático para nosso stack |
-| AOP para logging de entrada/saída | Recusado | "Papagaio com megafone" — gera ruído; AOP só para MDC lifecycle do RabbitMQ |
-| `event` como message vs addKeyValue separado | `setMessage` legível + `addKeyValue("event", ...)` | Message para humanos; event para queries no Loki |
+#### Próximo passo imediato
+Fechar `feat/structured-logging`:
+1. Investigar 14.66% de falhas no stress test (lançamentos com 3 instâncias) — HikariCP ou DB contention
+2. Rebuild + testes finais
+3. Merge em `develop`
 
 #### Próximas etapas
 - **Observabilidade** — fechar `feat/structured-logging` (itens acima)
-- **Stress test** — investigar 14.66% de falhas em lançamentos com 3 instâncias
 - **Frontend Angular** — plano em `docs/implementacao/frontend.md`
 - **Etapa 9** — Documentação Final e publicação
 
