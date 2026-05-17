@@ -71,7 +71,7 @@ jobs:
             -v "/tmp/c4-model:/var/model" \
             ghcr.io/avisi-cloud/structurizr-site-generatr:latest \
             generate-site --workspace-file workspace.dsl
-          cp -r /tmp/c4-model/build/* site/c4/
+          cp -r /tmp/c4-model/build/site/* site/c4/
 
       # ── Relatórios de testes (último CI verde em main) ──────────────────────
       - name: Baixar relatório — lancamentos
@@ -101,6 +101,21 @@ jobs:
           name: infracost-report
           path: site/infracost
           if_no_artifact_found: warn
+
+      - name: Fallback — páginas indisponíveis
+        run: |
+          if [ ! -f site/infracost/index.html ]; then
+            mkdir -p site/infracost
+            echo '<meta charset="utf-8"><p>Relatório não disponível. Configure o secret <code>INFRACOST_API_KEY</code> no repositório.</p>' > site/infracost/index.html
+          fi
+          if [ ! -f site/tests/lancamentos/index.html ]; then
+            mkdir -p site/tests/lancamentos
+            echo '<meta charset="utf-8"><p>Relatório não disponível. Execute o CI em main para gerar os artefatos de teste.</p>' > site/tests/lancamentos/index.html
+          fi
+          if [ ! -f site/tests/consolidado/index.html ]; then
+            mkdir -p site/tests/consolidado
+            echo '<meta charset="utf-8"><p>Relatório não disponível. Execute o CI em main para gerar os artefatos de teste.</p>' > site/tests/consolidado/index.html
+          fi
 
       - name: Upload artefato para Pages
         uses: actions/upload-pages-artifact@v3
