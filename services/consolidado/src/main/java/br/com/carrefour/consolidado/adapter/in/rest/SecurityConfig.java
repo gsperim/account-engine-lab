@@ -25,7 +25,7 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/actuator/health", "/actuator/prometheus", "/actuator/info").permitAll()
+                .requestMatchers("/health/**", "/actuator/prometheus", "/actuator/info").permitAll()
                 // Matriz de autorização — ADR-005 / docs/seguranca/index.md
                 .requestMatchers(HttpMethod.GET, "/saldo", "/saldo/**").hasAnyRole("GESTOR", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/admin/**").hasRole("ADMIN")

@@ -33,6 +33,11 @@ public class LancamentoRepositoryAdapter implements LancamentoRepository {
     }
 
     @Override
+    public Optional<Lancamento> buscarPorIdComLock(LancamentoId id) {
+        return jpaRepo.findByIdForUpdate(id.toUUID()).map(this::toDomain);
+    }
+
+    @Override
     public List<Lancamento> buscarPorDataCompetencia(LocalDate data, TipoLancamento tipo, int page, int size) {
         var pageable = PageRequest.of(page, size, Sort.by("criadoEm").descending());
         var resultado = tipo != null
