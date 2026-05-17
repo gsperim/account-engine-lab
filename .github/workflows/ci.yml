@@ -173,6 +173,9 @@ jobs:
     name: Custo estimado (Infracost)
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    # A chave é gratuita mas obrigatória — sem ela o job falha sem
+    # quebrar o CI. Obter em: https://dashboard.infracost.io
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -180,7 +183,7 @@ jobs:
       - name: Setup Infracost
         uses: infracost/actions/setup@v3
         with:
-          api-key: ${{ secrets.INFRACOST_API_KEY }}
+          api-key: ${{ secrets.INFRACOST_API_KEY || '' }}
 
       - name: Gerar relatório HTML
         run: |
