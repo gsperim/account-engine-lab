@@ -41,7 +41,7 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 
 ## Estado Atual
 
-**Data:** 2026-05-17 | **Branch:** `develop` (pós Etapa 8) + `feat/structured-logging` (em andamento)
+**Data:** 2026-05-17 | **Branch:** `develop` (pós merge de `feat/structured-logging`)
 **Repositório:** https://github.com/gsperim/account-engine-lab
 
 ### Etapas concluídas
@@ -53,9 +53,9 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 - ✅ Etapa 6 — Observabilidade (stack PLG + Tempo + OTEL + 4 dashboards Grafana)
 - ✅ Etapa 7 — Implementação (completa)
 - ✅ Etapa 8 — CI/CD + Chaos Engineering (completa)
-- 🔄 Observabilidade avançada — logs estruturados + tracing end-to-end (em andamento)
+- ✅ Observabilidade avançada — logs estruturados + tracing end-to-end (completa)
 
-### Onde estamos agora — Etapas 7 e 8 COMPLETAS / Observabilidade em andamento
+### Onde estamos agora — Etapas 7, 8 e Observabilidade avançada COMPLETAS
 
 **Data:** 2026-05-17 | **106 testes verdes** (lançamentos + consolidado)
 
@@ -93,35 +93,23 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 | Backoffice de DLQ | Replay controlado com audit trail — mencionado no `DlqConsumer.java` |
 | Idempotência com payload diferente para estorno | Estorno já é idempotente via UUID derivado; conflito de payload não verificado |
 
-#### 🔄 Melhorias de observabilidade em andamento (`feat/structured-logging`)
+#### ✅ Observabilidade avançada — `feat/structured-logging` COMPLETA
 
 | Item | Estado | Detalhe |
 |------|--------|---------|
-| `LoggingContextFilter` | ✅ implementado | HTTP method + path no MDC para todos os requests, nos dois serviços |
-| `MessagingLogContextAspect` | ✅ implementado | Wraps `@RabbitListener` automaticamente — correlation_id + cleanup MDC sem try/finally |
-| RabbitMQ observation-enabled | ✅ implementado | traceId propaga pelo RabbitMQ (publisher + consumer); confirmado no Loki |
-| Logs estruturados (SLF4J fluent API) | ✅ implementado | `addKeyValue("event", ...)` + `.setCause(t)` em 20 pontos de log nos dois serviços |
-| `RestClient.Builder` injetado | ✅ corrigido | `LancamentosGatewayAdapter` agora usa builder auto-configurado → trace propaga em chamadas HTTP |
-| Campo `event` no Loki | ✅ implementado | Promtail extrai `event` para structured_metadata |
-| Logs Keycloak no Grafana | ✅ corrigido | Promtail `output: source: message` restrito a serviços Spring; demais mantêm linha original |
-| OTEL no outbox-relay | ✅ corrigido | `MANAGEMENT_OTLP_TRACING_ENDPOINT` + rede `observability` adicionados |
-| `MethodArgumentTypeMismatchException` → 400 | ✅ corrigido | `GlobalExceptionHandler` lançamentos agora retorna 400 para UUID inválido no header |
-| Build info no MDC | 🔲 pendente | `version` + `commit_hash` via `build-info` do Actuator |
-| Stress test lançamentos (14.66% falhas) | 🔲 investigar | HikariCP ou contention no banco com 3 instâncias — próxima sessão |
-
-**O que falta para merge:**
-- Rebuild + testes após correção do `GlobalExceptionHandler`
-- Investigar falhas no stress com 3 instâncias de lançamentos
-- Commit e merge em `develop`
-
-#### Próximo passo imediato
-Fechar `feat/structured-logging`:
-1. Investigar 14.66% de falhas no stress test (lançamentos com 3 instâncias) — HikariCP ou DB contention
-2. Rebuild + testes finais
-3. Merge em `develop`
+| `LoggingContextFilter` | ✅ | HTTP method + path no MDC para todos os requests, nos dois serviços |
+| `MessagingLogContextAspect` | ✅ | Wraps `@RabbitListener` automaticamente — correlation_id + cleanup MDC sem try/finally |
+| RabbitMQ observation-enabled | ✅ | traceId propaga pelo RabbitMQ (publisher + consumer); confirmado no Loki |
+| Logs estruturados (SLF4J fluent API) | ✅ | `addKeyValue("event", ...)` + `.setCause(t)` em 20 pontos de log nos dois serviços |
+| `RestClient.Builder` injetado | ✅ | `LancamentosGatewayAdapter` usa builder auto-configurado → trace propaga em chamadas HTTP |
+| Campo `event` no Loki | ✅ | Promtail extrai `event` para structured_metadata |
+| Logs Keycloak no Grafana | ✅ | Promtail `output: source: message` restrito a serviços Spring |
+| OTEL no outbox-relay | ✅ | `MANAGEMENT_OTLP_TRACING_ENDPOINT` + rede `observability` adicionados |
+| `MethodArgumentTypeMismatchException` → 400 | ✅ | `GlobalExceptionHandler` lançamentos retorna 400 para UUID inválido no header |
+| Stress test 14.66% falhas | ✅ corrigido | Bug no `stress.js`: token estático do `setup()` expirava aos 5min; teste dura 7min → 401 nos últimos 60s com clock skew 60s do Spring Security. Fix: `expiresAt` no setup + `getCaixaToken/getGestorToken` com renovação per-VU gradual |
+| Build info no MDC | 🔲 pendente futuro | `version` + `commit_hash` via `build-info` do Actuator — não bloqueia merge |
 
 #### Próximas etapas
-- **Observabilidade** — fechar `feat/structured-logging` (itens acima)
 - **Frontend Angular** — plano em `docs/implementacao/frontend.md`
 - **Etapa 9** — Documentação Final e publicação
 
