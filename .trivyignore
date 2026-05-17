@@ -2,6 +2,9 @@
 # Fix disponível nos pacotes Debian mas ainda não incorporado na imagem distroless.
 # Reavaliar na próxima atualização da imagem base.
 
+# libc6 — Integer overflow em memalign; fix em 2.36-9+deb12u14 ainda não incorporado na distroless
+CVE-2026-0861
+
 # liblcms2-2 — Little CMS information disclosure
 CVE-2026-41254
 
