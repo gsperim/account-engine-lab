@@ -373,3 +373,29 @@ Traefik configura os limites via middleware `RateLimit` por rota. Em produção,
 **Por que PostgreSQL rota com mais frequência:** é o dado mais sensível (lançamentos financeiros). O RDS Proxy elimina o custo operacional da rotação — as conexões existentes não são derrubadas durante a troca de senha.
 
 **Por que as chaves Keycloak não rotam mensalmente:** rotação de chaves assimétricas exige janela de coexistência (o JWKS deve conter o par antigo até todos os tokens emitidos com ele expirarem — máximo 5 minutos com o TTL atual). A rotação anual com janela de 10 minutos é suficiente para o perfil de risco.
+
+---
+
+## Mapeamento ISO 27001 { #mapeamento-iso-27001 }
+
+Os controles abaixo mapeam os Controles do Anexo A da **ISO/IEC 27001:2022** para as decisões e artefatos implementados neste sistema. Controles não listados estão fora do escopo do sistema (ex.: segurança física, gestão de ativos de RH).
+
+| Controle ISO 27001 | Descrição | Status | Artefato |
+|--------------------|-----------|:------:|---------|
+| **A.5.15** — Controle de acesso | Regras de acesso definidas por identidade e função | ✅ | Matriz de autorização · escopos JWT · Keycloak RBAC |
+| **A.5.16** — Gerenciamento de identidade | Identidades únicas por ator — sem credenciais compartilhadas | ✅ | Keycloak realm + `operadorId` = `sub` claim |
+| **A.5.17** — Autenticação | Mecanismos de autenticação robustos por tipo de ator | ✅ | PKCE (humanos) + Client Credentials (máquinas) · [ADR-014](../adr/ADR-014-identity-provider.md) |
+| **A.5.23** — Segurança em serviços de nuvem | Controles de segurança nos serviços AWS utilizados | ✅ | IAM + IRSA + Secrets Manager + KMS · [ADR-010](../adr/ADR-010-seguranca.md) |
+| **A.8.2** — Direitos de acesso privilegiados | Separação de privilégios entre roles (`caixa`, `gestor`, `admin`) | ✅ | `SecurityConfig.securityFilterChain()` |
+| **A.8.5** — Autenticação segura | Proteção contra acesso não autenticado a todos os endpoints | ✅ | JWT obrigatório em todas as rotas · [ADR-004](../adr/ADR-004-jwt-validacao-local.md) |
+| **A.8.7** — Proteção contra malware | Scan de vulnerabilidades em imagens de container | ✅ | Trivy no `ci.yml` — bloqueia CRITICAL/HIGH |
+| **A.8.12** — Prevenção de vazamento de dados | PII e tokens não gravados em logs | ✅ | [ADR-016](../adr/ADR-016-redacao-pii-logs.md) |
+| **A.8.13** — Backup de informações | Dados com backup e retenção definidos | ✅ | AWS Backup cross-region + política de retenção · [dados.md](../arquitetura/dados.md) |
+| **A.8.16** — Monitoramento de atividades | Logs estruturados com rastreabilidade de operações | ✅ | Loki + Grafana + Prometheus + Tempo |
+| **A.8.17** — Sincronização de relógio | Timestamps UTC em todos os componentes | ✅ | `OffsetDateTime` + ISO 8601 + NTP via AWS |
+| **A.8.20** — Segurança de redes | Segmentação de rede e controle de tráfego | ✅ | Redes Docker isoladas (local) · VPC + SGs (prod) |
+| **A.8.23** — Filtragem de conteúdo web | WAF com regras OWASP em produção | ✅ | AWS WAF v2 + CloudFront · [ADR-010](../adr/ADR-010-seguranca.md) |
+| **A.8.24** — Uso de criptografia | Criptografia em repouso e em trânsito | ✅ | KMS CMK + TLS obrigatório em produção |
+| **A.8.25** — Ciclo de vida de desenvolvimento seguro | Segurança integrada desde o design | ✅ | Spec-first ([ADR-017](../adr/ADR-017-spec-driven-development.md)) + testes de segurança no CI |
+| **A.8.26** — Requisitos de segurança de aplicação | NFRs de segurança documentados e rastreados | ✅ | [NFR-05](../negocio/requisitos.md#nfr-05), [NFR-06](../negocio/requisitos.md#nfr-06), [NFR-09](../negocio/requisitos.md#nfr-09) |
+| **A.8.28** — Codificação segura | Queries parametrizadas, sem deserialização arbitrária | ✅ | JPA prepared statements + Jackson tipos explícitos |
