@@ -24,6 +24,7 @@ theme:
     - navigation.top
     - navigation.path
     - navigation.footer
+    - navigation.indexes
     - navigation.prune
     - toc.follow
     - header.autohide
@@ -101,8 +102,15 @@ plugins:
       minify_html: true
 
 nav:
-  - Início: index.md
-  - Visão Executiva: visao-executiva.md
+  - Início:
+    - index.md
+    - Visão Executiva: visao-executiva.md
+    - Planejamento:
+      - Visão do Projeto: planejamento.md
+      - Plano de Entrega: engenharia/plano-entregas.md
+      - Arquitetura de Transição: engenharia/transicao.md
+    - Glossário: glossario.md
+    - Tags: tags.md
 
   - Negócio:
     - Drivers e Stakeholders: negocio/drivers.md
@@ -135,11 +143,3 @@ nav:
       - Visão Geral: cloud/index.md
       - Custos: cloud/custos.md
     - Pipeline CI/CD: infraestrutura/pipeline.md
-
-  - Planejamento:
-    - Visão do Projeto: planejamento.md
-    - Plano de Entrega: engenharia/plano-entregas.md
-    - Arquitetura de Transição: engenharia/transicao.md
-
-  - Glossário: glossario.md
-  - Tags: tags.md
