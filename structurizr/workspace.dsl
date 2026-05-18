@@ -148,8 +148,8 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
         pdv -> gateway "Envia lançamentos via API" "REST/HTTPS · Bearer JWT"
 
         gateway -> idp "Obtém chaves públicas (JWKS) — cache local, uma vez por restart" "HTTPS"
-        gateway -> lancamentos "Roteia requisições de lançamento" "REST/HTTP · claims em headers"
-        gateway -> consolidado "Roteia requisições de saldo" "REST/HTTP · claims em headers"
+        gateway -> lancamentos "Roteia requisições de lançamento" "REST/HTTP · Bearer JWT passthrough"
+        gateway -> consolidado "Roteia requisições de saldo" "REST/HTTP · Bearer JWT passthrough"
 
         lancamentos -> dbLancamentos "Persiste lançamentos e outbox (mesma tx)" "SQL/TLS"
         lancamentos -> otelCollector "Envia traces, métricas e logs" "OTLP gRPC"
