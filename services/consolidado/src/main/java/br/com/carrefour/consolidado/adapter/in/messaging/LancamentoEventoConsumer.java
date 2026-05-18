@@ -46,7 +46,7 @@ public class LancamentoEventoConsumer {
     }
 
     @SuppressWarnings("unused")
-    private void consumirFallback(LancamentoRegistradoEvento evento, Message amqpMessage, Throwable t) {
+    void consumirFallback(LancamentoRegistradoEvento evento, Message amqpMessage, Throwable t) {
         log.atError()
                 .addKeyValue("event",         "consumer_circuit_aberto")
                 .addKeyValue("lancamento_id", evento.payload().lancamentoId())

@@ -50,9 +50,9 @@ gantt
     Etapa 6 — Observabilidade              :done,   2026-01-04, 1d
 
     section Entrega
-    Etapa 7 — Implementação                :active, 2026-01-05, 2d
-    Etapa 8 — Pipeline e Entrega           :        2026-01-06, 1d
-    Etapa 9 — Documentação Final           :        2026-01-07, 1d
+    Etapa 7 — Implementação                :done,   2026-01-05, 2d
+    Etapa 8 — Pipeline e Entrega           :done,   2026-01-06, 1d
+    Etapa 9 — Documentação Final           :done,   2026-01-07, 1d
 ```
 
 > As Etapas 2 e 3 se sobrepõem intencionalmente: as decisões arquiteturais (ADRs) e a topologia de infraestrutura evoluem em paralelo. As Etapas 5 e 6 também são paralelas — segurança e observabilidade são preocupações transversais que podem ser trabalhadas no mesmo dia. A Etapa 7 (Implementação) recebe dois dias por ser o maior volume de código.
@@ -139,34 +139,25 @@ Logs estruturados, métricas e rastreamento distribuído são requisitos do sist
 
 ---
 
-### Fase 7 — Implementação
+### Fase 7 — Implementação ✓
 
-Com toda a arquitetura documentada e as decisões formalizadas em ADRs, a implementação começa com contexto completo seguindo o fluxo **Spec-Driven Development**: os contratos Markdown definidos na Fase 2 são convertidos em `openapi.yaml` (REST) e `asyncapi.yaml` (eventos), gerando stubs de servidor, mocks e validação de contrato automatizada no CI.
+Com toda a arquitetura documentada e as decisões formalizadas em ADRs, a implementação seguiu o fluxo **Spec-Driven Development**: os contratos Markdown definidos na Fase 2 foram convertidos em `openapi.yaml` (REST) e `asyncapi.yaml` (eventos), gerando stubs de servidor, mocks e validação de contrato automatizada no CI.
 
-Os serviços de Lançamentos e Consolidação Diária são implementados contra esses contratos. É também nesta fase que o DDD Tático entra: aggregates, entities, value objects e domain events são modelados dentro de cada bounded context.
+Os serviços de Lançamentos e Consolidação Diária foram implementados contra esses contratos com DDD Tático: aggregates, entities, value objects e domain events modelados dentro de cada bounded context. Os mecanismos de resiliência (Outbox Pattern, Circuit Breaker, Retry, cache-aside com fallback) e a trilha de auditoria assíncrona foram incluídos nesta fase.
 
-> Base para o `openapi.yaml` e `asyncapi.yaml`: [Contratos de Integração](engenharia/contratos.md)
-
-**Pendência de Observabilidade:** com os serviços enviando OTLP ao Collector, revisitar os dashboards do Grafana que ficaram sem dados durante a Fase 6:
-
-| Dashboard | O que validar |
-|-----------|--------------|
-| Infraestrutura — Fluxo de Caixa | Latência p50/p95/p99 e throughput dos endpoints |
-| Negócio — Fluxo de Caixa | Lançamentos/hora, valor acumulado em BRL, DLQ, cache hit rate |
-| SLOs — Fluxo de Caixa | Burn rate por SLO, error budget consumido |
-| Grafana Explore | Correlação trace → log → metric → profile (drill-down até linha de código) |
+**Artefatos entregues:** 146 testes verdes · Outbox Pattern · Estorno · Idempotência com payload hash · Reconciliação diária · Recuperação catastrófica · Audit log assíncrono · DLQ consumer
 
 ---
 
-### Fase 8 — Pipeline e Entrega
+### Fase 8 — Pipeline e Entrega ✓
 
-Containerização, CI/CD e instruções de execução local. O `docker-compose` que permite rodar todo o sistema sem dependências externas é entregue aqui.
+Containerização, CI/CD e pipeline completo. Quatro workflows entregues: `ci.yml` (testes + JaCoCo + Trivy + Infracost), `cd-lancamentos.yml` + `cd-consolidado.yml` (CD independente por serviço, SemVer via `VERSION` file, OIDC sem credenciais estáticas), `docs.yml` (GitHub Pages com MkDocs + C4 + cobertura + Infracost). Cinco experimentos de Chaos Engineering executados com Pumba + k6 — todos os NFRs confirmados.
 
 ---
 
-### Fase 9 — Documentação Final
+### Fase 9 — Documentação Final ✓
 
-Consolidação de todos os artefatos, revisão do README, registro de pontos não implementados e evoluções futuras. O repositório público no GitHub é o artefato final desta fase.
+Consolidação de todos os artefatos, revisão de coerência entre documentação e implementação, registro de gaps e evoluções futuras. O repositório público no GitHub com GitHub Pages publicado é o artefato final desta fase.
 
 ---
 

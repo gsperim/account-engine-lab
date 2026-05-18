@@ -16,6 +16,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,6 +49,19 @@ class LancamentoEventoConsumerTest {
         var captor = ArgumentCaptor.forClass(ProcessarLancamentoUseCase.Command.class);
         verify(processarUseCase).executar(captor.capture());
         assertThat(captor.getValue().tipo()).isEqualTo(TipoMovimento.DEBITO);
+    }
+
+    @Test
+    void consumirFallback_deveLancarRuntimeExceptionComMensagem() {
+        var causa = new RuntimeException("broker indisponível");
+
+        assertThatThrownBy(() ->
+            consumer.consumirFallback(
+                umEvento("CREDITO", new BigDecimal("100.00")),
+                new Message(new byte[0]),
+                causa))
+            .isInstanceOf(RuntimeException.class)
+            .hasMessageContaining("circuit breaker aberto");
     }
 
     private LancamentoRegistradoEvento umEvento(String tipo, BigDecimal valor) {

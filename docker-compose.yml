@@ -353,6 +353,7 @@ services:
   tempo:
     container_name: obs-tempo
     image: grafana/tempo:2.6.0
+    user: root
     volumes:
       - ./observability/tempo.yml:/etc/tempo/config.yml:ro
       - tempo-data:/var/tempo
@@ -366,6 +367,7 @@ services:
   pyroscope:
     container_name: obs-pyroscope
     image: grafana/pyroscope:1.7.0
+    user: root
     volumes:
       - ./observability/pyroscope.yml:/etc/pyroscope/config.yml:ro
       - pyroscope-data:/var/lib/pyroscope
@@ -488,6 +490,18 @@ services:
       - ./structurizr:/usr/local/structurizr
       - ./docs:/usr/local/structurizr/docs:ro
     command: local
+
+  swagger-ui:
+    container_name: dev-swagger-ui
+    image: swaggerapi/swagger-ui
+    ports:
+      - "8070:8080"
+    environment:
+      URLS: '[{"url":"./contracts/lancamentos.yaml","name":"Lançamentos"},{"url":"./contracts/consolidado.yaml","name":"Consolidado Diário"}]'
+      URLS_PRIMARY_NAME: "Lançamentos"
+    volumes:
+      - ./contracts/openapi/lancamentos.yaml:/usr/share/nginx/html/contracts/lancamentos.yaml:ro
+      - ./contracts/openapi/consolidado.yaml:/usr/share/nginx/html/contracts/consolidado.yaml:ro
 
 # ── Redes ──────────────────────────────────────────────────────────────────
 networks:

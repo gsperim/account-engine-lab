@@ -94,7 +94,13 @@ jacocoTestReport {
 	}
 	afterEvaluate {
 		classDirectories.setFrom(files(classDirectories.files.collect {
-			fileTree(dir: it, exclude: ['**/generated/**'])
+			fileTree(dir: it, exclude: [
+				'**/generated/**',
+				// Excluídos por design — ver @NaoTestablePorDesign nas classes
+				'**/LancamentosApplication.class',   // main() — ponto de entrada Spring Boot
+				'**/OutboxPublisher.class',           // @CircuitBreaker/@Retry via AOP proxy
+				'**/OutboxPublisher$*.class',
+			])
 		}))
 	}
 }

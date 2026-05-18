@@ -29,7 +29,7 @@ O sistema foi projetado com os cinco pilares do Zero Trust desde a concepção:
 | **Identidade** | JWT validado em toda requisição ([ADR-004](../adr/ADR-004-jwt-validacao-local.md)) · Keycloak como IdP ([ADR-014](../adr/ADR-014-identity-provider.md)) · Access token TTL 5min + refresh rotation ([ADR-013](../adr/ADR-013-revogacao-tokens.md)) · Escopos mínimos por ator | Revogação com janela de até 5min (trade-off aceito — [ADR-013](../adr/ADR-013-revogacao-tokens.md)) |
 | **Dispositivo** | mTLS na borda CloudFront ([ADR-010](../adr/ADR-010-seguranca.md)) · WAF v2 filtra tráfego malicioso · IMDSv2 nos nós EKS | Sem verificação de postura do dispositivo cliente (aceitável — sistema B2B interno) |
 | **Rede** | VPC com subnets privadas · SGs com allow-list mínima · VPC Endpoints para serviços AWS · Redes Docker internas isoladas localmente | NAT Gateway como saída necessária para imagens externas |
-| **Aplicação** | Serviços recebem apenas claims pré-validados em headers · Autorização por escopo por endpoint · Credenciais por serviço (sem credencial compartilhada) · Outbox Relay com blast radius limitado | Sem service mesh (Istio/Linkerd) — mTLS intra-pod não implementado; SGs compensam |
+| **Aplicação** | Serviços validam JWT localmente (oauth2-resource-server + JWKS Keycloak) · Autorização por role por endpoint via SecurityFilterChain · Credenciais por serviço (sem credencial compartilhada) · Outbox Relay com blast radius limitado | Sem service mesh (Istio/Linkerd) — mTLS intra-pod não implementado; SGs compensam |
 | **Dados** | KMS CMK para PostgreSQL, Redis e backups ([ADR-010](../adr/ADR-010-seguranca.md)) · TLS em todos os canais de produção · LGPD compliance por design (sem PII nas tabelas financeiras) | Sem DLP (Data Loss Prevention) — aceitável para o volume e perfil de risco atual |
 
 ```mermaid
@@ -158,16 +158,17 @@ Os escopos abaixo são configurados como **optional scopes** no Keycloak e devem
 | `POST /lancamentos/recalcular` | ❌ | ❌ | ❌ | ✅ |
 | `POST /consolidacao/reconciliacao` | ❌ | ❌ | ❌ | ✅ |
 
-**Regra de autorização — onde cada verificação ocorre:**
+**Regra de autorização — defense-in-depth em duas camadas:**
 
-| Verificação | Responsável | Mecanismo |
-|-------------|-------------|-----------|
-| Assinatura JWT válida | **Gateway** | JWKS cache local — zero chamada de rede por requisição |
-| Token não expirado (`exp`) | **Gateway** | Verificação local do claim |
-| Escopo presente (`scope`) | **Gateway** | Comparação do claim com o escopo exigido pela rota |
-| Role autorizado para a operação | **Serviço** | Leitura do header `X-User-Role` injetado pelo gateway |
+| Verificação | Gateway | Serviço | Mecanismo |
+|-------------|:-------:|:-------:|-----------|
+| Assinatura JWT válida | ✅ | ✅ | JWKS do Keycloak — gateway e serviço validam independentemente |
+| Token não expirado (`exp`) | ✅ | ✅ | Verificação local do claim em cada camada |
+| Escopo presente (`scope`) | ✅ | ✅ | Comparação do claim com o escopo exigido pela rota |
+| Role autorizado para a operação | ❌ | ✅ | `SecurityFilterChain` + `jwtAuthenticationConverter` no serviço |
+| Extração de `operadorId` | ❌ | ✅ | `jwt.getSubject()` — claim `sub` do JWT |
 
-O serviço **não valida o JWT** e **não consulta nenhum store de autenticação**. Recebe os claims pré-validados como headers (`X-User-Id`, `X-User-Role`, `X-Scopes`) e confia neles — o gateway é o único ponto de validação criptográfica.
+Ambos os serviços são **OAuth2 Resource Servers** (`spring-boot-starter-oauth2-resource-server`): validam o JWT localmente contra o JWKS do Keycloak a cada requisição. O gateway valida na borda; o serviço valida novamente como camada de defesa independente — um bypass ou comprometimento do gateway não compromete a autorização no serviço.
 
 ---
 
@@ -233,7 +234,8 @@ sequenceDiagram
 
     U->>GW: requisição + Bearer token
     GW->>GW: valida assinatura + exp + scope (JWKS local)
-    GW->>S: headers X-User-Id, X-User-Role, X-Scopes
+    GW->>S: Bearer token (passthrough — Authorization: Bearer)
+    S->>S: valida JWT (oauth2-resource-server + JWKS Keycloak)
     S-->>U: resposta
 
     note over U,S: Logout explícito

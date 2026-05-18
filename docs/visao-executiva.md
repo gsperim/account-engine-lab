@@ -91,15 +91,15 @@ Cada passo é independente. Se o passo 4 estiver lento, os passos 1, 2 e 3 conti
 
 <table style="width:100%; border-collapse: collapse; font-size: 0.9em;">
   <tr>
-    <td colspan="7" align="center" style="background:#1d4ed8; color:#fff; font-weight:bold; padding:10px; border:2px solid #1e3a8a;">
+    <td colspan="10" align="center" style="background:#1d4ed8; color:#fff; font-weight:bold; padding:10px; border:2px solid #1e3a8a;">
       Controle de Fluxo de Caixa
     </td>
   </tr>
   <tr>
-    <td colspan="4" align="center" style="background:#3b82f6; color:#fff; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">
+    <td colspan="5" align="center" style="background:#3b82f6; color:#fff; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">
       Registro de Movimentações<br><span style="font-weight:normal; font-size:0.85em;">O que o caixa faz</span>
     </td>
-    <td colspan="3" align="center" style="background:#3b82f6; color:#fff; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">
+    <td colspan="5" align="center" style="background:#3b82f6; color:#fff; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">
       Consulta de Saldo<br><span style="font-weight:normal; font-size:0.85em;">O que o gestor vê</span>
     </td>
   </tr>
@@ -108,9 +108,12 @@ Cada passo é independente. Se o passo 4 estiver lento, os passos 1, 2 e 3 conti
     <td align="center" style="background:#dbeafe; color:#1e3a8a; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">Registrar crédito</td>
     <td align="center" style="background:#dbeafe; color:#1e3a8a; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">Validar lançamento</td>
     <td align="center" style="background:#dbeafe; color:#1e3a8a; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">Consultar histórico</td>
+    <td align="center" style="background:#dbeafe; color:#1e3a8a; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">Estornar lançamento</td>
     <td align="center" style="background:#dbeafe; color:#1e3a8a; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">Ver total de entradas e saídas</td>
     <td align="center" style="background:#dbeafe; color:#1e3a8a; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">Ver saldo líquido do dia</td>
     <td align="center" style="background:#dbeafe; color:#1e3a8a; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">Acompanhar atualização em tempo real</td>
+    <td align="center" style="background:#dbeafe; color:#1e3a8a; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">Verificar integridade diária</td>
+    <td align="center" style="background:#dbeafe; color:#1e3a8a; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">Reconstruir histórico de saldos</td>
   </tr>
 </table>
 
@@ -605,3 +608,81 @@ A cada execução do pipeline de CI na branch principal, uma estimativa de custo
 | **Documentação publicada** | Documentação técnica completa, diagramas C4, relatórios de testes e cobertura disponíveis publicamente |
 
 > Para a visão técnica desta fase: [Pipeline CI/CD](infraestrutura/pipeline.md) · [Chaos Engineering](implementacao/caos.md) · [Conformidade e Evidências](seguranca/conformidade.md)
+
+---
+
+## Fase 9 — Documentação final e fechamento
+
+A Fase 9 consolidou toda a documentação técnica produzida ao longo do projeto, revisou a coerência entre o que foi documentado e o que foi implementado, e registrou formalmente o que fica fora do escopo e por quê.
+
+---
+
+### Uma análise que leu o código
+
+A documentação desta fase não foi escrita a partir de memória ou de notas — foi produzida após leitura direta do código dos dois serviços. Cada claim sobre o que está implementado tem como origem um arquivo Java específico.
+
+Essa análise encontrou quatro gaps técnicos não documentados anteriormente:
+
+- O consumer do Consolidado não verifica se um evento já foi processado — redelivery do RabbitMQ pode duplicar o saldo
+- O gateway que chama o serviço de Lançamentos não tem retry nem circuit breaker
+- O job de reconciliação não tem proteção contra execução simultânea em múltiplas instâncias
+- A operação de reconstrução de saldo usa uma transação única para todo o período — falha no meio reverte o trabalho todo
+
+Todos foram documentados com código de evidência, risco concreto e caminho de evolução em [`docs/evolucoes.md`](evolucoes.md).
+
+---
+
+### O estado real dos pendentes
+
+Quatro itens estavam registrados como "pendentes para versões futuras". A análise confirmou três e encerrou um:
+
+- O **backoffice de reprocessamento da DLQ** está corretamente adiado — o `DlqConsumer` só loga e mede; sem replay intencional.
+- A **idempotência do estorno** estava registrada como não verificada. A análise do código mostrou que está resolvida: o ID do estorno é derivado deterministicamente do ID original, tornando o replay naturalmente idempotente.
+- O **build info no MDC** e a **estética do site C4** continuam pendentes conforme documentado.
+
+---
+
+### O que foi produzido nesta fase
+
+| Artefato | O que contém |
+|----------|-------------|
+| [`docs/arquitetura/index.md`](arquitetura/index.md) | Síntese da arquitetura — conecta NFRs → ADRs → classes de implementação |
+| [`docs/evolucoes.md`](evolucoes.md) | Backlog técnico confrontado com o código — 3 decisões de escopo + 5 gaps com evidência e caminho |
+| [`docs/visao-executiva.md`](visao-executiva.md) | Este documento — todas as 9 fases fechadas |
+| [`docs/index.md`](index.md) | Landing page revisada — orientação de navegação para o leitor |
+
+---
+
+### O que foi construído ao longo das 9 fases
+
+```mermaid
+flowchart TD
+    F1["Fase 1\nDomínio de Negócio\nDrivers · Capacidades · NFRs"]
+    F2["Fase 2\nArquitetura da Solução\n18 ADRs · Diagramas C4"]
+    F3["Fase 3\nInfraestrutura\ndocker-compose · Kubernetes · IaC Terraform"]
+    F4["Fase 4\nDados e Persistência\nFlyway · DECIMAL · Outbox · Redis"]
+    F5["Fase 5\nSegurança\nJWT · RBAC · mTLS · KMS · LGPD"]
+    F6["Fase 6\nObservabilidade\nPLT · OTEL · SLOs · Redação PII"]
+    F7["Fase 7\nImplementação\n106 testes · Idempotência · Audit log"]
+    F8["Fase 8\nCI/CD e Chaos Engineering\n4 workflows · 5 experimentos · NFRs confirmados"]
+    F9["Fase 9\nDocumentação Final\nSíntese · Gaps confrontados com código"]
+
+    F1 --> F2 --> F3 --> F4 --> F5 --> F6 --> F7 --> F8 --> F9
+```
+
+---
+
+### O que está pronto para produção
+
+| Área | Estado |
+|------|--------|
+| Serviço de Lançamentos | ✅ Implementado, testado, containerizado |
+| Serviço de Consolidação | ✅ Implementado, testado, containerizado |
+| Autenticação JWT + RBAC | ✅ Operacional com Keycloak local |
+| Pipeline CI/CD | ✅ 4 workflows no GitHub Actions — testes, cobertura, Trivy, Infracost, CD por serviço |
+| Infraestrutura como código | ✅ 21 arquivos Terraform cobrindo VPC, RDS, ElastiCache, EKS, CloudFront, WAF, KMS |
+| Observabilidade | ✅ PLT + OTEL + 4 dashboards Grafana + alertas configurados |
+| Estimativa de custo | ✅ $1.219/mês estimados pelo Infracost — publicado no GitHub Pages |
+| Documentação | ✅ GitHub Pages com MkDocs + C4 + relatórios de testes + cobertura |
+
+**O gap de maior prioridade antes de produção:** idempotência no consumer do Consolidado (G-01 em [`docs/evolucoes.md`](evolucoes.md)) — sem essa proteção, redelivery do RabbitMQ pode gerar saldo duplicado.

@@ -10,6 +10,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableAsync
 public class LancamentosApplication {
 
+	@NaoTestablePorDesign(motivo = "Ponto de entrada Spring Boot — testado indiretamente pelo @SpringBootTest de contexto")
 	public static void main(String[] args) {
 		SpringApplication.run(LancamentosApplication.class, args);
 	}

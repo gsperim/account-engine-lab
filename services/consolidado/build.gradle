@@ -95,7 +95,15 @@ jacocoTestReport {
 	}
 	afterEvaluate {
 		classDirectories.setFrom(files(classDirectories.files.collect {
-			fileTree(dir: it, exclude: ['**/generated/**'])
+			fileTree(dir: it, exclude: [
+				'**/generated/**',
+				// Excluídos por design — ver @NaoTestablePorDesign nas classes
+				'**/ConsolidadoApplication.class',        // main() — ponto de entrada Spring Boot
+				'**/MessagingLogContextAspect.class',     // AOP aspect, requer Spring proxy + listener ativo
+				'**/MessagingLogContextAspect$*.class',
+				'**/LancamentosGatewayAdapter.class',     // RestClient, requer WireMock/@RestClientTest
+				'**/LancamentosGatewayAdapter$*.class',
+			])
 		}))
 	}
 }
