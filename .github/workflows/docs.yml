@@ -92,6 +92,25 @@ jobs:
           path: site/tests/consolidado
           if_no_artifact_found: warn
 
+      # ── Cobertura JaCoCo (último CI verde em main) ──────────────────────────
+      - name: Baixar cobertura — lancamentos
+        uses: dawidd6/action-download-artifact@v9
+        with:
+          workflow: ci.yml
+          branch: main
+          name: coverage-lancamentos
+          path: site/coverage/lancamentos
+          if_no_artifact_found: warn
+
+      - name: Baixar cobertura — consolidado
+        uses: dawidd6/action-download-artifact@v9
+        with:
+          workflow: ci.yml
+          branch: main
+          name: coverage-consolidado
+          path: site/coverage/consolidado
+          if_no_artifact_found: warn
+
       # ── Infracost (último CI verde em main) ─────────────────────────────────
       - name: Baixar relatório Infracost
         uses: dawidd6/action-download-artifact@v9
@@ -115,6 +134,14 @@ jobs:
           if [ ! -f site/tests/consolidado/index.html ]; then
             mkdir -p site/tests/consolidado
             echo '<meta charset="utf-8"><p>Relatório não disponível. Execute o CI em main para gerar os artefatos de teste.</p>' > site/tests/consolidado/index.html
+          fi
+          if [ ! -f site/coverage/lancamentos/index.html ]; then
+            mkdir -p site/coverage/lancamentos
+            echo '<meta charset="utf-8"><p>Cobertura não disponível. Execute o CI em main para gerar os artefatos.</p>' > site/coverage/lancamentos/index.html
+          fi
+          if [ ! -f site/coverage/consolidado/index.html ]; then
+            mkdir -p site/coverage/consolidado
+            echo '<meta charset="utf-8"><p>Cobertura não disponível. Execute o CI em main para gerar os artefatos.</p>' > site/coverage/consolidado/index.html
           fi
 
       - name: Upload artefato para Pages

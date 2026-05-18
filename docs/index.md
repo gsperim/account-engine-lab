@@ -34,6 +34,8 @@ Um comerciante precisa controlar seu fluxo de caixa diário com lançamentos (d�
 | Diagramas C4 (Structurizr) | [.../c4/](https://gsperim.github.io/account-engine-lab/c4/) |
 | Relatórios de testes — Lançamentos | [.../tests/lancamentos/](https://gsperim.github.io/account-engine-lab/tests/lancamentos/) |
 | Relatórios de testes — Consolidado | [.../tests/consolidado/](https://gsperim.github.io/account-engine-lab/tests/consolidado/) |
+| Cobertura de testes — Lançamentos | [.../coverage/lancamentos/](https://gsperim.github.io/account-engine-lab/coverage/lancamentos/) |
+| Cobertura de testes — Consolidado | [.../coverage/consolidado/](https://gsperim.github.io/account-engine-lab/coverage/consolidado/) |
 | Estimativa de custo (Infracost) | [.../infracost/](https://gsperim.github.io/account-engine-lab/infracost/) |
 
 ---
