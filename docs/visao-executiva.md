@@ -478,3 +478,130 @@ Antes de qualquer log ser persistido, o sistema aplica **redação automática d
 | **Rastreabilidade** | Cada requisição tem um identificador único que percorre todos os serviços |
 
 > Para a visão técnica desta fase: [Observabilidade](observabilidade/index.md) · [ADR-015 — Stack de Observabilidade](adr/ADR-015-observabilidade.md) · [ADR-016 — Redação de PII](adr/ADR-016-redacao-pii-logs.md)
+
+---
+
+## Fase 7 — O sistema funcionando de ponta a ponta
+
+Com toda a infraestrutura e arquitetura definidas, a Fase 7 produziu o sistema funcionando: código implementado, testado e operando com todas as regras de negócio ativas.
+
+---
+
+### 106 verificações automáticas de correção
+
+Cada regra de negócio definida nas fases anteriores foi traduzida em um teste automatizado. Antes de qualquer alteração entrar no sistema, 106 verificações são executadas automaticamente — cobrindo desde o comportamento do domínio financeiro até a integração com banco de dados, mensageria e autenticação.
+
+Isso significa que uma mudança que quebre uma regra de negócio existente é detectada **antes** de chegar à produção, não depois.
+
+---
+
+### O PDV pode tentar de novo — sem criar lançamentos duplicados
+
+Se o sistema PDV envia um lançamento e não recebe confirmação (por falha de rede, timeout ou qualquer interrupção), ele pode reenviar a mesma operação com segurança. O sistema reconhece que já recebeu aquela operação e retorna o resultado original — sem criar um segundo lançamento.
+
+Esse comportamento é garantido por uma chave de idempotência: cada operação tem uma identidade única que o sistema usa para detectar e absorver repetições. Do ponto de vista do comerciante, o saldo nunca fica errado por causa de uma retentativa.
+
+---
+
+### Correções sem apagar o histórico
+
+Quando um operador registra um lançamento incorreto, a correção segue o mesmo princípio de um livro-caixa físico: não se apaga o que foi escrito, registra-se um estorno. O sistema cria um novo lançamento que anula o anterior, mantendo a trilha completa de quem fez o quê e quando.
+
+Isso é requisito regulatório em operações financeiras — e aqui é a única forma de corrigir um erro, por design.
+
+---
+
+### O sistema detecta inconsistências sozinho
+
+Todo dia às 2h da madrugada, o sistema compara automaticamente o total de lançamentos registrados com o saldo consolidado. Se houver divergência — por qualquer razão — o sistema alerta a equipe de operação e registra a discrepância como métrica. O Gestor não precisa fazer reconciliação manual.
+
+Em caso de falha grave que corrompa o saldo consolidado, o sistema consegue **reconstruir o saldo do zero** a partir do histórico de lançamentos — sem perda de nenhuma informação financeira.
+
+---
+
+### Toda operação é rastreável até o operador
+
+Cada lançamento registrado carrega a identidade digital de quem o realizou — extraída da credencial de autenticação no momento da operação. Essa informação é imutável e retida por 5 anos, conforme exigência fiscal.
+
+Em paralelo, um registro de auditoria é criado automaticamente após cada operação confirmada, documentando a ação, o recurso afetado e o contexto relevante. Esse registro é assíncrono — a resposta ao operador não espera por ele — e sua falha nunca compromete a operação de negócio.
+
+---
+
+### O que foi entregue nesta fase
+
+| O que | Resultado |
+|-------|-----------|
+| **Implementação completa** | Todos os endpoints de lançamento, estorno, consulta e consolidação operando |
+| **Qualidade verificada** | 106 testes automatizados cobrindo domínio, persistência, mensageria e segurança |
+| **Idempotência** | Retentativas do PDV absorvidas sem duplicação — saldo sempre correto |
+| **Estorno** | Correções geram trilha auditável — histórico financeiro nunca é apagado |
+| **Reconciliação automática** | Divergências detectadas e alertadas diariamente sem intervenção humana |
+| **Recuperação catastrófica** | Saldo pode ser reconstruído integralmente a partir do histórico |
+| **Rastreabilidade** | Identidade do operador gravada em cada lançamento; audit log pós-confirmação |
+
+> Para a visão técnica desta fase: [Implementação](implementacao/index.md) · [Dados e Persistência](arquitetura/dados.md) · [Segurança](seguranca/index.md)
+
+---
+
+## Fase 8 — Como sabemos que o sistema aguenta pressão real
+
+Construir o sistema e testá-lo em condições normais não é suficiente. A Fase 8 verificou o comportamento do sistema em condições adversas — falhas deliberadas, sobrecarga controlada e implantação automatizada.
+
+---
+
+### Quebramos o sistema de propósito para provar que ele funciona
+
+Cinco experimentos de engenharia do caos foram executados: o serviço de Consolidação foi derrubado, a rede foi interrompida, o broker de mensagens foi sobrecarregado, a latência foi artificialmente aumentada. Em todos os casos, o resultado esperado foi confirmado:
+
+- **O registro de lançamentos continuou funcionando** enquanto o módulo de saldo estava fora do ar
+- **Nenhum lançamento foi perdido** — todos chegaram ao destino quando o sistema se recuperou
+- **O sistema de filas absorveu** as mensagens pendentes sem intervenção humana
+
+Esses experimentos não são especulação — são evidência documentada de que o compromisso assumido na Fase 1 ("o registro nunca para") é real e verificado.
+
+---
+
+### Nenhuma mudança entra em produção sem passar por verificação automática
+
+Cada alteração no código — de qualquer desenvolvedor, em qualquer branch — dispara automaticamente uma sequência de verificações:
+
+```mermaid
+flowchart LR
+    PR["Alteração\nno código"] --> T["Testes\nautomáticos"]
+    T --> C["Cobertura\nde código"]
+    C --> B["Build da\nimagem Docker"]
+    B --> S["Scan de\nvulnerabilidades"]
+    S --> K["Estimativa\nde custo"]
+    K --> D["Pronto para\nimplantação"]
+```
+
+Imagens com vulnerabilidades conhecidas de severidade crítica ou alta são **bloqueadas automaticamente** — não chegam ao repositório de imagens.
+
+---
+
+### Cada serviço tem seu próprio ciclo de vida
+
+Os dois serviços — Lançamentos e Consolidação — podem ser atualizados e implantados de forma completamente independente. Uma correção no serviço de Consolidação não exige nova versão do serviço de Lançamentos, e vice-versa.
+
+Cada serviço segue seu próprio versionamento semântico. Quando arquivos do serviço de Lançamentos são alterados e chegam à branch principal, o pipeline de implantação daquele serviço dispara automaticamente — lê a versão do arquivo `VERSION` do serviço e publica a nova imagem.
+
+---
+
+### O custo da infraestrutura é visível e atualizado automaticamente
+
+A cada execução do pipeline de CI na branch principal, uma estimativa de custo da infraestrutura AWS é gerada e publicada automaticamente na documentação do projeto. O valor atual estimado é de **$1.219/mês** para a configuração de produção completa — visível para qualquer stakeholder sem precisar executar nenhum comando.
+
+---
+
+### O que foi entregue nesta fase
+
+| O que | Resultado |
+|-------|-----------|
+| **Caos Engineering** | 5 experimentos executados — NFR crítico confirmado em condições adversas reais |
+| **Pipeline de qualidade** | Testes + cobertura + build + scan de segurança + custo — automático em toda alteração |
+| **Scan de vulnerabilidades** | Imagens com CVE crítico ou alto bloqueadas antes de chegar ao ambiente de produção |
+| **Implantação independente** | CD separado por serviço com versionamento semântico independente |
+| **Custo transparente** | Estimativa de infraestrutura publicada e atualizada automaticamente no CI |
+| **Documentação publicada** | Documentação técnica completa, diagramas C4, relatórios de testes e cobertura disponíveis publicamente |
+
+> Para a visão técnica desta fase: [Pipeline CI/CD](infraestrutura/pipeline.md) · [Chaos Engineering](implementacao/caos.md) · [Conformidade e Evidências](seguranca/conformidade.md)
