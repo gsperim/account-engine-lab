@@ -1,0 +1,93 @@
+name: CD — Lançamentos
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/lancamentos/**'
+      - 'contracts/openapi/lancamentos.yaml'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versão SemVer (deixe vazio para ler de services/lancamentos/VERSION)'
+        required: false
+        type: string
+
+env:
+  AWS_REGION: sa-east-1
+  ECR_REPO: fluxo-caixa-production/lancamentos
+
+jobs:
+  release:
+    name: Build e push — lancamentos
+    runs-on: ubuntu-latest
+    environment: production
+
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolver versão SemVer
+        id: version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION=$(cat services/lancamentos/VERSION)
+          fi
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'; then
+            echo "Versão inválida: '$VERSION'. Use o formato SemVer (ex: 0.1.0)."
+            exit 1
+          fi
+          echo "semver=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Configurar credenciais AWS via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login no ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build e push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/lancamentos/Dockerfile
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO }}:${{ steps.version.outputs.tag }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO }}:latest
+
+      - name: Criar tag Git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "lancamentos/${{ steps.version.outputs.tag }}" \
+            -m "release: lancamentos ${{ steps.version.outputs.tag }}"
+          git push origin "lancamentos/${{ steps.version.outputs.tag }}"
+
+      - name: Criar GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: lancamentos/${{ steps.version.outputs.tag }}
+          name: lancamentos ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
+          body: |
+            ## lancamentos ${{ steps.version.outputs.tag }}
+
+            | | |
+            |-|-|
+            | Imagem ECR | `${{ env.ECR_REPO }}:${{ steps.version.outputs.tag }}` |
+            | Tag Git | `lancamentos/${{ steps.version.outputs.tag }}` |

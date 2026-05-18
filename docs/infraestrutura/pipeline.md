@@ -2,7 +2,7 @@
 
 **Perspectiva:** 🔐 DevSecOps · 🏗️ Arquiteto de Infraestrutura  
 **Requisitos:** [NFR-06](../negocio/requisitos.md#nfr-06) (zero perda de dados), [NFR-09](../negocio/requisitos.md#nfr-09) (rastreabilidade)  
-**Workflows:** [`ci.yml`](https://github.com/gsperim/account-engine-lab/blob/main/.github/workflows/ci.yml) · [`cd.yml`](https://github.com/gsperim/account-engine-lab/blob/main/.github/workflows/cd.yml) · [`docs.yml`](https://github.com/gsperim/account-engine-lab/blob/main/.github/workflows/docs.yml)
+**Workflows:** [`ci.yml`](https://github.com/gsperim/account-engine-lab/blob/main/.github/workflows/ci.yml) · [`cd-lancamentos.yml`](https://github.com/gsperim/account-engine-lab/blob/main/.github/workflows/cd-lancamentos.yml) · [`cd-consolidado.yml`](https://github.com/gsperim/account-engine-lab/blob/main/.github/workflows/cd-consolidado.yml) · [`docs.yml`](https://github.com/gsperim/account-engine-lab/blob/main/.github/workflows/docs.yml)
 
 ---
 
@@ -25,7 +25,8 @@ flowchart LR
 | Workflow | Gatilho | Objetivo |
 |----------|---------|---------|
 | **CI** | Push em qualquer branch · PR para main/develop · manual | Qualidade — testes, cobertura, imagem, segurança, custo |
-| **CD** | Manual (`workflow_dispatch`) | Release — build final e push para ECR + GitHub Release |
+| **CD — Lançamentos** | Push em main com mudança em `services/lancamentos/**` ou contrato · manual | Release independente do serviço de lançamentos |
+| **CD — Consolidado** | Push em main com mudança em `services/consolidado/**` ou contrato · manual | Release independente do serviço de consolidação |
 | **Docs** | Push em main (paths relevantes) · CI concluído em main · manual | Publicação — MkDocs + C4 + relatórios no GitHub Pages |
 
 ---
@@ -98,27 +99,44 @@ Roda **apenas em `main`** (`if: github.ref == 'refs/heads/main'`). Com `continue
 
 ---
 
-## CD — `cd.yml`
+## CD — `cd-lancamentos.yml` / `cd-consolidado.yml`
 
-Execução **exclusivamente manual** (`workflow_dispatch`). Requer o secret `AWS_DEPLOY_ROLE_ARN` e o environment `production` configurado no repositório.
+Cada serviço tem seu próprio workflow de release com **versionamento independente**, alinhado ao `CONTRIBUTING.md`. Os dois funcionam da mesma forma — apenas os paths e o repositório ECR diferem.
 
-### Sequência
+### Gatilhos
+
+| Evento | Condição |
+|--------|---------|
+| `push` em `main` | `services/lancamentos/**` ou `contracts/openapi/lancamentos.yaml` |
+| `workflow_dispatch` | Input `version` opcional — se vazio, lê `services/lancamentos/VERSION` |
+
+### Fonte de versão
+
+```
+services/
+  lancamentos/VERSION   → ex: 0.2.0
+  consolidado/VERSION   → ex: 0.1.1   ← versões independentes
+```
+
+No fluxo de release: o desenvolvedor cria `release/0.2.0`, bumpa o arquivo `VERSION`, faz merge em main → CD dispara automaticamente lendo a versão do arquivo. No `workflow_dispatch`, o input sobrescreve o arquivo — útil para hotfixes ou republicação.
+
+### Sequência (idêntica para os dois serviços)
 
 ```mermaid
 sequenceDiagram
-    actor Dev
+    participant Main as merge em main
     participant GHA as GitHub Actions
     participant AWS as AWS (OIDC)
     participant ECR
     participant GH as GitHub Releases
 
-    Dev->>GHA: workflow_dispatch
+    Main->>GHA: push (path match) ou workflow_dispatch
+    GHA->>GHA: ler VERSION ou usar input
     GHA->>AWS: AssumeRoleWithWebIdentity (OIDC)
     AWS-->>GHA: credenciais temporárias
-    GHA->>ECR: docker login
-    GHA->>ECR: push lancamentos :YYYYMMDD-SHA + :latest
-    GHA->>ECR: push consolidado  :YYYYMMDD-SHA + :latest
-    GHA->>GH: criar Release com release notes geradas
+    GHA->>ECR: push :vX.Y.Z + :latest
+    GHA->>GHA: git tag lancamentos/vX.Y.Z
+    GHA->>GH: GitHub Release
 ```
 
 **Versão:** informada como input do `workflow_dispatch` em formato SemVer (`MAJOR.MINOR.PATCH`). O workflow valida o formato antes de prosseguir — qualquer string inválida aborta o job.
