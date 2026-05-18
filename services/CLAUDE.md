@@ -135,6 +135,16 @@ adapter/out/messaging/   → RabbitMQ publisher (só em lançamentos)
 | Rota Keycloak no Traefik | `docker-compose.yml` labels `keycloak` + `traefik/dynamic/middlewares.yml` `strip-auth` |
 | Auth no k6 | `tests/k6/auth.js` — ROPC, cache per-VU, retry no boot |
 
+### Cobertura de código — JaCoCo
+| Artefato | Detalhe |
+|---|---|
+| Plugin | `id 'jacoco'` em ambos os `build.gradle` |
+| Geração | `jacocoTestReport` configurado como `finalizedBy` da task `test` |
+| Exclusões | `**/generated/**` (código OpenAPI Generator) excluído do relatório |
+| Reports | HTML em `build/reports/jacoco/test/html/`; XML em `build/reports/jacoco/test/` (para SonarCloud futuro) |
+| CI artifacts | `coverage-lancamentos` · `coverage-consolidado` — retenção 30 dias |
+| Pages | Publicados em `/coverage/lancamentos/` · `/coverage/consolidado/` no GitHub Pages |
+
 ### Rastreabilidade — Audit Log (NFR-09 / ISO 37301)
 | Artefato | Arquivo |
 |---|---|
@@ -155,7 +165,7 @@ adapter/out/messaging/   → RabbitMQ publisher (só em lançamentos)
 
 **106+ testes verdes**. Todos os endpoints implementados e cobertos. Audit log ativo em lançamentos.
 
-| Serviço | Artefatos relevantes (2026-05-17) |
+| Serviço | Artefatos relevantes (2026-05-18) |
 |---------|--------------------------------------|
 | lancamentos | `AuditEventListener`, `AuditPublisherAdapter`, `AuditLogJpaEntity`, `V6__create_audit_log.sql`, logs refatorados |
 | consolidado | `MessagingLogContextAspect`, `LoggingContextFilter`, `LancamentosGatewayAdapter` (RestClient.Builder) |
