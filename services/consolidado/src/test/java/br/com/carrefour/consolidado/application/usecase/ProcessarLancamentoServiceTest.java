@@ -3,6 +3,7 @@ package br.com.carrefour.consolidado.application.usecase;
 import br.com.carrefour.consolidado.domain.model.SaldoConsolidado;
 import br.com.carrefour.consolidado.domain.model.TipoMovimento;
 import br.com.carrefour.consolidado.domain.port.in.ProcessarLancamentoUseCase.Command;
+import br.com.carrefour.consolidado.domain.port.out.LancamentosAplicadosRepository;
 import br.com.carrefour.consolidado.domain.port.out.SaldoConsolidadoRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,48 +25,69 @@ import static org.mockito.Mockito.*;
 class ProcessarLancamentoServiceTest {
 
     @Mock SaldoConsolidadoRepository repository;
+    @Mock LancamentosAplicadosRepository aplicados;
     @InjectMocks ProcessarLancamentoService service;
 
     static final LocalDate HOJE = LocalDate.of(2026, 5, 9);
 
     @Test
     void deveCriarNovoSaldoQuandoNaoExiste() {
+        var id = UUID.randomUUID();
+        when(aplicados.existePorId(id)).thenReturn(false);
         when(repository.buscarPorData(HOJE)).thenReturn(Optional.empty());
         when(repository.salvar(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        service.executar(new Command(UUID.randomUUID(), TipoMovimento.CREDITO, new BigDecimal("100.00"), HOJE));
+        service.executar(new Command(id, TipoMovimento.CREDITO, new BigDecimal("100.00"), HOJE));
 
         var captor = ArgumentCaptor.forClass(SaldoConsolidado.class);
         verify(repository).salvar(captor.capture());
+        verify(aplicados).registrar(id, HOJE);
         assertThat(captor.getValue().getTotalCreditos()).isEqualByComparingTo("100.00");
         assertThat(captor.getValue().getTotalLancamentos()).isEqualTo(1);
     }
 
     @Test
     void deveAcumularEmSaldoExistente() {
+        var id = UUID.randomUUID();
         var saldoExistente = SaldoConsolidado.novo(HOJE);
         saldoExistente.aplicarCredito(new BigDecimal("50.00"));
+        when(aplicados.existePorId(id)).thenReturn(false);
         when(repository.buscarPorData(HOJE)).thenReturn(Optional.of(saldoExistente));
         when(repository.salvar(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        service.executar(new Command(UUID.randomUUID(), TipoMovimento.CREDITO, new BigDecimal("100.00"), HOJE));
+        service.executar(new Command(id, TipoMovimento.CREDITO, new BigDecimal("100.00"), HOJE));
 
         var captor = ArgumentCaptor.forClass(SaldoConsolidado.class);
         verify(repository).salvar(captor.capture());
+        verify(aplicados).registrar(id, HOJE);
         assertThat(captor.getValue().getTotalCreditos()).isEqualByComparingTo("150.00");
         assertThat(captor.getValue().getTotalLancamentos()).isEqualTo(2);
     }
 
     @Test
     void deveAplicarDebitoCorretamente() {
+        var id = UUID.randomUUID();
+        when(aplicados.existePorId(id)).thenReturn(false);
         when(repository.buscarPorData(HOJE)).thenReturn(Optional.empty());
         when(repository.salvar(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        service.executar(new Command(UUID.randomUUID(), TipoMovimento.DEBITO, new BigDecimal("30.00"), HOJE));
+        service.executar(new Command(id, TipoMovimento.DEBITO, new BigDecimal("30.00"), HOJE));
 
         var captor = ArgumentCaptor.forClass(SaldoConsolidado.class);
         verify(repository).salvar(captor.capture());
         assertThat(captor.getValue().getTotalDebitos()).isEqualByComparingTo("30.00");
         assertThat(captor.getValue().getTotalCreditos()).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    void deveIgnorarEventoJaAplicado() {
+        var id = UUID.randomUUID();
+        when(aplicados.existePorId(id)).thenReturn(true);
+
+        service.executar(new Command(id, TipoMovimento.CREDITO, new BigDecimal("100.00"), HOJE));
+
+        verify(repository, never()).buscarPorData(any());
+        verify(repository, never()).salvar(any());
+        verify(aplicados, never()).registrar(any(), any());
     }
 }
