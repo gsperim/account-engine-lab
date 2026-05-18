@@ -120,7 +120,7 @@ fi
 
 # ── Subir serviços ────────────────────────────────────────────────────────────
 
-info "Iniciando serviços..."
+info "Iniciando infraestrutura..."
 $COMPOSE pull --quiet
 $COMPOSE up -d
 
@@ -130,12 +130,15 @@ if [ "$CERT_GENERATED" = "true" ]; then
   $COMPOSE restart traefik
 fi
 
+info "Iniciando serviços de aplicação (build pode demorar)..."
+$COMPOSE --profile app up -d --build
+
 # ── Aguardar disponibilidade ──────────────────────────────────────────────────
 
 info "Aguardando serviços ficarem disponíveis..."
 
 wait_for() {
-  local url=$1 name=$2 attempts=0 max=30
+  local url=$1 name=$2 max=${3:-30} attempts=0
   while ! curl -sf --insecure "$url" &>/dev/null; do
     attempts=$((attempts + 1))
     if [ $attempts -ge $max ]; then
@@ -150,7 +153,9 @@ wait_for() {
 wait_for "http://localhost:8000"  "Portal de Documentação"
 wait_for "http://localhost:8080"  "Diagramas C4 (Structurizr)"
 wait_for "http://localhost:8091"  "Traefik Dashboard"
-# Nota: lancamentos e consolidado só sobem com --profile app (Etapa 7)
+wait_for "http://localhost:3000"  "Grafana"
+wait_for "http://localhost:8090/lancamentos/actuator/health"  "Serviço de Lançamentos" 120
+wait_for "http://localhost:8090/consolidacao/actuator/health" "Serviço de Consolidação" 120
 
 # ── Resumo ────────────────────────────────────────────────────────────────────
 
@@ -160,9 +165,13 @@ echo ""
 echo -e "  ${GREEN}●${RESET} API Gateway (HTTP)        →  http://localhost:8090"
 echo -e "  ${GREEN}●${RESET} API Gateway (HTTPS)       → https://localhost:8443   ${YELLOW}${HTTPS_NOTE}${RESET}"
 echo -e "  ${GREEN}●${RESET} Traefik Dashboard         →  http://localhost:8091"
+echo -e "  ${GREEN}●${RESET} Keycloak (IdP)            →  http://localhost:8180"
 echo -e "  ${GREEN}●${RESET} RabbitMQ Management       →  http://localhost:15672"
+echo -e "  ${GREEN}●${RESET} Grafana                   →  http://localhost:3000   ${YELLOW}admin / admin${RESET}"
+echo -e "  ${GREEN}●${RESET} Prometheus                →  http://localhost:9090"
 echo -e "  ${GREEN}●${RESET} Portal de Documentação    →  http://localhost:8000"
 echo -e "  ${GREEN}●${RESET} Diagramas C4              →  http://localhost:8080"
+echo -e "  ${GREEN}●${RESET} Swagger UI (contratos)    →  http://localhost:8070"
 echo ""
 
 if ! command -v mkcert &>/dev/null; then

@@ -147,15 +147,15 @@ graph LR
 
 <table style="width:100%; border-collapse: collapse; font-size: 0.9em;">
   <tr>
-    <td colspan="7" align="center" style="background:#1d4ed8; color:#fff; font-weight:bold; padding:10px; border:2px solid #1e3a8a;">
+    <td colspan="10" align="center" style="background:#1d4ed8; color:#fff; font-weight:bold; padding:10px; border:2px solid #1e3a8a;">
       Gestão de Fluxo de Caixa — Core Domain
     </td>
   </tr>
   <tr>
-    <td colspan="4" align="center" style="background:#3b82f6; color:#fff; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">
+    <td colspan="5" align="center" style="background:#3b82f6; color:#fff; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">
       Registro de Movimentações<br><span style="font-weight:normal; font-size:0.85em;">Contexto de Lançamentos</span>
     </td>
-    <td colspan="3" align="center" style="background:#3b82f6; color:#fff; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">
+    <td colspan="5" align="center" style="background:#3b82f6; color:#fff; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">
       Consolidação de Saldo<br><span style="font-weight:normal; font-size:0.85em;">Contexto de Consolidação Diária</span>
     </td>
   </tr>
@@ -164,8 +164,11 @@ graph LR
     <td align="center" style="background:#dbeafe; color:#1e3a8a; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">Registrar crédito</td>
     <td align="center" style="background:#dbeafe; color:#1e3a8a; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">Validar lançamento</td>
     <td align="center" style="background:#dbeafe; color:#1e3a8a; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">Consultar lançamentos por período</td>
+    <td align="center" style="background:#dbeafe; color:#1e3a8a; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">Estornar lançamento</td>
     <td align="center" style="background:#dbeafe; color:#1e3a8a; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">Processar eventos de lançamento</td>
     <td align="center" style="background:#dbeafe; color:#1e3a8a; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">Calcular saldo diário</td>
     <td align="center" style="background:#dbeafe; color:#1e3a8a; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">Disponibilizar relatório de saldo consolidado</td>
+    <td align="center" style="background:#dbeafe; color:#1e3a8a; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">Reconciliar saldos diariamente</td>
+    <td align="center" style="background:#dbeafe; color:#1e3a8a; font-weight:bold; padding:8px; border:2px solid #1e3a8a;">Reconstruir saldo consolidado</td>
   </tr>
 </table>

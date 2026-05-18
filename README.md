@@ -97,7 +97,7 @@ Resposta:
 ## Executando os Testes
 
 ```bash
-# Testes de unidade e integração (68 testes — 40 lançamentos + 28 consolidado)
+# Testes de unidade e integração (~146 testes — lancamentos + consolidado)
 cd services/lancamentos && ./gradlew test
 cd services/consolidado && ./gradlew test
 
@@ -141,6 +141,7 @@ k6 run idempotencia.js
 | Keycloak | http://localhost:8180 | Identity Provider |
 | Portal de Documentação | http://localhost:8000 | Arquitetura, ADRs, decisões |
 | Diagramas C4 | http://localhost:8080 | Contexto e containers (Structurizr Lite) |
+| **Swagger UI** | http://localhost:8070 | Contratos OpenAPI navegáveis (Lançamentos + Consolidado) |
 
 ```bash
 # Subir apenas a infraestrutura de dados
@@ -190,6 +191,11 @@ Cliente → Traefik → Lançamentos → PostgreSQL (escrita atômica)
 
 A documentação completa — visão executiva, ADRs, diagramas C4, decisões de segurança e observabilidade — está disponível em http://localhost:8000 após subir o portal.
 
+Os contratos OpenAPI também podem ser explorados online via Swagger Editor, sem precisar subir o ambiente local:
+
+- [Lançamentos](https://editor.swagger.io/?url=https://raw.githubusercontent.com/gsperim/account-engine-lab/main/contracts/openapi/lancamentos.yaml)
+- [Consolidado Diário](https://editor.swagger.io/?url=https://raw.githubusercontent.com/gsperim/account-engine-lab/main/contracts/openapi/consolidado.yaml)
+
 ---
 
 ## Observabilidade
@@ -236,7 +242,8 @@ docker compose restart traefik
 │   │   └── build.gradle        # OpenAPI Generator + Resilience4j + Flyway
 │   └── consolidado/            # Serviço de Consolidação Diária
 │       ├── src/main/java/      # Mesma estrutura hexagonal
-│       └── src/test/java/      # 28 testes
+│       ├── src/test/java/      # Testes (unit, slice, integração)
+│       └── build.gradle        # OpenAPI Generator + Resilience4j + Flyway + JaCoCo
 ├── contracts/openapi/          # Contratos OpenAPI 3.1 (source of truth)
 │   ├── lancamentos.yaml
 │   └── consolidado.yaml

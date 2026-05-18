@@ -119,11 +119,13 @@ nav:
     - Requisitos: negocio/requisitos.md
 
   - Arquitetura:
+    - Síntese: arquitetura/index.md
     - Diagramas C4: arquitetura/diagramas-c4.md
     - Contratos de Integração: engenharia/contratos.md
     - Dados e Persistência: arquitetura/dados.md
     - Stack e Ferramentas: stack.md
     - Decisões Arquiteturais: adr/index.md
+    - Evoluções Futuras: evolucoes.md
 
   - Segurança:
     - Visão Geral: seguranca/index.md

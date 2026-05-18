@@ -66,17 +66,20 @@ A ISO 37301 exige que a organização demonstre:
 
 #### Trilha de Auditoria Implementada
 
-Cada operação de escrita no sistema deixa evidências imutáveis que permitem responder às perguntas: *quem fez, o quê, quando e com qual valor*.
+Cada operação de escrita no sistema deixa evidências imutáveis que permitem responder às perguntas: *quem fez, o quê, quando e com qual valor*. A trilha opera em duas camadas complementares: os dados financeiros na tabela `lancamentos` e as ações de negócio na tabela `audit_log`.
 
 | Pergunta | Dado capturado | Onde |
 |----------|---------------|------|
-| **Quem** | `operador_id` = claim `sub` do JWT (UUID Keycloak) | Coluna `lancamentos.operador_id` |
+| **Quem** | `operador_id` = claim `sub` do JWT (UUID Keycloak) | Coluna `lancamentos.operador_id` · Coluna `audit_log.operador_id` |
 | **O quê** | `tipo` (CREDITO/DEBITO), `valor`, `descricao` | Colunas da tabela `lancamentos` |
+| **Qual ação** | `acao` = `lancamento.registrado` ou `estorno.registrado` | Coluna `audit_log.acao` + `contexto` JSON |
 | **Quando** | `criado_em` timestamp UTC imutável | `@CreationTimestamp` — não atualizável |
 | **Qual chave de transação** | `id` = UUID v4 gerado pelo banco | PK `lancamentos.id` |
 | **Idempotência** | `Idempotency-Key` + `payload_hash` SHA-256 | Coluna `lancamentos.idempotency_key` + `payload_hash` |
 | **Estorno de qual lançamento** | `estorno_de` UUID do original | Coluna `lancamentos.estorno_de` |
 | **Rastreabilidade distribuída** | `correlation_id` + `traceId` em logs | MDC → Loki + Tempo |
+
+**Mecanismo de persistência do audit log:** `AuditEventListener` usa `@TransactionalEventListener(AFTER_COMMIT)` + `@Async` — o response HTTP é enviado antes do registro de auditoria ser gravado; falhas no audit são capturadas e logadas, nunca propagadas para a operação de negócio. Schema em `V6__create_audit_log.sql`. Retenção: 5 anos.
 
 #### Imutabilidade como Controle de Conformidade
 
@@ -118,7 +121,7 @@ Divergências são registradas na métrica `saldo_reconciliado_divergencias_tota
 | ISO/IEC 27001 A.17 | Continuidade de negócios | Outbox + Circuit Breaker + Chaos Engineering | [continuidade.md](continuidade.md) |
 | ISO 22301 | RTO/RPO para operações críticas | `/admin/reconstruir` + Outbox Relay | [continuidade.md](continuidade.md) |
 | ISO 31000 | Risk register com controles mapeados | Chaos Engineering + reconciliação | [continuidade.md](continuidade.md#registro-de-riscos) |
-| ISO 37301 | Trilha de auditoria imutável | `operadorId` + timestamps + append-only | `LancamentoJpaEntity.java` |
+| ISO 37301 | Trilha de auditoria imutável | `operadorId` + timestamps + append-only + `audit_log` | `LancamentoJpaEntity.java` · `AuditEventListener.java` · `V6__create_audit_log.sql` |
 | OWASP ASVS L1 | Controles de segurança verificáveis | 26 controles L1 atendidos | [asvs.md](asvs.md) |
 | OWASP ASVS L2 | Defense in depth | 8 controles L2 adicionais atendidos | [asvs.md](asvs.md) |
 
