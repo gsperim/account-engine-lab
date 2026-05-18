@@ -41,7 +41,7 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 
 ## Estado Atual
 
-**Data:** 2026-05-17 | **Branch:** `develop` (pós sessão 2026-05-17)
+**Data:** 2026-05-18 | **Branch:** `main` (pós sessão 2026-05-18)
 **Repositório:** https://github.com/gsperim/account-engine-lab
 
 ### Etapas concluídas
@@ -82,12 +82,12 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 
 | Item | Detalhe |
 |------|---------|
-| `ci.yml` | Testes (lancamentos + consolidado) + build Docker + scan Trivy CRITICAL/HIGH — verde no GitHub Actions |
-| `cd.yml` | Push para ECR via OIDC + GitHub Release — trigger manual (`workflow_dispatch`); requer `AWS_DEPLOY_ROLE_ARN` |
-| `docs.yml` | MkDocs build + deploy no GitHub Pages via GitHub Actions source — publicado em `https://gsperim.github.io/account-engine-lab/` |
-| CVEs corrigidos | netty 4.1.132→4.1.133 (CVE-2026-42583), postgresql 42.7.10→42.7.11 (CVE-2026-42198) via BOM override; `.trivyignore` para CVEs de OS da distroless |
+| `ci.yml` | Testes + JaCoCo coverage + build Docker + scan Trivy + Infracost (main only) — verde no GitHub Actions |
+| `cd-lancamentos.yml` / `cd-consolidado.yml` | CD independente por serviço; SemVer via `VERSION` file; path trigger em main; OIDC sem credenciais estáticas |
+| `docs.yml` | MkDocs + C4 (Structurizr) + relatórios de testes + JaCoCo coverage + Infracost → GitHub Pages; trigger workflow_run pós-CI |
+| CVEs corrigidos | netty, postgresql via BOM override; `CVE-2026-0861` (libc6) + outros no `.trivyignore`; `cloudfront.tf` syntax fix |
 | Chaos Engineering | 5 experimentos executados com Pumba + k6; todos os NFRs confirmados — ver `docs/implementacao/caos.md` |
-| Frontend Angular | Plano completo em `docs/implementacao/frontend.md` — implementação após Etapa 8 completa |
+| Infracost | `$1.219/mês` verificado localmente; terraform init + `--show-skipped`; `INFRACOST_API_KEY` configurado no repo |
 
 #### Pendentes para versões futuras
 | Item | Observação |
@@ -95,16 +95,23 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 | Backoffice de DLQ | Replay controlado com audit trail — mencionado no `DlqConsumer.java` |
 | Idempotência com payload diferente para estorno | Estorno já é idempotente via UUID derivado; conflito de payload não verificado |
 | Build info no MDC | `version` + `commit_hash` via `build-info` do Actuator |
+| C4 site — estética | Structurizr site-generatr gera HTML sem formatação/CSS — investigar na Etapa 9 |
 
-#### ✅ Entregues nesta sessão (2026-05-17)
+#### ✅ Entregues nesta sessão (2026-05-18)
 
 | Item | Detalhe |
 |------|---------|
-| **fix/stress** | `stress.js`: token estático do `setup()` expirava em 5min com teste de 7min → 401 nos últimos 60s (clock skew 60s Spring Security = 14.66% falhas). Fix: `expiresAt` + helpers `getCaixaToken/getGestorToken` |
-| **docs/conformidade-normativa** | 7 normas ISO + OWASP ASVS aplicadas; 3 docs novos (`asvs.md`, `continuidade.md`, `conformidade.md`); mapeamento Anexo A ISO 27001 no `seguranca/index.md`; ISO 31000 em `caos.md`; ISO 20022 em ADR-001; ISO 4217 evolution path em ADR-012; `mkdocs.yml` — Segurança expandida de 1 para 4 páginas |
-| **fix/seguranca-claims-jwt** | Claims JWT alinhados com implementação real: TTL 5min (não 15min), `iss` real do realm Keycloak, `aud` = client ID, `jti` não usado como revogação, `preferred_username` adicionado, mecanismo de `role` documentado (atributo de usuário vs. hardcoded para PDV) |
-| **fix/trilha-auditoria** | Seção "Trilha de Auditoria" reescrita: removida tabela `audit_log` fictícia e mecanismo de headers gateway que não existem; documentada a trilha real (`operador_id` em `lancamentos` + logs estruturados); política de retenção expandida em `dados.md` |
-| **feat/audit-log** | `audit_log` assíncrono pós-commit em lançamentos: V6 Flyway, `AuditEvento` record, `AuditPublisher` port, `AuditPublisherAdapter`, `AuditEventListener` (`@TransactionalEventListener(AFTER_COMMIT)` + `@Async`), `@EnableAsync`; injetado em `RegistrarLancamentoService` e `EstornarLancamentoService`; `AuditEventListenerTest` |
+| **docs/audit-log** | `dados.md` e `seguranca/index.md` sincronizados com V6 Flyway: schema `audit_log`, retenção 5 anos, mecanismo AFTER_COMMIT+Async |
+| **feat/docs-pages** | `docs.yml` expandido: C4 via `structurizr-site-generatr`, relatórios de testes, JaCoCo coverage, Infracost; fallback pages para artefatos ausentes |
+| **feat/jacoco** | Plugin `jacoco` em ambos os `build.gradle`; `jacocoTestReport` como `finalizedBy`; excluí `**/generated/**`; artifacts `coverage-{serviço}` no CI |
+| **feat/cd-por-servico** | `cd.yml` substituído por `cd-lancamentos.yml` + `cd-consolidado.yml`; SemVer via `VERSION` file; path trigger automático em main |
+| **fix/structurizr** | 5 iterações: CLI descontinuado → `structurizr-site-generatr`; permissão Docker (`--user`); `overview.md`; path `build/site/*` |
+| **fix/terraform** | `cloudfront.tf`: `override_action { none {} }` expandido para multi-linha (Terraform ≥ 1.8) |
+| **fix/infracost** | Path (`cd terraform/`), `terraform init`, CVE-2026-0861 no `.trivyignore`, `--show-skipped` |
+| **docs/nav** | Menu reorganizado: Início agrupa Visão Executiva, Planejamento, Glossário e Tags |
+| **docs/pipeline** | `pipeline.md` reescrito com implementação real dos 4 workflows |
+| **docs/visao-executiva** | Fases 7 e 8 completas: implementação, testes, idempotência, estorno, audit, caos, CD independente |
+| **docs/index** | Links para todos os artefatos publicados no GitHub Pages |
 
 #### Próximo passo imediato
 **Etapa 9 — Documentação Final e publicação**
@@ -116,7 +123,7 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 - **Gateway:** Traefik (local) | CloudFront + API Gateway HTTP API (prod)
 - **Observabilidade:** Prometheus + Loki + Grafana + Tempo + OTEL Collector
 - **Contratos:** OpenAPI 3.1 spec-first, controllers gerados via OpenAPI Generator
-- **CI/CD:** GitHub Actions — `ci.yml` (testes + Trivy), `cd.yml` (ECR manual), `docs.yml` (GitHub Pages)
+- **CI/CD:** GitHub Actions — `ci.yml` (testes + JaCoCo + Trivy + Infracost), `cd-lancamentos.yml` + `cd-consolidado.yml` (ECR via OIDC, SemVer independente, path trigger), `docs.yml` (GitHub Pages: MkDocs + C4 + testes + cobertura + Infracost)
 
 ### Protocolo de continuidade entre sessões
 
