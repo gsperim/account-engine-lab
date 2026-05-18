@@ -1,5 +1,6 @@
 package br.com.carrefour.consolidado.adapter.out.gateway;
 
+import br.com.carrefour.consolidado.NaoTestablePorDesign;
 import br.com.carrefour.consolidado.domain.port.out.LancamentosGateway;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +13,7 @@ import java.time.LocalDate;
 // Em produção: substituir token estático por Client Credentials do Keycloak
 // (spring-security-oauth2-client + ClientRegistration).
 @Component
+@NaoTestablePorDesign(motivo = "RestClient configurado com baseUrl de variável de ambiente. Teste requer WireMock ou @RestClientTest com MockRestServiceServer.")
 public class LancamentosGatewayAdapter implements LancamentosGateway {
 
     private final RestClient restClient;

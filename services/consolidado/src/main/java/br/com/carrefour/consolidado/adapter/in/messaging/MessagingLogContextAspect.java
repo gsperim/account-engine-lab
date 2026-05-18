@@ -1,5 +1,6 @@
 package br.com.carrefour.consolidado.adapter.in.messaging;
 
+import br.com.carrefour.consolidado.NaoTestablePorDesign;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -20,6 +21,7 @@ import java.util.UUID;
 @Aspect
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
+@NaoTestablePorDesign(motivo = "Aspecto AOP em @RabbitListener. Executa somente com Spring AOP proxy ativo + listener configurado. Testável via @SpringBootTest com embedded broker.")
 public class MessagingLogContextAspect {
 
     private static final String CORRELATION_HEADER = "X-Correlation-ID";
