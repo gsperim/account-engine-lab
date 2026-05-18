@@ -353,6 +353,7 @@ services:
   tempo:
     container_name: obs-tempo
     image: grafana/tempo:2.6.0
+    user: root
     volumes:
       - ./observability/tempo.yml:/etc/tempo/config.yml:ro
       - tempo-data:/var/tempo
@@ -366,6 +367,7 @@ services:
   pyroscope:
     container_name: obs-pyroscope
     image: grafana/pyroscope:1.7.0
+    user: root
     volumes:
       - ./observability/pyroscope.yml:/etc/pyroscope/config.yml:ro
       - pyroscope-data:/var/lib/pyroscope
