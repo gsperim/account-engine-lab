@@ -1,48 +1,53 @@
+---
+tags:
+  - arquitetura
+  - c4
+---
+
 # Diagramas C4
 
 **Perspectiva:** 🧩 Arquiteto de Soluções  
 **Nível:** C4 L1 (System Context) + C4 L2 (Containers)  
-**Fonte:** [`structurizr/workspace.dsl`](../../structurizr/workspace.dsl)
-
----
-
-## Visualização Interativa
-
-Os diagramas são renderizados pelo Structurizr Lite incluído no ambiente local:
-
-```bash
-docker compose up structurizr
-# Acesse: http://localhost:8080
-```
+**Fonte:** [`structurizr/workspace.dsl`](../../structurizr/workspace.dsl) · visualização interativa: `docker compose up structurizr` → http://localhost:8080
 
 ---
 
 ## C4 L1 — Contexto do Sistema
 
-> Exportação em PNG disponível após execução do Structurizr. Execute `docker compose up structurizr` e exporte pelo menu *Diagrams → Export*.
+**O que mostra:** o sistema como uma caixa preta, seus usuários diretos (Caixa, Gestor, PDV) e os sistemas externos com os quais se integra (Identity Provider, Plataforma de Observabilidade).
 
-<!-- TODO Etapa 9: substituir pelo PNG exportado
-![Diagrama de Contexto do Sistema](../assets/c4-context.png)
--->
-
-**O que mostra:** o sistema como uma caixa preta, seus usuários diretos (Comerciante, PDV) e os sistemas externos com os quais se integra.
+[![Diagrama de Contexto do Sistema](assets/contexto.png)](assets/contexto.png)
 
 ---
 
-## C4 L2 — Diagrama de Containers
+## C4 L2 — Containers do Sistema de Negócio
 
-> Exportação em PNG disponível após execução do Structurizr.
+**O que mostra:** os containers internos — Serviço de Lançamentos, Outbox Relay, Serviço de Consolidação, bancos de dados, cache, broker — e como se comunicam entre si e com os sistemas externos.
 
-<!-- TODO Etapa 9: substituir pelo PNG exportado
-![Diagrama de Containers](../assets/c4-containers.png)
--->
+[![Diagrama de Containers](assets/containers.png)](assets/containers.png)
 
-**O que mostra:** os containers internos do sistema — Serviço de Lançamentos, Serviço de Consolidação Diária, bancos de dados, cache e broker — e como se comunicam entre si e com o mundo externo.
+[![Legenda](assets/containers-key.png)](assets/containers-key.png)
 
 ---
 
-## Decisões de Design
+## C4 L2 — Plataforma de Observabilidade
 
-Os diagramas foram produzidos em [Structurizr DSL](https://structurizr.com/dsl) e renderizados pelo Structurizr Lite. Esta escolha elimina dependência de ferramentas externas — qualquer pessoa com Docker consegue visualizar os diagramas sem conta ou licença.
+**O que mostra:** os containers da stack PLG + OTEL — OTEL Collector, Prometheus, Alertmanager, Loki, Promtail, Tempo, Pyroscope, Grafana, Blackbox Exporter — e como recebem telemetria dos serviços de negócio.
 
-A decisão de runtime está formalizada no [ADR-006](../adr/ADR-006-container-runtime.md).
+[![Diagrama de Observabilidade](assets/observabilidade-containers.png)](assets/observabilidade-containers.png)
+
+[![Legenda](assets/observabilidade-containers-key.png)](assets/observabilidade-containers-key.png)
+
+---
+
+## Fonte canônica
+
+Os diagramas são gerados pelo Structurizr Lite a partir do DSL versionado:
+
+```bash
+docker compose up structurizr
+# Acesse: http://localhost:8080
+# Exporte: menu Diagrams → Export → PNG
+```
+
+O DSL em [`structurizr/workspace.dsl`](../../structurizr/workspace.dsl) é a fonte de verdade — qualquer mudança na arquitetura começa por ali. Os PNGs nesta página são exportações pontuais e podem ficar desatualizados se o DSL for alterado sem re-exportar.
