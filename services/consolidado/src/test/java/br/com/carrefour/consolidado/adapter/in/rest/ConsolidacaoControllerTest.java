@@ -98,6 +98,16 @@ class ConsolidacaoControllerTest {
             .andExpect(jsonPath("$.codigo").value("ARGUMENTO_INVALIDO"));
     }
 
+    @Test
+    void qualquerEndpoint_deveRetornar500EmErroInesperado() throws Exception {
+        when(buscarUseCase.executar(any())).thenThrow(new RuntimeException("erro inesperado"));
+
+        mvc.perform(get("/saldo/{data}", HOJE)
+                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_GESTOR"))))
+            .andExpect(status().isInternalServerError())
+            .andExpect(jsonPath("$.codigo").value("ERRO_INTERNO"));
+    }
+
     private SaldoConsolidado umSaldo() {
         return SaldoConsolidado.reconstituir(
             HOJE, new BigDecimal("300.00"), new BigDecimal("100.00"), 3, LocalDateTime.of(2026, 5, 9, 12, 0));

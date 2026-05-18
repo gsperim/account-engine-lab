@@ -1,6 +1,8 @@
 package br.com.carrefour.lancamentos.adapter.in.rest;
 
+import br.com.carrefour.lancamentos.domain.exception.LancamentoConflitanteException;
 import br.com.carrefour.lancamentos.domain.exception.LancamentoDuplicadoException;
+import br.com.carrefour.lancamentos.domain.exception.LancamentoJaEstornadoException;
 import br.com.carrefour.lancamentos.domain.model.Lancamento;
 import br.com.carrefour.lancamentos.domain.model.LancamentoId;
 import br.com.carrefour.lancamentos.domain.model.TipoLancamento;
@@ -20,9 +22,11 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -149,6 +153,97 @@ class LancamentoControllerTest {
             .andExpect(jsonPath("$.content[0].id").value(ID.toString()))
             .andExpect(jsonPath("$.total_elements").value(1))
             .andExpect(jsonPath("$.total_pages").value(1));
+    }
+
+    // --- estornar ---
+
+    @Test
+    void estornar_deveRetornar201ComEstornoRegistrado() throws Exception {
+        when(estornarUseCase.executar(any())).thenReturn(umLancamento());
+
+        mvc.perform(post("/registros/{id}/estorno", ID)
+                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_CAIXA"))))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.id").value(ID.toString()));
+    }
+
+    @Test
+    void estornar_deveRetornar409QuandoJaEstornado() throws Exception {
+        when(estornarUseCase.executar(any())).thenThrow(new LancamentoJaEstornadoException(ID));
+
+        mvc.perform(post("/registros/{id}/estorno", ID)
+                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_CAIXA"))))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.codigo").value("LANCAMENTO_JA_ESTORNADO"));
+    }
+
+    @Test
+    void estornar_deveRetornar404QuandoNaoEncontrado() throws Exception {
+        when(estornarUseCase.executar(any())).thenThrow(new NoSuchElementException("não encontrado"));
+
+        mvc.perform(post("/registros/{id}/estorno", ID)
+                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_CAIXA"))))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.codigo").value("NAO_ENCONTRADO"));
+    }
+
+    // --- resumo diário ---
+
+    @Test
+    void resumoDiario_deveRetornar200ComTotais() throws Exception {
+        var resultado = new ResumoDiarioUseCase.Resultado(
+                LocalDate.of(2026, 5, 9),
+                new BigDecimal("500.00"), new BigDecimal("200.00"), 7);
+        when(resumoDiarioUseCase.executar(any())).thenReturn(resultado);
+
+        mvc.perform(get("/registros/resumo")
+                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_GESTOR")))
+                .param("data", "2026-05-09"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total_creditos").value(500.00))
+            .andExpect(jsonPath("$.total_debitos").value(200.00))
+            .andExpect(jsonPath("$.total_lancamentos").value(7));
+    }
+
+    // --- handlers de exceção não cobertos ---
+
+    @Test
+    void registrar_deveRetornar409QuandoConflitanteIdempotency() throws Exception {
+        when(registrarUseCase.executar(any()))
+                .thenThrow(new LancamentoConflitanteException(KEY.toString()));
+
+        mvc.perform(post("/registros")
+                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_CAIXA")))
+                .header("Idempotency-Key", KEY)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"tipo":"CREDITO","valor":150.00,"data_competencia":"2026-05-09"}
+                        """))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.codigo").value("IDEMPOTENCY_KEY_CONFLITO"));
+    }
+
+    @Test
+    void buscar_deveRetornar400PorTypeMismatch() throws Exception {
+        mvc.perform(get("/registros/{id}", "nao-e-um-uuid")
+                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_GESTOR"))))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.codigo").value("TIPO_INVALIDO"));
+    }
+
+    @Test
+    void registrar_deveRetornar500EmErroInesperado() throws Exception {
+        when(registrarUseCase.executar(any())).thenThrow(new RuntimeException("erro inesperado"));
+
+        mvc.perform(post("/registros")
+                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_CAIXA")))
+                .header("Idempotency-Key", KEY)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"tipo":"CREDITO","valor":150.00,"data_competencia":"2026-05-09"}
+                        """))
+            .andExpect(status().isInternalServerError())
+            .andExpect(jsonPath("$.codigo").value("ERRO_INTERNO"));
     }
 
     private Lancamento umLancamento() {
