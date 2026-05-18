@@ -33,10 +33,12 @@ graph LR
     Internet((Internet\n:8090 :8443))
 
     GW["🟠 API Gateway\ntraefik:v3.0"]
+    KC["🔑 Keycloak\n:8180"]
 
     subgraph svc [gateway-services]
         LA["🔵 Lançamentos"]
         CO["🔵 Consolidação\n(escalável ×N)"]
+        OT["📡 OTEL Collector"]
     end
 
     subgraph ldata [lancamentos-data · internal]
@@ -53,9 +55,21 @@ graph LR
         RMQ(["🔵 RabbitMQ"])
     end
 
+    subgraph obs [observability · internal]
+        PR["Prometheus"]
+        LK["Loki"]
+        TM["Tempo"]
+        GR["📊 Grafana\n:3000"]
+    end
+
     Internet --> GW
+    GW --> KC
     GW --> LA
     GW --> CO
+    LA -->|"OTLP gRPC"| OT
+    CO -->|"OTLP gRPC"| OT
+    OT --> PR & LK & TM
+    PR & LK & TM --> GR
     LA --> PL
     OR -->|polling outbox| PL
     OR --> RMQ
@@ -71,13 +85,23 @@ graph LR
 | Container | Imagem | Redes | Porta no host |
 |-----------|--------|-------|---------------|
 | `traefik` | `traefik:v3.0` | `gateway-services` | `8090:80`, `8443:443`, `8091:8080` |
-| `lancamentos` | build `./services/lancamentos` *(Etapa 7)* | `gateway-services`, `lancamentos-data` | — |
-| `outbox-relay` | build `./services/lancamentos` *(Etapa 7)* | `lancamentos-data`, `messaging` | — |
-| `consolidado` | build `./services/consolidado` *(Etapa 7)* | `gateway-services`, `consolidacao-data`, `messaging` | — |
+| `keycloak` | `quay.io/keycloak/keycloak:26` | `gateway-services` | `8180:8080` |
+| `lancamentos` | build `./services/lancamentos` | `gateway-services`, `lancamentos-data` | — |
+| `outbox-relay` | build `./services/lancamentos` | `lancamentos-data`, `messaging` | — |
+| `consolidado` | build `./services/consolidado` | `gateway-services`, `consolidacao-data`, `messaging` | — |
 | `postgres-lancamentos` | `postgres:16` | `lancamentos-data` | — |
 | `postgres-consolidado` | `postgres:16` | `consolidacao-data` | — |
 | `redis` | `redis:7-alpine` | `consolidacao-data` | — |
 | `rabbitmq` | `rabbitmq:3.13-management` | `messaging` | `15672:15672` *(dev)* |
+| `otel-collector` | `otel/opentelemetry-collector-contrib` | `gateway-services`, `observability` | — |
+| `prometheus` | `prom/prometheus` | `observability` | `9090:9090` |
+| `alertmanager` | `prom/alertmanager` | `observability` | — |
+| `loki` | `grafana/loki` | `observability` | — |
+| `promtail` | `grafana/promtail` | `observability` | — |
+| `tempo` | `grafana/tempo` | `observability` | — |
+| `pyroscope` | `grafana/pyroscope` | `observability` | — |
+| `grafana` | `grafana/grafana` | `observability` | `3000:3000` |
+| `blackbox-exporter` | `prom/blackbox-exporter` | `observability` | — |
 | `docs` | `squidfunk/mkdocs-material` | — | `8000:8000` |
 | `structurizr` | `structurizr/structurizr` | — | `8080:8080` |
 
@@ -89,10 +113,11 @@ Quatro redes isolam os componentes por função:
 
 | Rede | `internal` | Membros | Propósito |
 |------|-----------|---------|-----------|
-| `gateway-services` | Não | api-gateway, lancamentos, consolidado | Tráfego HTTP entre o gateway e os serviços |
+| `gateway-services` | Não | traefik, keycloak, lancamentos, consolidado, otel-collector | Tráfego HTTP entre o gateway, IdP e os serviços |
 | `lancamentos-data` | **Sim** | lancamentos, outbox-relay, postgres-lancamentos | Isolamento do banco de Lançamentos |
 | `consolidacao-data` | **Sim** | consolidado, postgres-consolidado, redis | Isolamento do banco e cache de Consolidação |
 | `messaging` | **Sim** | outbox-relay, rabbitmq, consolidado | Tráfego do broker — sem saída para internet |
+| `observability` | **Sim** | otel-collector, prometheus, alertmanager, loki, promtail, tempo, pyroscope, grafana, blackbox-exporter | Stack PLG + OTEL isolada — serviços entregam métricas e traces ao collector |
 
 Redes marcadas como `internal: true` no docker-compose não têm rota de saída para a internet — os containers podem se comunicar entre si, mas não fazem requests externos. Isso impede que um banco de dados ou o Redis tentem fazer chamadas externas (vetor de exfiltração).
 

@@ -97,7 +97,7 @@ Resposta:
 ## Executando os Testes
 
 ```bash
-# Testes de unidade e integração (68 testes — 40 lançamentos + 28 consolidado)
+# Testes de unidade e integração (~146 testes — lancamentos + consolidado)
 cd services/lancamentos && ./gradlew test
 cd services/consolidado && ./gradlew test
 
@@ -236,7 +236,8 @@ docker compose restart traefik
 │   │   └── build.gradle        # OpenAPI Generator + Resilience4j + Flyway
 │   └── consolidado/            # Serviço de Consolidação Diária
 │       ├── src/main/java/      # Mesma estrutura hexagonal
-│       └── src/test/java/      # 28 testes
+│       ├── src/test/java/      # Testes (unit, slice, integração)
+│       └── build.gradle        # OpenAPI Generator + Resilience4j + Flyway + JaCoCo
 ├── contracts/openapi/          # Contratos OpenAPI 3.1 (source of truth)
 │   ├── lancamentos.yaml
 │   └── consolidado.yaml
