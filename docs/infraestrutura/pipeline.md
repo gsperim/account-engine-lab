@@ -121,7 +121,16 @@ sequenceDiagram
     GHA->>GH: criar Release com release notes geradas
 ```
 
-**Tag de versão:** `YYYYMMDD-<SHA curto>` — ex: `20260518-3e2e11b`. Tag `latest` aponta sempre para o último push.
+**Versão:** informada como input do `workflow_dispatch` em formato SemVer (`MAJOR.MINOR.PATCH`). O workflow valida o formato antes de prosseguir — qualquer string inválida aborta o job.
+
+| Artefato | Formato | Exemplo |
+|----------|---------|---------|
+| Tag Git — Lançamentos | `lancamentos/vMAJOR.MINOR.PATCH` | `lancamentos/v0.1.0` |
+| Tag Git — Consolidação | `consolidacao/vMAJOR.MINOR.PATCH` | `consolidacao/v0.1.0` |
+| Tag ECR | `vMAJOR.MINOR.PATCH` + `latest` | `v0.1.0` |
+| GitHub Release | `vMAJOR.MINOR.PATCH` | `v0.1.0` |
+
+Cada serviço tem tag Git independente conforme definido no `CONTRIBUTING.md` (seção Versionamento). A tag `latest` no ECR sempre aponta para o último push.
 
 **Autenticação:** OIDC sem credenciais de longa duração armazenadas — o GitHub Actions assume a role IAM via `aws-actions/configure-aws-credentials@v4`. Nenhuma `AWS_ACCESS_KEY_ID` nos secrets.
 

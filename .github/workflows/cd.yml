@@ -4,6 +4,11 @@ name: CD — Release para ECR
 # Em produção: adicionar `push: branches: [main]` para deploy automático.
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versão SemVer (ex: 0.1.0). Gera tags lancamentos/v0.1.0 e consolidacao/v0.1.0.'
+        required: true
+        type: string
 
 env:
   AWS_REGION: sa-east-1
@@ -22,12 +27,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extrair versão do CLAUDE.md
+      - name: Validar e preparar versão SemVer
         id: version
         run: |
-          SHA_SHORT=$(git rev-parse --short HEAD)
-          echo "sha=${SHA_SHORT}" >> "$GITHUB_OUTPUT"
-          echo "tag=$(date +'%Y%m%d')-${SHA_SHORT}" >> "$GITHUB_OUTPUT"
+          VERSION="${{ inputs.version }}"
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'; then
+            echo "Versão inválida: '$VERSION'. Use o formato SemVer (ex: 0.1.0 ou 1.2.3-rc1)."
+            exit 1
+          fi
+          echo "semver=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Configurar credenciais AWS via OIDC
         uses: aws-actions/configure-aws-credentials@v4
@@ -54,6 +63,7 @@ jobs:
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_PREFIX }}/lancamentos:${{ steps.version.outputs.tag }}
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_PREFIX }}/lancamentos:latest
 
+
       - name: Build e push — consolidado
         uses: docker/build-push-action@v6
         with:
@@ -66,6 +76,15 @@ jobs:
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_PREFIX }}/consolidado:${{ steps.version.outputs.tag }}
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_PREFIX }}/consolidado:latest
 
+      - name: Criar Git tags por serviço
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "lancamentos/${{ steps.version.outputs.tag }}" -m "release: lancamentos ${{ steps.version.outputs.tag }}"
+          git tag -a "consolidacao/${{ steps.version.outputs.tag }}" -m "release: consolidacao ${{ steps.version.outputs.tag }}"
+          git push origin "lancamentos/${{ steps.version.outputs.tag }}"
+          git push origin "consolidacao/${{ steps.version.outputs.tag }}"
+
       - name: Criar GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -75,9 +94,9 @@ jobs:
           body: |
             ## Imagens publicadas
 
-            | Serviço | Tag |
-            |---------|-----|
-            | lancamentos | `${{ steps.version.outputs.tag }}` |
-            | consolidado | `${{ steps.version.outputs.tag }}` |
+            | Serviço | Tag ECR | Tag Git |
+            |---------|---------|---------|
+            | lancamentos | `${{ steps.version.outputs.tag }}` | `lancamentos/${{ steps.version.outputs.tag }}` |
+            | consolidado | `${{ steps.version.outputs.tag }}` | `consolidacao/${{ steps.version.outputs.tag }}` |
 
             Repositórios ECR: `${{ env.ECR_PREFIX }}/lancamentos` · `${{ env.ECR_PREFIX }}/consolidado`
