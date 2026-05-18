@@ -141,6 +141,7 @@ k6 run idempotencia.js
 | Keycloak | http://localhost:8180 | Identity Provider |
 | Portal de Documentação | http://localhost:8000 | Arquitetura, ADRs, decisões |
 | Diagramas C4 | http://localhost:8080 | Contexto e containers (Structurizr Lite) |
+| **Swagger UI** | http://localhost:8070 | Contratos OpenAPI navegáveis (Lançamentos + Consolidado) |
 
 ```bash
 # Subir apenas a infraestrutura de dados
@@ -189,6 +190,11 @@ Cliente → Traefik → Lançamentos → PostgreSQL (escrita atômica)
 ```
 
 A documentação completa — visão executiva, ADRs, diagramas C4, decisões de segurança e observabilidade — está disponível em http://localhost:8000 após subir o portal.
+
+Os contratos OpenAPI também podem ser explorados online via Swagger Editor, sem precisar subir o ambiente local:
+
+- [Lançamentos](https://editor.swagger.io/?url=https://raw.githubusercontent.com/gsperim/account-engine-lab/main/contracts/openapi/lancamentos.yaml)
+- [Consolidado Diário](https://editor.swagger.io/?url=https://raw.githubusercontent.com/gsperim/account-engine-lab/main/contracts/openapi/consolidado.yaml)
 
 ---
 

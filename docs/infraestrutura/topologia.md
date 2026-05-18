@@ -102,6 +102,7 @@ graph LR
 | `pyroscope` | `grafana/pyroscope` | `observability` | — |
 | `grafana` | `grafana/grafana` | `observability` | `3000:3000` |
 | `blackbox-exporter` | `prom/blackbox-exporter` | `observability` | — |
+| `swagger-ui` | `swaggerapi/swagger-ui` | — | `8070:8080` |
 | `docs` | `squidfunk/mkdocs-material` | — | `8000:8000` |
 | `structurizr` | `structurizr/structurizr` | — | `8080:8080` |
 

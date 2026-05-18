@@ -84,6 +84,42 @@ tags:
 - [ ] Uma falha no broker não deve impedir o registro do lançamento
 - [ ] Os campos `estorno_de` e `estornado_por` devem ser `null` para lançamentos comuns recém-criados
 
+**Fluxo de dados:**
+
+```mermaid
+sequenceDiagram
+    actor C as Caixa / PDV
+    participant GW as API Gateway
+    participant LA as Lançamentos
+    participant DB as PostgreSQL
+    participant OB as OutboxRelay
+    participant BR as RabbitMQ
+
+    C->>GW: POST /lancamentos/registros<br/>Idempotency-Key: UUID · Bearer token
+    GW->>GW: valida JWT (JWKS Keycloak)
+    GW->>LA: POST /registros (Bearer passthrough)
+    LA->>LA: valida JWT + extrai operadorId (sub)
+    LA->>LA: verifica ROLE_CAIXA ou ROLE_PDV
+    LA->>LA: valida campos (tipo, valor, data_competencia)
+    LA->>DB: existsById(idempotencyKey)?
+    alt já existe — mesmo payload
+        DB-->>LA: true
+        LA-->>C: HTTP 200 (replay idempotente)
+    else já existe — payload diferente
+        LA-->>C: HTTP 409 IDEMPOTENCY_KEY_CONFLITO
+    else novo lançamento
+        DB-->>LA: false
+        LA->>DB: INSERT lancamento + INSERT outbox (transação atômica)
+        DB-->>LA: commit
+        LA-->>C: HTTP 201 {id, tipo, valor, criado_em}
+    end
+
+    note over OB,BR: Fluxo assíncrono (OutboxRelay a cada 5s)
+    OB->>DB: busca outbox WHERE publicado = false
+    OB->>BR: publica LancamentoRegistrado
+    OB->>DB: marca publicado = true
+```
+
 ---
 
 ### RF-02 — Consultar Lançamentos por Período { #rf-02 }
@@ -249,6 +285,36 @@ A separação em dois handlers mantém cada um com responsabilidade única. O re
 - [ ] Dado o mesmo evento processado duas vezes, o saldo não deve ser duplicado (idempotência)
 - [ ] Dado o serviço indisponível temporariamente, os eventos devem ser processados após a recuperação
 
+**Fluxo de dados:**
+
+```mermaid
+sequenceDiagram
+    participant BR as RabbitMQ
+    participant CO as LancamentoEventoConsumer
+    participant PL as ProcessarLancamentoService
+    participant AP as lancamentos_aplicados
+    participant DB as PostgreSQL
+    participant RD as Redis
+
+    BR->>CO: LancamentoRegistrado<br/>{lancamentoId, tipo, valor, data_competencia}
+    CO->>CO: converte TipoMovimento (Anti-Corruption Layer)
+    CO->>PL: executar(Command)
+    PL->>AP: existePorId(lancamentoId)?
+    alt já aplicado — replay at-least-once
+        AP-->>PL: true
+        PL-->>CO: retorna sem efeito
+        CO-->>BR: ACK
+    else primeiro processamento
+        AP-->>PL: false
+        PL->>DB: busca ou cria SaldoConsolidado(data_competencia)
+        PL->>PL: aplicarCredito() ou aplicarDebito()
+        PL->>DB: salva saldo + INSERT lancamentos_aplicados<br/>(transação atômica)
+        DB-->>PL: commit
+        PL->>RD: @CacheEvict (invalida cache do dia)
+        CO-->>BR: ACK
+    end
+```
+
 ---
 
 ### RF-05 — Validar Lançamentos { #rf-05 }
@@ -298,6 +364,35 @@ Detalhado como parte das regras e casos de borda do [RF-01](#rf-01). A validaç�
 - [ ] Dado uma divergência real, deve gerar alerta com a data afetada e os valores divergentes
 - [ ] Dado dias sem lançamentos, não deve gerar alertas falsos positivos
 - [ ] A reconciliação deve ser idempotente — re-execução não gera alertas duplicados
+
+**Fluxo de dados:**
+
+```mermaid
+sequenceDiagram
+    participant SCH as Scheduler (02:00)
+    participant JOB as ReconciliacaoDiariaJob
+    participant GW as LancamentosGateway
+    participant LA as Serviço de Lançamentos
+    participant DB as PostgreSQL (Consolidado)
+    participant PR as Prometheus
+
+    SCH->>JOB: dispara (@Scheduled cron="0 0 2 * * *")
+    loop Para cada data com consolidado
+        JOB->>GW: buscarResumo(data)
+        GW->>LA: GET /registros/resumo?data=YYYY-MM-DD
+        LA-->>GW: {total_creditos, total_debitos, total_lancamentos}
+        GW-->>JOB: ResumoLancamentosDto
+        JOB->>DB: SELECT FROM saldo_consolidado WHERE data = :data
+        DB-->>JOB: SaldoConsolidado
+        JOB->>JOB: compara totais
+        alt divergência detectada
+            JOB->>PR: saldo_reconciliado_divergencias_total++
+            JOB->>JOB: log ERROR {data, esperado, encontrado}
+        else consistente
+            JOB->>PR: saldo_reconciliado_total++
+        end
+    end
+```
 
 ---
 
@@ -400,6 +495,41 @@ sequenceDiagram
 - [ ] Dado tentativa de estornar um lançamento que já **é** um estorno, deve retornar HTTP 422
 - [ ] Dado tentativa de estornar um lançamento que já **foi** estornado (`estornado_por` preenchido), deve retornar HTTP 422
 - [ ] Dado `id_lancamento_original` inexistente, deve retornar HTTP 404
+
+**Fluxo de dados:**
+
+```mermaid
+sequenceDiagram
+    actor C as Caixa
+    participant GW as API Gateway
+    participant LA as Lançamentos
+    participant DB as PostgreSQL
+    participant OB as OutboxRelay
+    participant BR as RabbitMQ
+
+    C->>GW: POST /registros/{id}/estorno · Bearer token
+    GW->>GW: valida JWT (JWKS Keycloak)
+    GW->>LA: POST /registros/{id}/estorno (Bearer passthrough)
+    LA->>LA: valida JWT + verifica ROLE_CAIXA
+    LA->>DB: busca lançamento original por id
+    alt id não encontrado
+        DB-->>LA: null
+        LA-->>C: HTTP 404
+    else encontrado
+        DB-->>LA: lançamento original
+        LA->>LA: estorno_de != null? → HTTP 422 (estorno de estorno)
+        LA->>LA: estornado_por != null? → HTTP 422 (duplo estorno)
+        LA->>LA: cria estorno com UUID derivado (idempotente)
+        LA->>DB: INSERT estorno + UPDATE original.estornado_por<br/>+ INSERT outbox (transação atômica)
+        DB-->>LA: commit
+        LA-->>C: HTTP 201 {id_estorno, estorno_de, tipo_inverso}
+    end
+
+    note over OB,BR: Fluxo assíncrono
+    OB->>DB: busca outbox WHERE publicado = false
+    OB->>BR: publica LancamentoEstornado (não LancamentoRegistrado)
+    OB->>DB: marca publicado = true
+```
 
 ---
 

@@ -171,6 +171,7 @@ echo -e "  ${GREEN}●${RESET} Grafana                   →  http://localhost:3
 echo -e "  ${GREEN}●${RESET} Prometheus                →  http://localhost:9090"
 echo -e "  ${GREEN}●${RESET} Portal de Documentação    →  http://localhost:8000"
 echo -e "  ${GREEN}●${RESET} Diagramas C4              →  http://localhost:8080"
+echo -e "  ${GREEN}●${RESET} Swagger UI (contratos)    →  http://localhost:8070"
 echo ""
 
 if ! command -v mkcert &>/dev/null; then

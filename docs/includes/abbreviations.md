@@ -62,10 +62,9 @@
 *[AMQPS]: AMQP Secure — AMQP com criptografia TLS na camada de transporte
 *[REST]: Representational State Transfer — estilo arquitetural para APIs sobre HTTP com recursos e verbos padronizados
 *[gRPC]: Google Remote Procedure Call — framework de RPC de alta performance que usa HTTP/2 e Protocol Buffers
-*[JSON]: JavaScript Object Notation — formato leve de intercâmbio de dados baseado em texto
-*[YAML]: YAML Ain't Markup Language — formato de serialização de dados legível por humanos
-*[ISO]: International Organization for Standardization — organização que define padrões internacionais
 *[TTL]: Time To Live — tempo de vida de um dado em cache ou de um registro DNS antes de expirar
+*[MDC]: Mapped Diagnostic Context — mecanismo do SLF4J/Logback que associa pares chave-valor ao contexto da thread corrente, disponíveis em todos os logs sem passagem explícita de parâmetros
+*[ACL]: Anti-Corruption Layer — camada de tradução que isola dois bounded contexts ou sistemas com modelos diferentes, convertendo entre eles na fronteira
 *[CI]: Continuous Integration — prática de integrar código ao repositório principal frequentemente com validação automatizada
 *[CD]: Continuous Delivery ou Continuous Deployment — prática de entregar software de forma automatizada e contínua
 
