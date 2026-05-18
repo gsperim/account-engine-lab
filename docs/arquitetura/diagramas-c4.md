@@ -7,7 +7,7 @@ tags:
 # Diagramas C4
 
 **Perspectiva:** 🧩 Arquiteto de Soluções  
-**Nível:** C4 L1 (System Context) + C4 L2 (Containers)  
+**Níveis:** C4 L1 · L2 · L3 (Components) · L5 (Deployment)  
 **Fonte:** [`structurizr/workspace.dsl`](../../structurizr/workspace.dsl) · visualização interativa: `docker compose up structurizr` → http://localhost:8080
 
 ---
@@ -40,9 +40,55 @@ tags:
 
 ---
 
-## Fonte canônica
+## C4 L3 — Components (Arquitetura Hexagonal)
 
-Os diagramas são gerados pelo Structurizr Lite a partir do DSL versionado:
+> Exportar via Structurizr Lite após `docker compose up structurizr`: views `lancamentos-components`, `consolidado-components` e `outbox-relay-components`.
+
+**O que mostra:** os componentes internos de cada serviço organizados nas camadas da Arquitetura Hexagonal:
+
+| Camada | Cor | Exemplos |
+|--------|-----|---------|
+| **Adapters IN** | Amarelo | `LancamentoController`, `LancamentoEventoConsumer`, `AdminController` |
+| **Application** | Verde | `RegistrarLancamentoService`, `ProcessarLancamentoService`, `ReconciliacaoDiariaJob` |
+| **Adapters OUT** | Rosa | `LancamentoRepositoryAdapter`, `SaldoConsolidadoRepositoryAdapter`, `LancamentosGatewayAdapter` |
+
+---
+
+## C4 L5 — Deployment
+
+> Exportar via Structurizr Lite: views `deployment-dev` e `deployment-prod`.
+
+**Ambiente de Desenvolvimento (Docker Compose):**
+
+| Container | Tecnologia | Porta |
+|-----------|-----------|-------|
+| traefik | Traefik 3 | 8090 · 8443 · 8091 |
+| keycloak | Keycloak 26 | 8180 |
+| lancamentos | JVM · Spring Boot | — |
+| outbox-relay | JVM · Spring Boot | — |
+| consolidado | JVM · Spring Boot | — |
+| postgres-lancamentos | PostgreSQL 16 | — (internal) |
+| postgres-consolidado | PostgreSQL 16 | — (internal) |
+| redis | Redis 7 · AOF | — (internal) |
+| rabbitmq | RabbitMQ 3.13 | 15672 |
+| otel-collector + PLG | stack completa | 9090 · 3000 |
+
+**Ambiente de Produção (AWS):**
+
+| Componente AWS | Mapeia para | Detalhe |
+|----------------|-------------|---------|
+| CloudFront + API Gateway HTTP API | API Gateway | WAF v2 · rate limiting |
+| EKS — lancamentos Deployment | Serviço de Lançamentos | 2 réplicas |
+| EKS — consolidado Deployment | Serviço de Consolidação | 2–10 réplicas (HPA) |
+| EKS — outbox-relay Deployment | Outbox Relay | 1 réplica |
+| RDS PostgreSQL 16 (×2) | Bancos por serviço | Multi-AZ · RDS Proxy |
+| ElastiCache Redis 7 | Cache | cluster mode · KMS CMK |
+| Amazon MQ RabbitMQ | Message Broker | AMQPS · Multi-AZ |
+| Cognito / IdP corporativo | Identity Provider | substitui Keycloak local |
+
+---
+
+## Fonte canônica
 
 ```bash
 docker compose up structurizr
@@ -50,4 +96,4 @@ docker compose up structurizr
 # Exporte: menu Diagrams → Export → PNG
 ```
 
-O DSL em [`structurizr/workspace.dsl`](../../structurizr/workspace.dsl) é a fonte de verdade — qualquer mudança na arquitetura começa por ali. Os PNGs nesta página são exportações pontuais e podem ficar desatualizados se o DSL for alterado sem re-exportar.
+O DSL em [`structurizr/workspace.dsl`](../../structurizr/workspace.dsl) é a fonte de verdade. Os PNGs nesta página são exportações pontuais e podem ficar desatualizados se o DSL for alterado sem re-exportar.
