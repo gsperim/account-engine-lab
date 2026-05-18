@@ -202,6 +202,7 @@ jobs:
           infracost breakdown \
             --config-file infracost.yml \
             --format html \
+            --show-skipped \
             --out-file $GITHUB_WORKSPACE/index.html
 
       - name: Upload relatório
