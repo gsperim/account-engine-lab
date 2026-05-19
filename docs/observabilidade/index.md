@@ -403,7 +403,7 @@ HTTP 503 — não pronto (kubernetes não roteia tráfego)
 
 ## Logs de Eventos de Segurança
 
-O Keycloak emite eventos de segurança nos logs do container — capturados pelo Promtail e enviados ao Loki automaticamente. **Configuração já aplicada via [`keycloak/realm-fluxocaixa.json`](../../keycloak/realm-fluxocaixa.json) — nenhuma ação manual no Admin Console necessária.**
+O Keycloak emite eventos de segurança nos logs do container — capturados pelo Promtail e enviados ao Loki automaticamente. **Configuração já aplicada via [`keycloak/realm-fluxocaixa.json`](https://github.com/gsperim/account-engine-lab/blob/main/keycloak/realm-fluxocaixa.json) — nenhuma ação manual no Admin Console necessária.**
 
 | Campo configurado | Valor | Efeito |
 |-------------------|-------|--------|

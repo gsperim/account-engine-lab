@@ -71,7 +71,7 @@ O estado alvo é a arquitetura completa documentada neste projeto — equivalent
 - Redis cache para alta performance no saldo consolidado ([NFR-02](../negocio/requisitos.md#nfr-02))
 - Estorno rastreável com vínculo ao lançamento original ([RF-08](../negocio/requisitos.md#rf-08))
 
-O diagrama C4 L2 do estado alvo está no [workspace Structurizr](../../structurizr/workspace.dsl) e pode ser visualizado com `docker-compose up structurizr`.
+O diagrama C4 L2 do estado alvo está no [workspace Structurizr](https://github.com/gsperim/account-engine-lab/blob/main/structurizr/workspace.dsl) e pode ser visualizado com `docker-compose up structurizr`.
 
 ---
 
