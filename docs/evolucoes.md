@@ -24,25 +24,14 @@ Estes itens foram identificados durante o desenvolvimento e conscientemente adia
 
 **Escopo:** reproduzir manualmente mensagens da Dead-Letter Queue para a fila principal, com trilha de auditoria.
 
-**O que está implementado:**  
-`DlqConsumer.java` (`consolidado/adapter/in/messaging/`) escuta a fila `consolidacao.lancamentos.dlq`. Para cada mensagem recebida, incrementa a métrica `dlq_mensagens_total`, extrai o header `x-death` para contar tentativas, e registra em ERROR. Não há replay automático.
+**Estado atual:**  
+A DLQ `consolidacao.lancamentos.dlq` está configurada no RabbitMQ via `RabbitConfig` — mensagens que excedem o limite de retentativas são roteadas automaticamente. O volume da fila é monitorado pelas métricas nativas do RabbitMQ (Prometheus scraping via management plugin), visíveis no Grafana. Não há consumer na DLQ.
 
-```java
-// DlqConsumer.java — comportamento atual
-@RabbitListener(queues = RabbitConfig.DLQ)
-public void consumir(Message message) {
-    // incrementa métrica + loga ERROR → sem reprocessamento
-}
-```
-
-**Por que foi adiado:**  
-Replay automático em DLQ mascara falhas sistêmicas — se uma mensagem foi para a DLQ, é porque falhou repetidamente. Reprocessar sem investigar a causa raiz pode acumular saldo incorreto. O caminho correto exige um backoffice com:
-- Visualização da mensagem e do histórico de falhas
-- Decisão humana (replay ou descarte)
-- Registro em audit trail de quem reprocessou, quando, e o resultado
+**Por que não há consumer:**  
+Um consumer na DLQ consumiria (ackaria) as mensagens, impedindo a análise posterior da causa raiz. Mensagens na DLQ devem permanecer lá até investigação manual — o volume crescente é o sinal de alerta. O reprocessamento exige decisão humana e audit trail.
 
 **Caminho de evolução:**  
-Endpoint `POST /admin/dlq/{messageId}/replay` com `ROLE_ADMIN`, persistência em `audit_log`, e painel no Grafana mostrando volume na DLQ ao longo do tempo.
+Endpoint `POST /admin/dlq/{messageId}/replay` com `ROLE_ADMIN`, persistência em `audit_log`, e painel no Grafana com histórico de volume e TTL da fila.
 
 ---
 
@@ -80,16 +69,5 @@ O problema é de aparência, não de conteúdo arquitetural. Os diagramas render
 **Caminho de evolução:**  
 Injetar CSS customizado via `--custom-stylesheet` (opção da ferramenta, se disponível na versão atual), ou pós-processar o HTML com `sed`/`python` no step do workflow.
 
----
 
-## Análise do status dos pendentes documentados
-
-Durante o desenvolvimento foram registrados quatro itens como "pendentes para versões futuras" no `CLAUDE.md`. A análise do código confronta esse registro com o que está realmente implementado:
-
-| Item documentado | Status real |
-|------------------|-------------|
-| Backoffice de DLQ | ✅ Correto — `DlqConsumer` só loga e mede; sem replay. Decisão correta. |
-| Idempotência com payload diferente para estorno | ✅ **Resolvido** — `EstornarLancamentoService` deriva o ID do estorno deterministicamente (`UUID.nameUUIDFromBytes("estorno-" + originalId)`). Replay retorna 409 via colisão de PK. |
-| Build info no MDC | ✅ Correto — não implementado, filtros de MDC não incluem `version` ou `commit_hash`. |
-| C4 site — estética | ✅ Correto — HTML gerado sem CSS pelo `structurizr-site-generatr`. Conteúdo correto; aparência limitada. |
 

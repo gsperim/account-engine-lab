@@ -195,12 +195,6 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
                     technology "Spring AMQP · @RabbitListener · @CircuitBreaker"
                     tags "AdapterIn"
                 }
-                cDlq = component "DlqConsumer" {
-                    description "Adapter Messaging IN. @RabbitListener na DLQ. Registra métrica consolidado_dlq_mensagens_total e loga o payload — sem reprocessamento automático intencional."
-                    technology "Spring AMQP · Micrometer"
-                    tags "AdapterIn"
-                }
-
                 # Application — Use Cases
                 cProcSvc = component "ProcessarLancamentoService" {
                     description "Verifica idempotência via LancamentosAplicadosRepository antes de aplicar o crédito/débito. Persiste saldo + registra em lancamentos_aplicados na mesma transação. @CacheEvict após commit."
@@ -340,7 +334,6 @@ workspace "Fluxo de Caixa Diário" "Controle de Fluxo de Caixa" {
         cAdminCtrl -> cRecSvc "executar(inicio, fim)"
 
         cConsumer -> cProcSvc "executar(Command)"
-        cDlq -> prometheus "consolidado_dlq_mensagens_total++"
 
         cProcSvc -> cAplicadosRepo "existePorId · registrar"
         cProcSvc -> cRepo "buscarOuCriar · salvar"
