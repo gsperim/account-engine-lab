@@ -9,7 +9,7 @@
 
 ## Metodologia
 
-A estimativa é gerada diretamente do código Terraform em [`/terraform`](../../terraform/README.md):
+A estimativa é gerada diretamente do código Terraform em [`/terraform`](https://github.com/gsperim/account-engine-lab/blob/main/terraform/README.md):
 
 ```bash
 cd terraform
