@@ -135,7 +135,7 @@ graph LR
 
 **O que muda:**
 
-- Job de migração importa lançamentos históricos da planilha para o Serviço de Lançamentos (ver [Estratégia de Migração de Dados](#estratégia-de-migração-de-dados))
+- Job de migração importa lançamentos históricos da planilha para o Serviço de Lançamentos (ver [Estratégia de Migração de Dados](#estrategia-de-migracao))
 - PDV é reconfigurado para chamar a API REST diretamente (sem exportação manual)
 - O processo manual de registro é descontinuado para novas entradas
 - A planilha passa a somente-leitura — referência de validação, não fonte de escrita
@@ -166,7 +166,7 @@ O acesso às planilhas é mantido em modo somente-leitura por 30 dias (janela de
 
 ---
 
-## Estratégia de Migração de Dados
+## Estratégia de Migração de Dados { #estrategia-de-migracao }
 
 Os lançamentos históricos existem em formato heterogêneo (planilhas Excel, exportações CSV do PDV). A migração acontece no estado Tr2, em três etapas:
 
