@@ -41,7 +41,7 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 
 ## Estado Atual
 
-**Data:** 2026-05-18 | **Branch:** `main` (pós sessão 2026-05-18)
+**Data:** 2026-05-19 | **Branch:** `main` (pós sessão 2026-05-19)
 **Repositório:** https://github.com/gsperim/account-engine-lab
 
 ### Etapas concluídas
@@ -56,65 +56,24 @@ Toda documentação deve ser escrita em **português**, exceto nomenclaturas té
 - ✅ Observabilidade avançada — logs estruturados + tracing end-to-end (completa)
 - ✅ Conformidade normativa — ISO 8601/20022/4217/27001/22301/31000/37301 + OWASP ASVS (completa)
 - ✅ Audit log assíncrono — `audit_log` pós-commit em lançamentos (completa)
+- ✅ Etapa 9 — Documentação Final e fechamento (completa)
 
-### Onde estamos agora — pré-Etapa 9
-
-**Data:** 2026-05-17 | **106+ testes verdes** (lançamentos + consolidado)
-
-#### ✅ Etapa 7 — tudo entregue
+### ✅ Entregues nesta sessão (2026-05-19)
 
 | Item | Detalhe |
 |------|---------|
-| JWT / Spring Security | `oauth2-resource-server` + JWKS Keycloak + `sub` como `operadorId` |
-| Outbox cleanup | `OutboxRelay.limparPublicados()` — `@Scheduled(cron="0 0 3 * * *")`, janela 7 dias |
-| DLQ consumer | `DlqConsumer` — só métrica + log; sem retry (DLQ é destino final); backoffice futuro documentado |
-| Grafana fix | `or vector(0)` no painel Taxa de Erro |
-| Idempotência com payload diferente | `payload_hash` (SHA-256) na tabela `lancamentos`; mesma key + payload diferente → 409 `IDEMPOTENCY_KEY_CONFLITO`; replay idempotente retorna existente |
-| Estorno de lançamento | `POST /registros/{id}/estorno` — `EstornarLancamentoService`, UUID derivado para idempotência, marca original como estornado |
-| `GET /lancamentos/registros/resumo` | Totais de crédito/débito/contagem por data — usado pela reconciliação |
-| Reconciliação diária | `ReconciliacaoDiariaJob` — `@Scheduled(cron="0 0 2 * * *")`, compara com `LancamentosGateway`, métrica `saldo_reconciliado_divergencias_total` |
-| Recuperação catastrófica | `POST /admin/reconstruir` — `ReconstruirConsolidadoService`, reconstrói saldo iterando dia a dia via gateway |
-| `GET /consolidacao/saldo` (período) | Verificado — implementado e coberto em todas as camadas |
-| Documentação sincronizada | `stack.md`, `implementacao/index.md`, `dados.md`, `observabilidade/index.md` |
-| Hook pre-commit + protocolo de branch | Bloqueia commits diretos em `main`/`develop`; checklist no CLAUDE.md |
+| **fix/stress-test-keycloak** | `accessTokenLifespan` 300s → 600s; `getTokenFull()` em auth.js; `setup()` do stress.js calcula `expiresAt` a partir do `expires_in` real — sem thundering herd mid-test |
+| **dashboard negócio** | UID corrigido (`negocio`); `$__range` → `${__range_s}s` (Grafana 11 não substitui em instant queries); label mismatch corrigido com `sum()` em Saldo Líquido e Taxa de Estorno |
+| **k6 estornos** | ~15% das iterações de lançamento fazem estorno do ID recém-criado; contadores `estornos_ok`/`estornos_falha` adicionados |
+| **docs/visao-executiva** | Fase 9 reescrita sem meta-comentário de IA; parágrafo de G-01 removido; referências a gaps removidas |
+| **DlqConsumer removido** | Consumer de DLQ eliminado — ACK removia mensagens antes de análise; monitoramento via métricas nativas RabbitMQ |
 
-#### ✅ Etapa 8 — COMPLETA
-
-| Item | Detalhe |
-|------|---------|
-| `ci.yml` | Testes + JaCoCo coverage + build Docker + scan Trivy + Infracost (main only) — verde no GitHub Actions |
-| `cd-lancamentos.yml` / `cd-consolidado.yml` | CD independente por serviço; SemVer via `VERSION` file; path trigger em main; OIDC sem credenciais estáticas |
-| `docs.yml` | MkDocs + C4 (Structurizr) + relatórios de testes + JaCoCo coverage + Infracost → GitHub Pages; trigger workflow_run pós-CI |
-| CVEs corrigidos | netty, postgresql via BOM override; `CVE-2026-0861` (libc6) + outros no `.trivyignore`; `cloudfront.tf` syntax fix |
-| Chaos Engineering | 5 experimentos executados com Pumba + k6; todos os NFRs confirmados — ver `docs/implementacao/caos.md` |
-| Infracost | `$1.219/mês` verificado localmente; terraform init + `--show-skipped`; `INFRACOST_API_KEY` configurado no repo |
-
-#### Pendentes para versões futuras
+### Pendentes para versões futuras
 | Item | Observação |
 |------|-----------|
-| Backoffice de DLQ | Replay controlado com audit trail — mencionado no `DlqConsumer.java` |
-| Idempotência com payload diferente para estorno | Estorno já é idempotente via UUID derivado; conflito de payload não verificado |
+| Backoffice de DLQ | Replay controlado com audit trail |
 | Build info no MDC | `version` + `commit_hash` via `build-info` do Actuator |
-| C4 site — estética | Structurizr site-generatr gera HTML sem formatação/CSS — investigar na Etapa 9 |
-
-#### ✅ Entregues nesta sessão (2026-05-18)
-
-| Item | Detalhe |
-|------|---------|
-| **docs/audit-log** | `dados.md` e `seguranca/index.md` sincronizados com V6 Flyway: schema `audit_log`, retenção 5 anos, mecanismo AFTER_COMMIT+Async |
-| **feat/docs-pages** | `docs.yml` expandido: C4 via `structurizr-site-generatr`, relatórios de testes, JaCoCo coverage, Infracost; fallback pages para artefatos ausentes |
-| **feat/jacoco** | Plugin `jacoco` em ambos os `build.gradle`; `jacocoTestReport` como `finalizedBy`; excluí `**/generated/**`; artifacts `coverage-{serviço}` no CI |
-| **feat/cd-por-servico** | `cd.yml` substituído por `cd-lancamentos.yml` + `cd-consolidado.yml`; SemVer via `VERSION` file; path trigger automático em main |
-| **fix/structurizr** | 5 iterações: CLI descontinuado → `structurizr-site-generatr`; permissão Docker (`--user`); `overview.md`; path `build/site/*` |
-| **fix/terraform** | `cloudfront.tf`: `override_action { none {} }` expandido para multi-linha (Terraform ≥ 1.8) |
-| **fix/infracost** | Path (`cd terraform/`), `terraform init`, CVE-2026-0861 no `.trivyignore`, `--show-skipped` |
-| **docs/nav** | Menu reorganizado: Início agrupa Visão Executiva, Planejamento, Glossário e Tags |
-| **docs/pipeline** | `pipeline.md` reescrito com implementação real dos 4 workflows |
-| **docs/visao-executiva** | Fases 7 e 8 completas: implementação, testes, idempotência, estorno, audit, caos, CD independente |
-| **docs/index** | Links para todos os artefatos publicados no GitHub Pages |
-
-#### Próximo passo imediato
-**Etapa 9 — Documentação Final e publicação**
+| C4 site — estética | Structurizr site-generatr gera HTML sem formatação/CSS |
 
 ### Stack técnico (referência rápida)
 - **Serviços:** Spring Boot 3.5.14 + Java 21, Arquitetura Hexagonal + DDD Tático
