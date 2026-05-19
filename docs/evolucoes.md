@@ -10,7 +10,7 @@ tags:
 **Papel:** 🧩 Arquiteto de Soluções · 🛠️ Engenheiro de Software  
 **Data da análise:** 2026-05-18
 
-Este documento registra o que foi deixado fora do escopo com justificativa técnica. Os gaps técnicos identificados na análise do código foram todos resolvidos — ver [histórico de gaps](#histórico-de-gaps-resolvidos).
+Este documento registra o que foi deixado fora do escopo com justificativa técnica. Os gaps técnicos identificados na análise do código foram todos resolvidos e incorporados à implementação.
 
 ---
 
@@ -93,16 +93,3 @@ Durante o desenvolvimento foram registrados quatro itens como "pendentes para ve
 | Build info no MDC | ✅ Correto — não implementado, filtros de MDC não incluem `version` ou `commit_hash`. |
 | C4 site — estética | ✅ Correto — HTML gerado sem CSS pelo `structurizr-site-generatr`. Conteúdo correto; aparência limitada. |
 
----
-
-## Histórico de gaps resolvidos
-
-Gaps identificados na análise do código (2026-05-18) e resolvidos na mesma sessão.
-
-| Gap | Severidade | Resolução |
-|-----|-----------|-----------|
-| **G-01** — Consumer do consolidado sem idempotência | Alta | `lancamentos_aplicados` (PK por `lancamento_id`) + verificação em `ProcessarLancamentoService` antes de aplicar crédito/débito. Migration V2. |
-| **G-02** — `LancamentosGatewayAdapter` sem resiliência | Média | `@Retry(lancamentos-gateway)` + `@CircuitBreaker(lancamentos-gateway)` com fallback que lança `GatewayException`. Config em `application.properties`. |
-| **G-03** — `ReconciliacaoDiariaJob` sem proteção contra execução concorrente | Média | ShedLock via JDBC (`shedlock-provider-jdbc-template`). `@SchedulerLock(name="reconciliacao-diaria", lockAtMostFor="PT1H")`. Migration V3 para tabela `shedlock`. |
-| **G-04** — `ReconstruirConsolidadoService` com transação única para o período inteiro | Baixa | `ReconstruirPorDataHelper` (`@Transactional(REQUIRES_NEW)` + `@CacheEvict`) — bean separado para que o Spring AOP aplique a propagação corretamente. Falha em uma data não reverte as anteriores; loop continua com `try/catch` por data. |
-| **G-05** — Audit log ausente no consolidado para operações administrativas | Baixa | Infraestrutura de audit portada: `AuditEvento`, `AuditPublisher` (port), `AuditPublisherAdapter`, `AuditEventListener` (`@TransactionalEventListener(AFTER_COMMIT)` + `@Async`), `AuditLogJpaEntity`, Migration V4. `ReconstruirConsolidadoService` publica `consolidado.reconstruido` com operadorId extraído do JWT em `AdminController`. |
