@@ -29,29 +29,7 @@ Cada decisão arquitetural relevante rastreia até um desses dois NFRs.
 
 ## Visão de contexto — C4 L1
 
-```mermaid
-flowchart LR
-    Caixa(["👤 Caixa\nRegistra lançamentos"])
-    Gestor(["👤 Gestor\nConsulta saldo"])
-    PDV(["🖥️ Sistema PDV\nexterno"])
-
-    subgraph SFC ["Sistema de Fluxo de Caixa"]
-        GW["API Gateway"]
-        LA["Lançamentos"]
-        CO["Consolidação"]
-    end
-
-    IdP(["🔑 Identity Provider\nKeycloak / Cognito"])
-    Obs(["📊 Observabilidade\nPrometheus · Loki · Tempo · Grafana"])
-
-    Caixa -->|"HTTPS/JWT"| GW
-    Gestor -->|"HTTPS/JWT"| GW
-    PDV -->|"REST/HTTPS OAuth2"| GW
-    GW --> LA
-    GW --> CO
-    GW -.->|"JWKS"| IdP
-    SFC -.->|"OTLP gRPC"| Obs
-```
+[![C4 L1 — Contexto do Sistema](assets/contexto.png)](assets/contexto.png)
 
 O sistema não é acessível diretamente — toda requisição passa pelo API Gateway (Traefik em desenvolvimento, CloudFront + AWS API Gateway em produção). O Identity Provider é externo e substituível sem mudança de código nos serviços.
 
@@ -61,37 +39,9 @@ O sistema não é acessível diretamente — toda requisição passa pelo API Ga
 
 ## Visão de containers — C4 L2
 
-```mermaid
-flowchart TD
-    GW["API Gateway\n(Traefik / CloudFront + API GW HTTP API)"]
+[![C4 L2 — Containers](assets/containers.png)](assets/containers.png)
 
-    subgraph ln["Serviço de Lançamentos"]
-        LA["Lançamentos API\n(Spring Boot 3.5 · Java 21)"]
-        PL[("PostgreSQL\nlancamentos\noutbox · audit_log")]
-    end
-
-    subgraph cn["Serviço de Consolidação"]
-        CO["Consolidado API\n(Spring Boot 3.5 · Java 21)"]
-        PC[("PostgreSQL\nsaldo_consolidado")]
-        RE[("Redis\nCache TTL 1h")]
-    end
-
-    OR["Outbox Relay\n(@Scheduled 5s)"]
-    RMQ([("RabbitMQ\nlancamentos.events\nDLQ habilitado")])
-    KC["Keycloak\n(Identity Provider)"]
-
-    GW --> LA
-    GW --> CO
-    LA --> PL
-    LA --> OR
-    OR --> RMQ
-    RMQ --> CO
-    CO --> PC
-    CO --> RE
-    GW --> KC
-    LA -.->|"JWKS"| KC
-    CO -.->|"JWKS"| KC
-```
+[![Legenda](assets/containers-key.png)](assets/containers-key.png)
 
 Os dois serviços de negócio não se comunicam diretamente. A única ponte entre eles é o RabbitMQ — e mesmo essa ponte é tolerante a falhas por causa do Outbox Pattern.
 
