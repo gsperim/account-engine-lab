@@ -146,7 +146,7 @@ Os escopos abaixo são configurados como **optional scopes** no Keycloak e devem
 
 ---
 
-## Matriz de Autorização
+## Matriz de Autorização { #matriz-de-autorizacao }
 
 | Endpoint | Caixa | Gestor | PDV (CC) | Admin |
 |----------|:-----:|:------:|:--------:|:-----:|

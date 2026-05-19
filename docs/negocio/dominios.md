@@ -36,7 +36,7 @@ tags:
 
 ---
 
-## 2. Classificação Estratégica — DDD Strategic Design
+## 2. Classificação Estratégica — DDD Strategic Design { #classificacao-estrategica }
 
 > **Framework:** Domain-Driven Design — Strategic Patterns
 >

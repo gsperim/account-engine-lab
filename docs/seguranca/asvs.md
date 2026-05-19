@@ -62,7 +62,7 @@ Os níveis ASVS são cumulativos: L2 supõe L1 atendido. Os controles L3 (para s
 | V4.1.1 | Controle de acesso aplicado server-side | L1 | ✅ | Gateway valida escopo por rota; serviço valida role via header |
 | V4.1.2 | Recurso protegido contra acesso sem autenticação | L1 | ✅ | Todos os endpoints requerem JWT válido ([ADR-004](../adr/ADR-004-jwt-validacao-local.md)) |
 | V4.1.3 | Princípio do menor privilégio aplicado | L1 | ✅ | Escopos granulares: `lancamentos:write`, `lancamentos:read`, `consolidacao:read`, `consolidacao:admin` |
-| V4.2.1 | Acesso restrito por função e recurso | L2 | ✅ | Matriz de autorização por role × endpoint ([seguranca/index.md](index.md#matriz-de-autorização)) |
+| V4.2.1 | Acesso restrito por função e recurso | L2 | ✅ | Matriz de autorização por role × endpoint ([seguranca/index.md](index.md#matriz-de-autorizacao)) |
 | V4.3.1 | Interface administrativa protegida por autenticação adicional | L1 | ✅ | `POST /admin/reconstruir` restringe ao role `admin` via `consolidacao:admin` |
 
 ---
