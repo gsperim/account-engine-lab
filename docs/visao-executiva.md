@@ -636,7 +636,7 @@ Todos foram documentados com código de evidência, risco concreto e caminho de 
 
 Quatro itens estavam registrados como "pendentes para versões futuras". A análise confirmou três e encerrou um:
 
-- O **backoffice de reprocessamento da DLQ** está corretamente adiado — o `DlqConsumer` só loga e mede; sem replay intencional.
+- O **backoffice de reprocessamento da DLQ** está corretamente adiado — mensagens na DLQ são monitoradas via métricas nativas do RabbitMQ; sem consumer automático.
 - A **idempotência do estorno** estava registrada como não verificada. A análise do código mostrou que está resolvida: o ID do estorno é derivado deterministicamente do ID original, tornando o replay naturalmente idempotente.
 - O **build info no MDC** e a **estética do site C4** continuam pendentes conforme documentado.
 

@@ -35,7 +35,7 @@ Cada decisão arquitetural relevante rastreia até um desses dois NFRs.
 
 O sistema não é acessível diretamente — toda requisição passa pelo API Gateway (Traefik em desenvolvimento, CloudFront + AWS API Gateway em produção). O Identity Provider é externo e substituível sem mudança de código nos serviços.
 
-> Fonte: [`structurizr/workspace.dsl`](../../structurizr/workspace.dsl) · visualização interativa: `docker compose up structurizr`
+> Fonte: [`structurizr/workspace.dsl`](https://github.com/gsperim/account-engine-lab/blob/main/structurizr/workspace.dsl) · visualização interativa: `docker compose up structurizr`
 
 ---
 
@@ -89,9 +89,9 @@ OutboxRelay (@Scheduled fixedDelay=5s)
 
 | Artefato | Arquivo |
 |----------|---------|
-| Persistência atômica | [`OutboxRepositoryAdapter.java`](../../services/lancamentos/src/main/java/br/com/carrefour/lancamentos/adapter/out/persistence/OutboxRepositoryAdapter.java) |
-| Relay com retry | [`OutboxRelay.java`](../../services/lancamentos/src/main/java/br/com/carrefour/lancamentos/adapter/out/messaging/OutboxRelay.java) |
-| Circuit breaker + retry (bean separado para Spring AOP) | [`OutboxPublisher.java`](../../services/lancamentos/src/main/java/br/com/carrefour/lancamentos/adapter/out/messaging/OutboxPublisher.java) — `@CircuitBreaker(name="rabbit-publisher") @Retry(name="rabbit-publisher")` |
+| Persistência atômica | [`OutboxRepositoryAdapter.java`](https://github.com/gsperim/account-engine-lab/blob/main/services/lancamentos/src/main/java/br/com/carrefour/lancamentos/adapter/out/persistence/OutboxRepositoryAdapter.java) |
+| Relay com retry | [`OutboxRelay.java`](https://github.com/gsperim/account-engine-lab/blob/main/services/lancamentos/src/main/java/br/com/carrefour/lancamentos/adapter/out/messaging/OutboxRelay.java) |
+| Circuit breaker + retry (bean separado para Spring AOP) | [`OutboxPublisher.java`](https://github.com/gsperim/account-engine-lab/blob/main/services/lancamentos/src/main/java/br/com/carrefour/lancamentos/adapter/out/messaging/OutboxPublisher.java) — `@CircuitBreaker(name="rabbit-publisher") @Retry(name="rabbit-publisher")` |
 | Configuração de resiliência | `services/lancamentos/src/main/resources/application.properties` — `resilience4j.circuitbreaker.rabbit-publisher.*` |
 
 O `OutboxPublisher` é um bean separado do `OutboxRelay` propositalmente: self-invocation (`OutboxRelay → publicar()`) bypassaria o proxy Spring AOP e os decoradores `@CircuitBreaker` e `@Retry` não seriam aplicados.
@@ -120,9 +120,9 @@ GET /saldo/{data}
 
 | Artefato | Arquivo |
 |----------|---------|
-| Cache-aside com fallback | [`SaldoConsolidadoRepositoryAdapter.java`](../../services/consolidado/src/main/java/br/com/carrefour/consolidado/adapter/out/persistence/SaldoConsolidadoRepositoryAdapter.java) — `@Cacheable` |
-| Fallback silencioso Redis | [`CacheConfig.java`](../../services/consolidado/src/main/java/br/com/carrefour/consolidado/adapter/out/persistence/CacheConfig.java) — `RedisFallbackCacheErrorHandler` |
-| Invalidação no processamento | [`ProcessarLancamentoService.java`](../../services/consolidado/src/main/java/br/com/carrefour/consolidado/application/usecase/ProcessarLancamentoService.java) — `@CacheEvict` |
+| Cache-aside com fallback | [`SaldoConsolidadoRepositoryAdapter.java`](https://github.com/gsperim/account-engine-lab/blob/main/services/consolidado/src/main/java/br/com/carrefour/consolidado/adapter/out/persistence/SaldoConsolidadoRepositoryAdapter.java) — `@Cacheable` |
+| Fallback silencioso Redis | [`CacheConfig.java`](https://github.com/gsperim/account-engine-lab/blob/main/services/consolidado/src/main/java/br/com/carrefour/consolidado/adapter/out/persistence/CacheConfig.java) — `RedisFallbackCacheErrorHandler` |
+| Invalidação no processamento | [`ProcessarLancamentoService.java`](https://github.com/gsperim/account-engine-lab/blob/main/services/consolidado/src/main/java/br/com/carrefour/consolidado/application/usecase/ProcessarLancamentoService.java) — `@CacheEvict` |
 
 **Confirmação em carga:** k6 stress test executado com 100 usuários virtuais durante 30 segundos — throughput sustentado acima de 50 req/s, taxa de erro abaixo de 5%. Evidências em [`docs/implementacao/caos.md`](../implementacao/caos.md).
 

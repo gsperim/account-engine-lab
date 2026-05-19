@@ -362,7 +362,6 @@ Todos os itens da Etapa 7 estão implementados, testados e no `develop`. **~146 
 | Item | Artefatos principais |
 |------|---------------------|
 | Outbox cleanup | `OutboxRelay.limparPublicados()` — `@Scheduled(cron="0 0 3 * * *")`, 7 dias |
-| DLQ consumer | `DlqConsumer` — métrica `dlq_mensagens_total` + log; sem retry; backoffice futuro documentado |
 | Idempotência com payload diferente | `PayloadHash` (SHA-256), coluna `payload_hash`, 409 `IDEMPOTENCY_KEY_CONFLITO` |
 | Estorno de lançamento | `POST /registros/{id}/estorno` — `EstornarLancamentoService`, UUID derivado, migrations V4+V5 |
 | `GET /lancamentos/registros/resumo` | `ResumoDiarioService` — totais crédito/débito/contagem por data |

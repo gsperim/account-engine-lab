@@ -268,4 +268,4 @@ O Chaos Engineering é a aplicação prática da gestão de riscos prevista na *
 
 **Apetite ao risco declarado:** degradação parcial com disponibilidade mantida é aceitável; perda de lançamento ou saldo incorreto não detectado é inaceitável. Os experimentos confirmam que nenhum dos cenários testados viola esse apetite.
 
-> O registro de riscos completo e o plano de continuidade operacional estão em [Continuidade Operacional](continuidade.md).
+> O registro de riscos completo e o plano de continuidade operacional estão em [Continuidade Operacional](../seguranca/continuidade.md).

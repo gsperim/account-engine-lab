@@ -8,7 +8,7 @@ tags:
 
 **Perspectiva:** 🧩 Arquiteto de Soluções  
 **Níveis:** C4 L1 · L2 · L3 (Components) · L5 (Deployment)  
-**Fonte:** [`structurizr/workspace.dsl`](../../structurizr/workspace.dsl) · visualização interativa: `docker compose up structurizr` → http://localhost:8080
+**Fonte:** [`structurizr/workspace.dsl`](https://github.com/gsperim/account-engine-lab/blob/main/structurizr/workspace.dsl) · visualização interativa: `docker compose up structurizr` → http://localhost:8080
 
 ---
 
@@ -85,4 +85,4 @@ docker compose up structurizr
 # Salve em: docs/arquitetura/assets/
 ```
 
-O DSL em [`structurizr/workspace.dsl`](../../structurizr/workspace.dsl) é a fonte de verdade. Os PNGs são exportações pontuais — re-exporte sempre que o workspace for atualizado.
+O DSL em [`structurizr/workspace.dsl`](https://github.com/gsperim/account-engine-lab/blob/main/structurizr/workspace.dsl) é a fonte de verdade. Os PNGs são exportações pontuais — re-exporte sempre que o workspace for atualizado.

@@ -28,7 +28,7 @@ As decisões de nuvem são portanto uma **camada separada** — opções de impl
 | `rabbitmq:3.13-management` | RabbitMQ self-hosted no EKS (Helm bitnami) |
 | imagens locais | Amazon ECR (privado, imutável, scan on push) |
 
-**Infraestrutura como Código:** toda a infraestrutura de produção está em [`/terraform`](../../terraform/README.md) — 21 arquivos `.tf` organizados por responsabilidade. O estado é gerenciado em S3 com locking via DynamoDB.
+**Infraestrutura como Código:** toda a infraestrutura de produção está em [`/terraform`](https://github.com/gsperim/account-engine-lab/blob/main/terraform/README.md) — 21 arquivos `.tf` organizados por responsabilidade. O estado é gerenciado em S3 com locking via DynamoDB.
 
 ---
 

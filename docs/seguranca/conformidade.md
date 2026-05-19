@@ -96,7 +96,7 @@ A imutabilidade é garantida em duas camadas:
 
 #### Rastreabilidade de Eventos com Falha
 
-Eventos que não puderam ser processados pelo Serviço de Consolidação chegam à **Dead Letter Queue (DLQ)**. O `DlqConsumer` registra métricas (`consolidado_dlq_mensagens_total`) e logs estruturados para cada mensagem na DLQ — sem reprocessamento automático. Isso garante que falhas de processamento sejam **visíveis, mensuráveis e auditáveis**, sem risco de reprocessamento duplicado não controlado.
+Eventos que não puderam ser processados pelo Serviço de Consolidação são roteados pelo RabbitMQ para a **Dead Letter Queue (DLQ)** `consolidacao.lancamentos.dlq`. O volume da fila é monitorado via métricas nativas do RabbitMQ (Prometheus scraping), visível no Grafana. Mensagens permanecem na DLQ para análise — sem consumer automático, sem risco de reprocessamento não controlado.
 
 #### Reconciliação como Mecanismo de Detecção
 
@@ -117,7 +117,7 @@ Divergências são registradas na métrica `saldo_reconciliado_divergencias_tota
 | ISO/IEC 27001 A.9 | Controle de acesso por identidade | JWT + escopos + RBAC | [seguranca/index.md](index.md) |
 | ISO/IEC 27001 A.10 | Criptografia de dados | KMS CMK + TLS obrigatório em produção | [ADR-010](../adr/ADR-010-seguranca.md) |
 | ISO/IEC 27001 A.12 | Logging e monitoramento de operações | Loki + Grafana + Prometheus + Tempo | [observabilidade](../observabilidade/index.md) |
-| ISO/IEC 27001 A.16 | Gestão de incidentes de segurança | DLQ + `DlqConsumer` + Security Hub (prod) | `DlqConsumer.java` · [ADR-010](../adr/ADR-010-seguranca.md) |
+| ISO/IEC 27001 A.16 | Gestão de incidentes de segurança | DLQ monitorada via RabbitMQ metrics + Security Hub (prod) | [ADR-010](../adr/ADR-010-seguranca.md) |
 | ISO/IEC 27001 A.17 | Continuidade de negócios | Outbox + Circuit Breaker + Chaos Engineering | [continuidade.md](continuidade.md) |
 | ISO 22301 | RTO/RPO para operações críticas | `/admin/reconstruir` + Outbox Relay | [continuidade.md](continuidade.md) |
 | ISO 31000 | Risk register com controles mapeados | Chaos Engineering + reconciliação | [continuidade.md](continuidade.md#registro-de-riscos) |
