@@ -36,6 +36,8 @@ import { tokenCaixa, tokenGestor, getTokenFull, CAIXA_USER, GESTOR_USER } from '
 const taxaRateLimit      = new Rate('rate_limit_atingido');
 const lancamentosOk      = new Counter('lancamentos_ok');
 const lancamentosFalha   = new Counter('lancamentos_falha');
+const estornosOk         = new Counter('estornos_ok');
+const estornosFalha      = new Counter('estornos_falha');
 
 // Busca tokens uma única vez antes de todos os VUs iniciarem para evitar thundering
 // herd no Keycloak com centenas de VUs autenticando simultaneamente no início.
@@ -125,7 +127,9 @@ export function consultarConsolidado(data) {
 }
 
 // ── Cenário 2: lançamentos contínuos (prova que o serviço segue operacional) ──
+// ~15% das iterações também fazem um estorno do lançamento recém-criado.
 export function registrarLancamento(data) {
+  const token  = getCaixaToken(data);
   const payload = JSON.stringify({
     tipo:             tipoAleatorio(),
     valor:            valorAleatorio(),
@@ -134,7 +138,7 @@ export function registrarLancamento(data) {
   });
 
   const res = http.post(`${LANCAMENTOS_URL}/registros`, payload, {
-    headers: { ...HEADERS, 'Idempotency-Key': randomUUID(), Authorization: `Bearer ${getCaixaToken(data)}` },
+    headers: { ...HEADERS, 'Idempotency-Key': randomUUID(), Authorization: `Bearer ${token}` },
     timeout: '10s',
   });
 
@@ -144,6 +148,19 @@ export function registrarLancamento(data) {
 
   if (ok) {
     lancamentosOk.add(1);
+
+    // 15% de chance de estornar o lançamento recém-criado
+    if (Math.random() < 0.15) {
+      const id = JSON.parse(res.body).id;
+      const estRes = http.post(`${LANCAMENTOS_URL}/registros/${id}/estorno`, null, {
+        headers: { ...HEADERS, Authorization: `Bearer ${token}` },
+        timeout: '10s',
+      });
+      const estOk = check(estRes, {
+        'estorno aceito (201)': (r) => r.status === 201,
+      });
+      estOk ? estornosOk.add(1) : estornosFalha.add(1);
+    }
   } else {
     lancamentosFalha.add(1);
   }
