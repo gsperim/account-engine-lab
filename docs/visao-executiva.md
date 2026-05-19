@@ -613,32 +613,15 @@ A cada execução do pipeline de CI na branch principal, uma estimativa de custo
 
 ## Fase 9 — Documentação final e fechamento
 
-A Fase 9 consolidou toda a documentação técnica produzida ao longo do projeto, revisou a coerência entre o que foi documentado e o que foi implementado, e registrou formalmente o que fica fora do escopo e por quê.
+A Fase 9 consolidou a documentação técnica, alinhou o que estava registrado com o que foi de fato implementado, e fechou formalmente o escopo do projeto.
 
 ---
 
-### Uma análise que leu o código
+### Pendentes revisados
 
-A documentação desta fase não foi escrita a partir de memória ou de notas — foi produzida após leitura direta do código dos dois serviços. Cada claim sobre o que está implementado tem como origem um arquivo Java específico.
-
-Essa análise encontrou quatro gaps técnicos não documentados anteriormente:
-
-- O consumer do Consolidado não verifica se um evento já foi processado — redelivery do RabbitMQ pode duplicar o saldo
-- O gateway que chama o serviço de Lançamentos não tem retry nem circuit breaker
-- O job de reconciliação não tem proteção contra execução simultânea em múltiplas instâncias
-- A operação de reconstrução de saldo usa uma transação única para todo o período — falha no meio reverte o trabalho todo
-
-Todos foram documentados com código de evidência, risco concreto e caminho de evolução em [`docs/evolucoes.md`](evolucoes.md).
-
----
-
-### O estado real dos pendentes
-
-Quatro itens estavam registrados como "pendentes para versões futuras". A análise confirmou três e encerrou um:
-
-- O **backoffice de reprocessamento da DLQ** está corretamente adiado — mensagens na DLQ são monitoradas via métricas nativas do RabbitMQ; sem consumer automático.
-- A **idempotência do estorno** estava registrada como não verificada. A análise do código mostrou que está resolvida: o ID do estorno é derivado deterministicamente do ID original, tornando o replay naturalmente idempotente.
-- O **build info no MDC** e a **estética do site C4** continuam pendentes conforme documentado.
+- O **backoffice de reprocessamento da DLQ** foi descartado — mensagens na DLQ são monitoradas via métricas nativas do RabbitMQ sem consumer automático, que removeria as mensagens antes de qualquer análise.
+- A **idempotência do estorno** estava registrada como não verificada. O ID do estorno é derivado deterministicamente do ID original, tornando o replay naturalmente idempotente — item encerrado.
+- O **build info no MDC** e a **estética do site C4** continuam fora do escopo.
 
 ---
 
@@ -647,7 +630,7 @@ Quatro itens estavam registrados como "pendentes para versões futuras". A anál
 | Artefato | O que contém |
 |----------|-------------|
 | [`docs/arquitetura/index.md`](arquitetura/index.md) | Síntese da arquitetura — conecta NFRs → ADRs → classes de implementação |
-| [`docs/evolucoes.md`](evolucoes.md) | Backlog técnico confrontado com o código — 3 decisões de escopo + 5 gaps com evidência e caminho |
+| [`docs/evolucoes.md`](evolucoes.md) | Backlog técnico — decisões de escopo e itens para versões futuras |
 | [`docs/visao-executiva.md`](visao-executiva.md) | Este documento — todas as 9 fases fechadas |
 | [`docs/index.md`](index.md) | Landing page revisada — orientação de navegação para o leitor |
 
@@ -665,7 +648,7 @@ flowchart TD
     F6["Fase 6\nObservabilidade\nPLT · OTEL · SLOs · Redação PII"]
     F7["Fase 7\nImplementação\n106 testes · Idempotência · Audit log"]
     F8["Fase 8\nCI/CD e Chaos Engineering\n4 workflows · 5 experimentos · NFRs confirmados"]
-    F9["Fase 9\nDocumentação Final\nSíntese · Gaps confrontados com código"]
+    F9["Fase 9\nDocumentação Final\nSíntese · Revisão de escopo · Fechamento"]
 
     F1 --> F2 --> F3 --> F4 --> F5 --> F6 --> F7 --> F8 --> F9
 ```
