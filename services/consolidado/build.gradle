@@ -45,6 +45,10 @@ dependencies {
 	implementation 'io.micrometer:micrometer-tracing-bridge-otel'
 	implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
 
+	// ShedLock — distributed lock para @Scheduled jobs em ambiente multi-instância
+	implementation 'net.javacrumbs.shedlock:shedlock-spring:5.14.0'
+	implementation 'net.javacrumbs.shedlock:shedlock-provider-jdbc-template:5.14.0'
+
 	// Runtime do código gerado pelo OpenAPI Generator — fora do Boot BOM
 	implementation 'io.swagger.core.v3:swagger-annotations-jakarta:2.2.22'
 	implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
@@ -101,8 +105,10 @@ jacocoTestReport {
 				'**/ConsolidadoApplication.class',        // main() — ponto de entrada Spring Boot
 				'**/MessagingLogContextAspect.class',     // AOP aspect, requer Spring proxy + listener ativo
 				'**/MessagingLogContextAspect$*.class',
-				'**/LancamentosGatewayAdapter.class',     // RestClient, requer WireMock/@RestClientTest
+				'**/LancamentosGatewayAdapter.class',     // RestClient + Resilience4j, requer WireMock/@RestClientTest
 				'**/LancamentosGatewayAdapter$*.class',
+				'**/GatewayException.class',              // exception simples de infra
+				'**/SchedulingConfig.class',              // @Configuration ShedLock — testado pelo contexto de integração
 			])
 		}))
 	}

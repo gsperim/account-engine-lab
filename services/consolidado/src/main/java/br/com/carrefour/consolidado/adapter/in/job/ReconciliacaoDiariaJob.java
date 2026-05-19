@@ -6,6 +6,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -34,6 +35,7 @@ public class ReconciliacaoDiariaJob {
     }
 
     @Scheduled(cron = "0 0 2 * * *")
+    @SchedulerLock(name = "reconciliacao-diaria", lockAtMostFor = "PT1H", lockAtLeastFor = "PT30M")
     public void reconciliar() {
         var ontem = LocalDate.now().minusDays(1);
 
