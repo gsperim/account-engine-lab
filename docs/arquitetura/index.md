@@ -31,6 +31,8 @@ Cada decisão arquitetural relevante rastreia até um desses dois NFRs.
 
 [![C4 L1 — Contexto do Sistema](assets/contexto.png)](assets/contexto.png)
 
+[![Legenda](assets/contexto-key.png)](assets/contexto-key.png)
+
 O sistema não é acessível diretamente — toda requisição passa pelo API Gateway (Traefik em desenvolvimento, CloudFront + AWS API Gateway em produção). O Identity Provider é externo e substituível sem mudança de código nos serviços.
 
 > Fonte: [`structurizr/workspace.dsl`](../../structurizr/workspace.dsl) · visualização interativa: `docker compose up structurizr`

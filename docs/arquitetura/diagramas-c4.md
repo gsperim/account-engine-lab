@@ -16,6 +16,8 @@ tags:
 
 [![C4 L1 — Contexto do Sistema](assets/contexto.png)](assets/contexto.png)
 
+[![Legenda](assets/contexto-key.png)](assets/contexto-key.png)
+
 ---
 
 ## C4 L2 — Containers do Sistema de Negócio
@@ -46,6 +48,8 @@ tags:
 
 [![C4 L3 — Outbox Relay](assets/outbox-relay-components.png)](assets/outbox-relay-components.png)
 
+[![Legenda](assets/outbox-relay-components-key.png)](assets/outbox-relay-components-key.png)
+
 ---
 
 ## C4 L3 — Components — Serviço de Consolidação Diária
@@ -60,11 +64,15 @@ tags:
 
 [![Deployment — Docker Compose](assets/deployment-dev.png)](assets/deployment-dev.png)
 
+[![Legenda](assets/deployment-dev-key.png)](assets/deployment-dev-key.png)
+
 ---
 
 ## C4 L5 — Deployment — Produção AWS
 
 [![Deployment — AWS](assets/deployment-prod.png)](assets/deployment-prod.png)
+
+[![Legenda](assets/deployment-prod-key.png)](assets/deployment-prod-key.png)
 
 ---
 
