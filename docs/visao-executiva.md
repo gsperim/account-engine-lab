@@ -684,5 +684,3 @@ flowchart TD
 | Observabilidade | ✅ PLT + OTEL + 4 dashboards Grafana + alertas configurados |
 | Estimativa de custo | ✅ $1.219/mês estimados pelo Infracost — publicado no GitHub Pages |
 | Documentação | ✅ GitHub Pages com MkDocs + C4 + relatórios de testes + cobertura |
-
-**O gap de maior prioridade antes de produção:** idempotência no consumer do Consolidado (G-01 em [`docs/evolucoes.md`](evolucoes.md)) — sem essa proteção, redelivery do RabbitMQ pode gerar saldo duplicado.

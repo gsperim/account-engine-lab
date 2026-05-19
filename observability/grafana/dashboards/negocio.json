@@ -37,7 +37,7 @@
         {
           "datasource": "Prometheus",
           "instant": true,
-          "expr": "increase(lancamentos_valor_reais_total{job=\"lancamentos\",tipo=\"CREDITO\"}[$__range]) - increase(lancamentos_valor_reais_total{job=\"lancamentos\",tipo=\"DEBITO\"}[$__range])",
+          "expr": "increase(lancamentos_valor_reais_total{job=\"lancamentos\",tipo=\"CREDITO\"}[${__range_s}s]) - increase(lancamentos_valor_reais_total{job=\"lancamentos\",tipo=\"DEBITO\"}[${__range_s}s])",
           "legendFormat": "saldo"
         }
       ],
@@ -92,7 +92,7 @@
         {
           "datasource": "Prometheus",
           "instant": true,
-          "expr": "increase(lancamentos_valor_reais_total{job=\"lancamentos\",tipo=\"CREDITO\"}[$__range])",
+          "expr": "increase(lancamentos_valor_reais_total{job=\"lancamentos\",tipo=\"CREDITO\"}[${__range_s}s])",
           "legendFormat": "créditos"
         }
       ],
@@ -139,7 +139,7 @@
         {
           "datasource": "Prometheus",
           "instant": true,
-          "expr": "increase(lancamentos_valor_reais_total{job=\"lancamentos\",tipo=\"DEBITO\"}[$__range])",
+          "expr": "increase(lancamentos_valor_reais_total{job=\"lancamentos\",tipo=\"DEBITO\"}[${__range_s}s])",
           "legendFormat": "débitos"
         }
       ],
@@ -186,7 +186,7 @@
         {
           "datasource": "Prometheus",
           "instant": true,
-          "expr": "increase(lancamentos_registrados_total{job=\"lancamentos\"}[$__range])",
+          "expr": "increase(lancamentos_registrados_total{job=\"lancamentos\"}[${__range_s}s])",
           "legendFormat": "total"
         }
       ],
@@ -232,7 +232,7 @@
         {
           "datasource": "Prometheus",
           "instant": true,
-          "expr": "increase(estornos_registrados_total{job=\"lancamentos\"}[$__range])",
+          "expr": "increase(estornos_registrados_total{job=\"lancamentos\"}[${__range_s}s])",
           "legendFormat": "estornos"
         }
       ],
@@ -287,7 +287,7 @@
         {
           "datasource": "Prometheus",
           "instant": true,
-          "expr": "increase(estornos_registrados_total{job=\"lancamentos\"}[$__range]) / clamp_min(increase(lancamentos_registrados_total{job=\"lancamentos\"}[$__range]), 1) * 100",
+          "expr": "increase(estornos_registrados_total{job=\"lancamentos\"}[${__range_s}s]) / clamp_min(increase(lancamentos_registrados_total{job=\"lancamentos\"}[${__range_s}s]), 1) * 100",
           "legendFormat": "taxa"
         }
       ],
@@ -475,13 +475,13 @@
         {
           "datasource": "Prometheus",
           "instant": true,
-          "expr": "increase(lancamentos_registrados_total{job=\"lancamentos\",tipo=\"CREDITO\"}[$__range])",
+          "expr": "increase(lancamentos_registrados_total{job=\"lancamentos\",tipo=\"CREDITO\"}[${__range_s}s])",
           "legendFormat": "Crédito"
         },
         {
           "datasource": "Prometheus",
           "instant": true,
-          "expr": "increase(lancamentos_registrados_total{job=\"lancamentos\",tipo=\"DEBITO\"}[$__range])",
+          "expr": "increase(lancamentos_registrados_total{job=\"lancamentos\",tipo=\"DEBITO\"}[${__range_s}s])",
           "legendFormat": "Débito"
         }
       ],
@@ -542,13 +542,13 @@
         {
           "datasource": "Prometheus",
           "instant": true,
-          "expr": "increase(lancamentos_valor_reais_total{job=\"lancamentos\",tipo=\"CREDITO\"}[$__range])",
+          "expr": "increase(lancamentos_valor_reais_total{job=\"lancamentos\",tipo=\"CREDITO\"}[${__range_s}s])",
           "legendFormat": "Crédito (BRL)"
         },
         {
           "datasource": "Prometheus",
           "instant": true,
-          "expr": "increase(lancamentos_valor_reais_total{job=\"lancamentos\",tipo=\"DEBITO\"}[$__range])",
+          "expr": "increase(lancamentos_valor_reais_total{job=\"lancamentos\",tipo=\"DEBITO\"}[${__range_s}s])",
           "legendFormat": "Débito (BRL)"
         }
       ],
