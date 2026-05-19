@@ -37,7 +37,7 @@
         {
           "datasource": "Prometheus",
           "instant": true,
-          "expr": "increase(lancamentos_valor_reais_total{job=\"lancamentos\",tipo=\"CREDITO\"}[${__range_s}s]) - increase(lancamentos_valor_reais_total{job=\"lancamentos\",tipo=\"DEBITO\"}[${__range_s}s])",
+          "expr": "sum(increase(lancamentos_valor_reais_total{job=\"lancamentos\",tipo=\"CREDITO\"}[${__range_s}s])) - sum(increase(lancamentos_valor_reais_total{job=\"lancamentos\",tipo=\"DEBITO\"}[${__range_s}s]))",
           "legendFormat": "saldo"
         }
       ],
@@ -287,7 +287,7 @@
         {
           "datasource": "Prometheus",
           "instant": true,
-          "expr": "increase(estornos_registrados_total{job=\"lancamentos\"}[${__range_s}s]) / clamp_min(increase(lancamentos_registrados_total{job=\"lancamentos\"}[${__range_s}s]), 1) * 100",
+          "expr": "increase(estornos_registrados_total{job=\"lancamentos\"}[${__range_s}s]) / clamp_min(sum(increase(lancamentos_registrados_total{job=\"lancamentos\"}[${__range_s}s])), 1) * 100",
           "legendFormat": "taxa"
         }
       ],
