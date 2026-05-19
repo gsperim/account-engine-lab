@@ -5,8 +5,9 @@
  * O estado é module-level: em k6, cada VU tem sua própria cópia do módulo,
  * então o cache é por-VU — tokens não são compartilhados entre VUs.
  *
- * Renova automaticamente 30 segundos antes do vencimento (TTL = 5 min no realm).
- * Isso garante que load tests de até 7–8 min funcionem sem 401 mid-test.
+ * Renova automaticamente 30 segundos antes do vencimento.
+ * getTokenFull() retorna { token, expiresIn } para que o setup() dos testes
+ * compute expiresAt a partir do expires_in real do realm — sem hardcode.
  */
 import http from 'k6/http';
 
@@ -84,3 +85,27 @@ export const ADMIN_USER  = { username: 'admin.demo',  password: 'demo123' };
 
 export function tokenCaixa()  { return getToken(CAIXA_USER.username,  CAIXA_USER.password); }
 export function tokenGestor() { return getToken(GESTOR_USER.username, GESTOR_USER.password); }
+
+/**
+ * Faz login fresco e retorna { token, expiresIn } sem usar o cache per-VU.
+ * Usado pelo setup() dos testes para obter o expires_in real do realm e calcular
+ * expiresAt dinamicamente — independente do valor hardcoded no realm.
+ */
+export function getTokenFull(username, password, scope = 'openid lancamentos:write lancamentos:read consolidacao:read') {
+  const body = `client_id=frontend-app`
+    + `&username=${encodeURIComponent(username)}`
+    + `&password=${encodeURIComponent(password)}`
+    + `&grant_type=password`
+    + `&scope=${encodeURIComponent(scope)}`;
+  const res = http.post(AUTH_URL, body, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    insecureSkipTLSVerify: true,
+    timeout: '10s',
+  });
+  if (res.status !== 200) {
+    console.error(`[auth] getTokenFull falhou para ${username}: ${res.status} ${res.body}`);
+    return null;
+  }
+  const d = JSON.parse(res.body);
+  return { token: d.access_token, expiresIn: d.expires_in || 300 };
+}
