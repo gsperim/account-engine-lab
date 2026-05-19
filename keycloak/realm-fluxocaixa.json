@@ -3,7 +3,7 @@
   "displayName": "Fluxo de Caixa Diário",
   "enabled": true,
 
-  "accessTokenLifespan": 300,
+  "accessTokenLifespan": 600,
   "ssoSessionIdleTimeout": 1800,
   "ssoSessionMaxLifespan": 86400,
   "offlineSessionIdleTimeout": 2592000,

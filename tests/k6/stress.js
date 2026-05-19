@@ -31,7 +31,7 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { Rate, Counter } from 'k6/metrics';
 import { CONSOLIDACAO_URL, LANCAMENTOS_URL, HEADERS, randomUUID, dataAleatoria, tipoAleatorio, valorAleatorio } from './config.js';
-import { tokenCaixa, tokenGestor } from './auth.js';
+import { tokenCaixa, tokenGestor, getTokenFull, CAIXA_USER, GESTOR_USER } from './auth.js';
 
 const taxaRateLimit      = new Rate('rate_limit_atingido');
 const lancamentosOk      = new Counter('lancamentos_ok');
@@ -39,12 +39,16 @@ const lancamentosFalha   = new Counter('lancamentos_falha');
 
 // Busca tokens uma única vez antes de todos os VUs iniciarem para evitar thundering
 // herd no Keycloak com centenas de VUs autenticando simultaneamente no início.
-// expiresAt marca 30s antes da expiração real (mesmo buffer do auth.js).
+// expiresAt é calculado a partir do expires_in real do realm — sem hardcode —
+// para que o token compartilhado cubra o teste inteiro sem renovação mid-test.
 export function setup() {
+  const caixa  = getTokenFull(CAIXA_USER.username,  CAIXA_USER.password);
+  const gestor = getTokenFull(GESTOR_USER.username, GESTOR_USER.password);
+  const expiresIn = (caixa && caixa.expiresIn) || 300;
   return {
-    tokenCaixa:  tokenCaixa(),
-    tokenGestor: tokenGestor(),
-    expiresAt:   Math.floor(Date.now() / 1000) + 300 - 30,
+    tokenCaixa:  caixa  && caixa.token,
+    tokenGestor: gestor && gestor.token,
+    expiresAt:   Math.floor(Date.now() / 1000) + expiresIn - 30,
   };
 }
 
