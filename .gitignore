@@ -27,6 +27,8 @@ base-de-conhecimento/
 CLAUDE.md
 AGENTS.md
 .claude/
+.claudeignore
+services/CLAUDE.md
 
 # Traefik — certificados locais gerados por mkcert (cada dev gera o seu)
 traefik/certs/*.pem
