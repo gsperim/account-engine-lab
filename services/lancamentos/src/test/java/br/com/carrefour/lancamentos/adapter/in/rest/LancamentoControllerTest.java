@@ -12,9 +12,13 @@ import br.com.carrefour.lancamentos.domain.port.in.EstornarLancamentoUseCase;
 import br.com.carrefour.lancamentos.domain.port.in.ListarLancamentosUseCase;
 import br.com.carrefour.lancamentos.domain.port.in.RegistrarLancamentoUseCase;
 import br.com.carrefour.lancamentos.domain.port.in.ResumoDiarioUseCase;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
@@ -37,8 +41,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(LancamentoController.class)
-@Import({LancamentoMapper.class, GlobalExceptionHandler.class, SecurityConfig.class})
+@Import({LancamentoMapper.class, GlobalExceptionHandler.class, SecurityConfig.class,
+         LancamentoControllerTest.MetricsConfig.class})
 class LancamentoControllerTest {
+
+    @TestConfiguration
+    static class MetricsConfig {
+        @Bean
+        MeterRegistry meterRegistry() { return new SimpleMeterRegistry(); }
+    }
 
     @Autowired MockMvc mvc;
 
