@@ -13,6 +13,8 @@ import br.com.carrefour.lancamentos.domain.port.in.EstornarLancamentoUseCase;
 import br.com.carrefour.lancamentos.domain.port.in.ListarLancamentosUseCase;
 import br.com.carrefour.lancamentos.domain.port.in.RegistrarLancamentoUseCase;
 import br.com.carrefour.lancamentos.domain.port.in.ResumoDiarioUseCase;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,19 +35,43 @@ public class LancamentoController implements LancamentosApi {
     private final ResumoDiarioUseCase resumoDiarioUseCase;
     private final LancamentoMapper mapper;
 
+    // Métricas de negócio — publicadas no adapter para não poluir o domínio
+    private final Counter creditosTotal;
+    private final Counter debitosTotal;
+    private final Counter creditosValor;
+    private final Counter debitosValor;
+    private final Counter estornosTotal;
+
     public LancamentoController(
             RegistrarLancamentoUseCase registrarUseCase,
             BuscarLancamentoUseCase buscarUseCase,
             ListarLancamentosUseCase listarUseCase,
             EstornarLancamentoUseCase estornarUseCase,
             ResumoDiarioUseCase resumoDiarioUseCase,
-            LancamentoMapper mapper) {
-        this.registrarUseCase   = registrarUseCase;
-        this.buscarUseCase      = buscarUseCase;
-        this.listarUseCase      = listarUseCase;
-        this.estornarUseCase    = estornarUseCase;
+            LancamentoMapper mapper,
+            MeterRegistry meterRegistry) {
+        this.registrarUseCase    = registrarUseCase;
+        this.buscarUseCase       = buscarUseCase;
+        this.listarUseCase       = listarUseCase;
+        this.estornarUseCase     = estornarUseCase;
         this.resumoDiarioUseCase = resumoDiarioUseCase;
-        this.mapper             = mapper;
+        this.mapper              = mapper;
+
+        this.creditosTotal = Counter.builder("lancamentos_registrados_total")
+                .tag("tipo", "CREDITO").description("Total de lançamentos de crédito registrados")
+                .register(meterRegistry);
+        this.debitosTotal = Counter.builder("lancamentos_registrados_total")
+                .tag("tipo", "DEBITO").description("Total de lançamentos de débito registrados")
+                .register(meterRegistry);
+        this.creditosValor = Counter.builder("lancamentos_valor_reais_total")
+                .tag("tipo", "CREDITO").description("Valor acumulado de créditos em BRL")
+                .register(meterRegistry);
+        this.debitosValor = Counter.builder("lancamentos_valor_reais_total")
+                .tag("tipo", "DEBITO").description("Valor acumulado de débitos em BRL")
+                .register(meterRegistry);
+        this.estornosTotal = Counter.builder("estornos_registrados_total")
+                .description("Total de estornos registrados")
+                .register(meterRegistry);
     }
 
     @Override
@@ -60,6 +86,14 @@ public class LancamentoController implements LancamentosApi {
                 idempotencyKey.toString()
         );
         var lancamento = registrarUseCase.executar(command);
+        var valor = lancamento.getValor().toBigDecimal().doubleValue();
+        if (lancamento.getTipo().name().equals("CREDITO")) {
+            creditosTotal.increment();
+            creditosValor.increment(valor);
+        } else {
+            debitosTotal.increment();
+            debitosValor.increment(valor);
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toResponse(lancamento));
     }
 
@@ -67,6 +101,7 @@ public class LancamentoController implements LancamentosApi {
     public ResponseEntity<LancamentoResponse> estornarLancamento(UUID id) {
         var command = new EstornarLancamentoUseCase.Command(LancamentoId.de(id), extrairOperadorId());
         var estorno = estornarUseCase.executar(command);
+        estornosTotal.increment();
         return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toResponse(estorno));
     }
 
